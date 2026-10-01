@@ -16,10 +16,14 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.core.read.ListAppender
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
@@ -28,8 +32,10 @@ import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.never
+import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
 import org.mockito.junit.jupiter.MockitoExtension
+import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
@@ -125,6 +131,74 @@ class TeamServiceTest {
     }
 
     @Test
+    fun `change team admin logs the previous and new admin identities`() {
+        val team = Team("Test Team")
+        val previousAdmin = spy(Member(name = "Previous Admin"))
+        val newAdmin = spy(Member(name = "New Admin"))
+        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(previousAdmin, "id", 2L)
+        ReflectionTestUtils.setField(newAdmin, "id", 3L)
+        team.changeAdmin(previousAdmin)
+        newAdmin.team = team
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+        whenever(memberRepository.findById(3L)).thenReturn(Optional.of(newAdmin))
+
+        val logger = LoggerFactory.getLogger(TeamService::class.java) as LogbackLogger
+        val appender = ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply {
+            context = logger.loggerContext
+            start()
+        }
+        logger.addAppender(appender)
+        val actor = LoginMember(id = 11L, name = "Acting Admin", isImpersonating = true, originalMemberId = 12L)
+        try {
+            service.changeTeamAdmin(teamId = 1L, memberId = 3L, actor = actor)
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("Test Team", "2", "3", "Acting Admin", "\"originalMemberId\":12")
+            .doesNotContain("Previous Admin", "New Admin", "adminName")
+        verify(previousAdmin, never()).name
+        verify(newAdmin, never()).name
+    }
+
+    @Test
+    fun `adding and removing team manager logs identities once for actual changes`() {
+        val team = Team("Test Team")
+        val manager = Member(name = "Team Manager")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(manager, "id", 2L)
+        manager.team = team
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+        whenever(memberRepository.findById(2L)).thenReturn(Optional.of(manager))
+        val actor = LoginMember(id = 11L, name = "Acting Admin", isImpersonating = true, originalMemberId = 12L)
+
+        val logger = LoggerFactory.getLogger(TeamService::class.java) as LogbackLogger
+        val appender = ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply {
+            context = logger.loggerContext
+            start()
+        }
+        logger.addAppender(appender)
+        try {
+            service.addTeamManager(teamId = 1L, memberId = 2L, actor = actor)
+            service.addTeamManager(teamId = 1L, memberId = 2L, actor = actor)
+            service.removeTeamManager(teamId = 1L, memberId = 2L, actor = actor)
+            service.removeTeamManager(teamId = 1L, memberId = 2L, actor = actor)
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+
+        assertThat(appender.list).hasSize(2)
+        assertThat(appender.list.map { it.formattedMessage })
+            .anySatisfy { assertThat(it).contains("team.manager_added", "Test Team", "Team Manager", "Acting Admin") }
+            .anySatisfy { assertThat(it).contains("team.manager_removed", "Test Team", "Team Manager", "Acting Admin") }
+    }
+
+    @Test
     fun `member can create a team and becomes its admin`() {
         val member = Member(name = "new member")
         ReflectionTestUtils.setField(member, "id", 10L)
@@ -153,7 +227,7 @@ class TeamServiceTest {
         assertThat(result.dutyTypes.map { it.name }).containsExactly("OFF", "WORK")
         assertThat(result.dutyTypes[1].id).isEqualTo(30L)
         assertThat(result.dutyTypes[1].position).isEqualTo(0)
-        assertThat(result.dutyTypes[1].color).isEqualTo("#98fb98")
+        assertThat(result.dutyTypes[1].color).isEqualTo("#F6D365")
         assertThat(result.dutyTypes[1].hidden).isFalse
         verify(dutyTypeRepository).saveAndFlush(any<DutyType>())
         verify(publicContentService).validateContent("new team")
@@ -308,11 +382,40 @@ class TeamServiceTest {
         ReflectionTestUtils.setField(team, "id", 1L)
         `when`(teamRepository.findById(team.id!!)).thenReturn(Optional.of(team))
 
-        service.updateDefaultDuty(team.id!!, "New default", "#123456")
+        service.updateDefaultDuty(team.id!!, "New default", "#F6D365")
 
         verify(publicContentService).validateContent("New default")
         assertThat(team.defaultDutyName).isEqualTo("New default")
-        assertThat(team.defaultDutyColor).isEqualTo("#123456")
+        assertThat(team.defaultDutyColor).isEqualTo("#F6D365")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["#000000", "#ffffff", "#ff0000", "#0000ff", "#123456"])
+    fun `default duty color changes accept custom hex colors outside the palette`(color: String) {
+        val team = Team("Test Team").apply {
+            defaultDutyName = "before"
+            defaultDutyColor = "#abcdef"
+            defaultDutyAbbreviation = "B"
+        }
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+
+        service.updateDefaultDuty(1L, "after", color, "A")
+
+        assertThat(team.defaultDutyName).isEqualTo("after")
+        assertThat(team.defaultDutyColor).isEqualTo(color)
+        assertThat(team.defaultDutyAbbreviation).isEqualTo("A")
+    }
+
+    @Test
+    fun `legacy default duty color allows name and abbreviation edits`() {
+        val team = Team("Test Team").apply { defaultDutyColor = "#abcdef" }
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+
+        service.updateDefaultDuty(1L, "after", "#abcdef", "A")
+
+        assertThat(team.defaultDutyName).isEqualTo("after")
+        assertThat(team.defaultDutyColor).isEqualTo("#abcdef")
+        assertThat(team.defaultDutyAbbreviation).isEqualTo("A")
     }
 
     @Test

@@ -3,6 +3,9 @@ package com.tistory.shanepark.dutypark.attachment.service
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentUploadSessionRepository
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -19,6 +22,7 @@ class AttachmentCleanupScheduler(
     private val clock: Clock
 ) {
     private val log = logger()
+    private val systemActor = AuditActor(id = null, name = "system:attachment-cleanup")
 
     @Scheduled(cron = "0 0 2 * * *")
     @Transactional
@@ -31,48 +35,130 @@ class AttachmentCleanupScheduler(
         }
 
         var attachmentsRemoved = 0
+        var attachmentFailures = 0
+        var directoryCleanupsCompleted = 0
+        var directoryFailures = 0
+        val sessionResults = mutableListOf<Map<String, Any?>>()
 
         expiredSessions.forEach { session ->
             val sessionId = session.id
             val attachments = attachmentRepository.findAllByUploadSessionId(sessionId)
+            val removedBeforeSession = attachmentsRemoved
+            val attachmentFailuresBeforeSession = attachmentFailures
 
             attachments.forEach { attachment ->
                 runCatching {
-                    attachmentService.deleteAttachment(attachment)
+                    attachmentService.deleteAttachment(
+                        attachment,
+                        actor = systemActor,
+                        reason = "expired_upload_session"
+                    )
                     attachmentsRemoved++
                 }.onFailure { ex ->
+                    attachmentFailures++
                     log.error(
-                        "Failed to delete attachment {} for expired session {}: {}",
-                        attachment.id,
-                        sessionId,
-                        ex.message
+                        "Expired-session attachment removal failed: {}",
+                        auditContext(
+                            mapOf(
+                                "actor" to systemActor,
+                                "attachmentId" to attachment.id,
+                                "contextType" to attachment.contextType,
+                                "contextId" to attachment.contextId,
+                                "uploadSessionId" to sessionId,
+                                "ownerId" to attachment.createdBy,
+                                "ownerName" to null,
+                                "filename" to attachment.originalFilename
+                            ) + ex.toAttachmentLogDiagnostics()
+                        )
                     )
                 }
             }
 
             val tempDir = pathResolver.resolveTemporaryDirectory(sessionId)
+            var directoryResult = "completed"
             runCatching {
                 fileSystemService.deleteDirectory(tempDir)
+                directoryCleanupsCompleted++
             }.onFailure { ex ->
+                directoryResult = "failed"
+                directoryFailures++
                 log.error(
-                    "Failed to delete temporary directory {} for session {}: {}",
-                    tempDir,
-                    sessionId,
-                    ex.message
+                    "Expired-session temporary directory cleanup failed: {}",
+                    auditContext(
+                        mapOf(
+                            "actor" to systemActor,
+                            "sessionId" to sessionId,
+                            "contextType" to session.contextType,
+                            "contextId" to session.targetContextId,
+                            "ownerId" to session.ownerId,
+                            "ownerName" to null,
+                            "path" to tempDir.toString()
+                        ) + ex.toAttachmentLogDiagnostics()
+                    )
                 )
             }
+
+            sessionResults += mapOf(
+                "sessionId" to sessionId,
+                "contextType" to session.contextType,
+                "contextId" to session.targetContextId,
+                "ownerId" to session.ownerId,
+                "ownerName" to null,
+                "expiresAt" to session.expiresAt,
+                "attachmentCount" to attachments.size,
+                "attachmentsRemoved" to attachmentsRemoved - removedBeforeSession,
+                "attachmentFailures" to attachmentFailures - attachmentFailuresBeforeSession,
+                "temporaryDirectoryResult" to directoryResult
+            )
         }
 
+        var sessionDeleteFailed = false
         runCatching {
             sessionRepository.deleteAll(expiredSessions)
         }.onFailure { ex ->
-            log.error("Failed to delete expired sessions: {}", ex.message)
+            sessionDeleteFailed = true
+            log.error(
+                "Expired attachment upload-session removal failed: {}",
+                auditContext(
+                    mapOf(
+                        "actor" to systemActor,
+                        "sessionIds" to expiredSessions.map { it.id },
+                        "sessionCount" to expiredSessions.size
+                    ) + ex.toAttachmentLogDiagnostics()
+                )
+            )
         }
 
-        log.info(
-            "Expired session cleanup removed {} attachments across {} sessions",
-            attachmentsRemoved,
-            expiredSessions.size
+        if (!sessionDeleteFailed) {
+            expiredSessions.forEachIndexed { index, session ->
+                val result = sessionResults[index]
+                log.auditEventAfterCommit(
+                    event = "attachment.upload_session.expired_and_removed",
+                    actor = systemActor,
+                    target = mapOf(
+                        "type" to "AttachmentUploadSession",
+                        "id" to session.id,
+                        "contextType" to session.contextType,
+                        "contextId" to session.targetContextId,
+                        "ownerId" to session.ownerId,
+                        "ownerName" to null
+                    ),
+                    details = result.filterKeys { it != "sessionId" }
+                )
+            }
+        }
+        log.auditEventAfterCommit(
+            event = "attachment.expired_session_cleanup.completed",
+            actor = systemActor,
+            target = mapOf("type" to "AttachmentCleanupJob", "runAt" to now),
+            details = mapOf(
+                "expiredSessionCount" to expiredSessions.size,
+                "sessionDeletionSucceeded" to !sessionDeleteFailed,
+                "attachmentsRemoved" to attachmentsRemoved,
+                "attachmentFailures" to attachmentFailures,
+                "temporaryDirectoryCleanupsCompleted" to directoryCleanupsCompleted,
+                "temporaryDirectoryFailures" to directoryFailures
+            )
         )
     }
 }

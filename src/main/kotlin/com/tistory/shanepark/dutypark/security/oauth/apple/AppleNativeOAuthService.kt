@@ -2,6 +2,8 @@ package com.tistory.shanepark.dutypark.security.oauth.apple
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
@@ -85,7 +87,7 @@ class AppleNativeOAuthService(
                 verifyExchangedIdentity(tokenResponse, clientId, identity.subject)
                 link(requireNotNull(authenticated), identity.subject, refreshToken, clientId)
             } catch (linkFailure: Exception) {
-                compensateFailedLink(refreshToken, clientId, clientSecret, linkFailure)
+                compensateFailedLink(refreshToken, clientId, clientSecret, loginMember, linkFailure)
             }
         }
 
@@ -118,6 +120,7 @@ class AppleNativeOAuthService(
             val signup = signupRepository.save(MemberSsoRegister(SsoType.APPLE, subject))
             return MobileOAuthExchangeResult(MobileOAuthExchangeResponse(true, signupUuid = signup.uuid))
         }
+        request.setAttribute("dutypark.logging.authProvider", SsoType.APPLE)
         val tokens = authService.getTokenResponseByMemberId(requireNotNull(existingMember.id), request)
         return MobileOAuthExchangeResult(
             MobileOAuthExchangeResponse(false, expiresIn = tokens.expiresIn),
@@ -162,6 +165,7 @@ class AppleNativeOAuthService(
         refreshToken: String,
         clientId: String,
         clientSecret: String,
+        loginMember: LoginMember?,
         linkFailure: Exception,
     ): Nothing {
         try {
@@ -170,13 +174,30 @@ class AppleNativeOAuthService(
             linkFailure.addSuppressed(revokeFailure)
             try {
                 credentialService.storeRevocationRetry(refreshToken, clientId)
-                log.warn("Apple LINK credential revoke deferred for durable retry. clientId={}", clientId)
+                log.warn(
+                    "Apple LINK credential revoke deferred for durable retry: {}",
+                    auditContext(
+                        mapOf(
+                            "clientId" to clientId,
+                            "actor" to loginMember?.toAuditActor(),
+                            "flow" to "LINK",
+                            "reason" to "provider_revocation_failed",
+                            "exceptionType" to revokeFailure.javaClass.simpleName,
+                        )
+                    ),
+                )
             } catch (retryPersistenceFailure: Exception) {
                 linkFailure.addSuppressed(retryPersistenceFailure)
                 log.error(
-                    "Failed to persist Apple LINK credential revocation retry. clientId={}",
-                    clientId,
-                    retryPersistenceFailure,
+                    "Failed to persist Apple LINK credential revocation retry: {}",
+                    auditContext(
+                        mapOf(
+                            "clientId" to clientId,
+                            "actor" to loginMember?.toAuditActor(),
+                            "exceptionType" to retryPersistenceFailure.javaClass.simpleName,
+                            "causeType" to retryPersistenceFailure.cause?.javaClass?.simpleName,
+                        )
+                    ),
                 )
             }
         }

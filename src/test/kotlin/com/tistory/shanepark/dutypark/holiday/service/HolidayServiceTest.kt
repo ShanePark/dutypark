@@ -1,6 +1,10 @@
 package com.tistory.shanepark.dutypark.holiday.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.holiday.domain.Holiday
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
@@ -14,7 +18,9 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
+import org.slf4j.LoggerFactory
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -47,6 +53,28 @@ class HolidayServiceTest {
 
         verify(dutyRepository).deleteAutomaticByDutyDateGreaterThanEqual(LocalDate.of(2026, 7, 11))
         verify(holidayRepository).deleteAll()
+    }
+
+    @Test
+    fun `reset emits an audit event when holiday and cache snapshots are empty`() {
+        val logger = LoggerFactory.getLogger(HolidayService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            holidayService.resetHolidayInfo(AuditActor(id = 9L, name = "Holiday Admin"))
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        verify(dutyRepository).deleteAutomaticByDutyDateGreaterThanEqual(LocalDate.of(2026, 7, 11))
+        verify(holidayRepository).deleteAll()
+        verify(holidayRepository, never()).count()
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("\"event\":\"holiday_information_reset\"", "\"name\":\"Holiday Admin\"")
+            .doesNotContain("holidayRecordCountBefore", "holidayRecordCountAfter")
+            .contains("\"cachedHolidayYearsBefore\":[]", "\"cachedHolidayYearsAfter\":[]")
     }
 
     @Test

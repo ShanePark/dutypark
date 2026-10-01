@@ -6,6 +6,8 @@ import com.tistory.shanepark.dutypark.duty.batch.exceptions.NotSupportedFileExce
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.YearMonthNotMatchException
 import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchSungsimService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.core.read.ListAppender
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
@@ -26,6 +28,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import java.time.YearMonth
 
 class TeamManageControllerTest : RestDocsTest() {
@@ -138,17 +141,39 @@ class TeamManageControllerTest : RestDocsTest() {
             dutyBatchSungsimService.batchUploadTeam(any(), eq(TestData.team.id!!), eq(YearMonth.of(2024, 1)))
         ).thenThrow(NotSupportedFileException(".xls,.xlsx"))
 
-        mockMvc.perform(
-            MockMvcRequestBuilders.multipart("/api/teams/manage/{teamId}/duty", TestData.team.id!!)
-                .file(validFile())
-                .param("year", "2024")
-                .param("month", "1")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.result").value(false))
-            .andExpect(jsonPath("$.errorCode").value("dutyBatch.notSupportedFile"))
-            .andExpect(jsonPath("$.errorDetails.supportedFile").value(".xls,.xlsx"))
+        val logger = LoggerFactory.getLogger(TeamManageController::class.java) as LogbackLogger
+        val appender = ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply {
+            context = logger.loggerContext
+            start()
+        }
+        logger.addAppender(appender)
+        try {
+            mockMvc.perform(
+                MockMvcRequestBuilders.multipart("/api/teams/manage/{teamId}/duty", TestData.team.id!!)
+                    .file(validFile())
+                    .param("year", "2024")
+                    .param("month", "1")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+            )
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.result").value(false))
+                .andExpect(jsonPath("$.errorCode").value("dutyBatch.notSupportedFile"))
+                .andExpect(jsonPath("$.errorDetails.supportedFile").value(".xls,.xlsx"))
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains(
+                "duty_batch.team_upload_failed",
+                TestData.team.name,
+                TestData.member.name,
+                "dutyBatch.notSupportedFile",
+                "2024",
+                "1",
+            )
     }
 
     @Test
@@ -182,7 +207,7 @@ class TeamManageControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/default-duty", TestData.team.id!!)
-                .param("color", "#123456")
+                .param("color", "#F6D365")
                 .param("name", "DEFAULT")
                 .withAuth(TestData.member)
         )
@@ -190,7 +215,24 @@ class TeamManageControllerTest : RestDocsTest() {
 
         val updated = teamRepository.findById(TestData.team.id!!).orElseThrow()
         assertThat(updated.defaultDutyName).isEqualTo("DEFAULT")
-        assertThat(updated.defaultDutyColor).isEqualTo("#123456")
+        assertThat(updated.defaultDutyColor).isEqualTo("#F6D365")
+    }
+
+    @Test
+    fun `manager can change default duty to a custom hex color`() {
+        setTeamAdmin(TestData.member.id!!)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/default-duty", TestData.team.id!!)
+                .param("color", "#ffffff")
+                .param("name", "DEFAULT")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+
+        val updated = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(updated.defaultDutyColor).isEqualTo("#ffffff")
+        assertThat(updated.defaultDutyName).isEqualTo("DEFAULT")
     }
 
     @Test
@@ -199,7 +241,7 @@ class TeamManageControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/default-duty", TestData.team.id!!)
-                .param("color", "#123456")
+                .param("color", "#F6D365")
                 .param("name", "시.발")
                 .withAuth(TestData.member)
         )

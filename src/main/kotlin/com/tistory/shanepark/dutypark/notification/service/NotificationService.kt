@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.notification.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -76,10 +78,22 @@ class NotificationService(
             ?: throw NoSuchElementException("Notification not found")
 
         notificationRepository.delete(notification)
+        log.auditEventAfterCommit(
+            "notification_deleted", null,
+            target = mapOf("memberId" to memberId, "notificationId" to notificationId),
+            details = mapOf("notificationType" to notification.type),
+        )
     }
 
     fun deleteAllRead(memberId: Long): Int {
-        return notificationRepository.deleteByMemberIdAndIsReadTrue(memberId)
+        val deletedCount = notificationRepository.deleteByMemberIdAndIsReadTrue(memberId)
+        if (deletedCount > 0) {
+            log.auditEventAfterCommit(
+                "read_notifications_deleted", null, mapOf("memberId" to memberId),
+                mapOf("deletedCount" to deletedCount),
+            )
+        }
+        return deletedCount
     }
 
     fun createNotification(
@@ -105,7 +119,14 @@ class NotificationService(
             payloadVersion = payload.version
         )
 
-        return notificationRepository.save(notification)
+        val saved = notificationRepository.save(notification)
+        log.auditEventAfterCommit(
+            "notification_created", null,
+            target = mapOf("memberId" to memberId, "notificationId" to saved.id),
+            details = mapOf("actorMemberId" to actorId, "notificationType" to type,
+                "referenceType" to referenceType, "referenceId" to referenceId),
+        )
+        return saved
     }
 
     private fun toDto(memberId: Long, notification: Notification, source: String): NotificationDto {
@@ -122,20 +143,43 @@ class NotificationService(
             notification.payloadJson,
         )) {
             is NotificationPayloadDecodeResult.Success -> result.payload
-            is NotificationPayloadDecodeResult.Missing -> fallbackPayload(memberId, notification, source, result.reason)
-            is NotificationPayloadDecodeResult.Invalid -> fallbackPayload(memberId, notification, source, result.reason)
+            is NotificationPayloadDecodeResult.Missing -> fallbackPayload(
+                memberId,
+                notification,
+                source,
+                decodeStatus = "MISSING",
+            )
+            is NotificationPayloadDecodeResult.Invalid -> fallbackPayload(
+                memberId,
+                notification,
+                source,
+                decodeStatus = "INVALID",
+            )
         }
     }
 
-    private fun fallbackPayload(memberId: Long, notification: Notification, source: String, reason: String): NotificationPayload {
+    private fun fallbackPayload(
+        memberId: Long,
+        notification: Notification,
+        source: String,
+        decodeStatus: String,
+    ): NotificationPayload {
         log.warn(
-            "Falling back to generic payload for notification {} of member {} during {} because payload is invalid (type={}, version={}, reason={})",
-            notification.id,
-            memberId,
-            source,
-            notification.type,
-            notification.payloadVersion,
-            reason,
+            "Notification payload fallback: {}",
+            auditContext(
+                mapOf(
+                    "event" to "notification_payload_fallback",
+                    "notificationId" to notification.id,
+                    "memberId" to memberId,
+                    "actorMemberId" to notification.actorId,
+                    "referenceType" to notification.referenceType,
+                    "referenceId" to notification.referenceId,
+                    "source" to source,
+                    "notificationType" to notification.type,
+                    "payloadVersion" to notification.payloadVersion,
+                    "decodeStatus" to decodeStatus,
+                )
+            ),
         )
         return UnknownNotificationPayload()
     }

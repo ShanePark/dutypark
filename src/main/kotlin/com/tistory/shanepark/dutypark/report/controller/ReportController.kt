@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.report.domain.dto.ReportIdResponse
 import com.tistory.shanepark.dutypark.report.service.ReportService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.validation.Valid
+import java.util.UUID
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.HttpStatus
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
 @RestController
 @RequestMapping("/api/reports")
@@ -31,7 +31,7 @@ class ReportController(
         @Login loginMember: LoginMember,
         @Valid @RequestBody request: CreateReportRequest,
     ): ResponseEntity<ReportIdResponse> {
-        val result = reportService.createReport(loginMember.id, request)
+        val result = reportService.createReport(loginMember.id, request, loginMember)
         val status = if (result.isNew) HttpStatus.CREATED else HttpStatus.OK
         return ResponseEntity.status(status).body(ReportIdResponse(result.id))
     }
@@ -41,7 +41,11 @@ class ReportController(
         @Login loginMember: LoginMember,
         @PathVariable reportId: UUID,
     ): MyReportDto {
-        return reportService.cancelReport(loginMemberId = loginMember.id, reportId = reportId)
+        return reportService.cancelReport(
+            loginMemberId = loginMember.id,
+            reportId = reportId,
+            loginMember = loginMember,
+        )
     }
 
     @GetMapping("/me")

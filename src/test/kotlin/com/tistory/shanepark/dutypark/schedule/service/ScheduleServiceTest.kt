@@ -2,9 +2,11 @@ package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
+import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
@@ -765,12 +767,18 @@ class ScheduleServiceTest {
         ReflectionTestUtils.setField(schedule, "id", scheduleId)
 
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
-        whenever(attachmentRepository.findAllByContextTypeAndContextId(any(), any())).thenReturn(emptyList())
+        val attachment = mock<Attachment>()
+        whenever(attachmentRepository.findAllByContextTypeAndContextId(any(), any())).thenReturn(listOf(attachment))
         whenever(pathResolver.resolveContextDirectory(any(), any())).thenReturn(java.nio.file.Paths.get("/tmp/test"))
 
         scheduleService.deleteSchedule(loginMember, scheduleId)
 
         verify(schedulePermissionService).checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
+        verify(attachmentService).deleteAttachment(
+            attachment,
+            actor = loginMember.toAuditActor(),
+            reason = "schedule_deleted",
+        )
         verify(scheduleRepository).delete(schedule)
     }
 
@@ -803,7 +811,7 @@ class ScheduleServiceTest {
 
         scheduleService.deleteScheduleInternal(schedule)
 
-        verify(attachmentService).deleteAttachment(attachment)
+        verify(attachmentService).deleteAttachment(attachment, actor = null, reason = "schedule_deleted")
         verify(fileSystemService).deleteDirectory(contextDir)
         verify(scheduleRepository).delete(schedule)
         verifyNoInteractions(schedulePermissionService)

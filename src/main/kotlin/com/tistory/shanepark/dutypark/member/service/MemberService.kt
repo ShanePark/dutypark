@@ -1,5 +1,10 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberInviteCandidateDto
@@ -30,6 +35,8 @@ class MemberService(
     private val memberDtoAssembler: MemberDtoAssembler,
 ) {
 
+    private val log = logger()
+
     @Transactional(readOnly = true)
     fun findById(memberId: Long): MemberDto {
         val member = memberRepository.findById(memberId).orElseThrow()
@@ -43,8 +50,12 @@ class MemberService(
     }
 
     fun createSsoMember(username: String, memberSsoRegisterUUID: String): Member {
-        val ssoRegister = memberSsoRegisterRepository.findByUuid(memberSsoRegisterUUID).orElseThrow()
+        val ssoRegister = memberSsoRegisterRepository.findByUuid(memberSsoRegisterUUID).orElseThrow {
+            log.warn("Signup denied {}", auditContext(mapOf("event" to "member.signup.denied", "reason" to "registration_not_found")))
+            NoSuchElementException("No value present")
+        }
         if (!ssoRegister.isValid()) {
+            log.warn("Signup denied {}", auditContext(mapOf("event" to "member.signup.denied", "provider" to ssoRegister.ssoType, "reason" to "registration_expired")))
             throw IllegalArgumentException("sso.uuid.invalid")
         }
         val member = Member(
@@ -53,6 +64,10 @@ class MemberService(
         )
         memberRepository.save(member)
         memberSocialAccountService.link(member, ssoRegister.ssoType, ssoRegister.ssoId)
+        log.auditEventAfterCommit(
+            event = "member.signup.completed", actor = member.toAuditActor(),
+            target = mapOf("memberId" to member.id), details = mapOf("provider" to ssoRegister.ssoType),
+        )
         return member
     }
 
@@ -66,7 +81,13 @@ class MemberService(
 
     fun updateCalendarVisibility(loginMember: LoginMember, visibility: Visibility) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
+        val previous = member.calendarVisibility
         member.calendarVisibility = visibility
+        log.auditChangeAfterCommit(
+            event = "member.calendar_visibility.changed", actor = loginMember.toAuditActor(),
+            target = mapOf("memberId" to member.id),
+            before = mapOf("visibility" to previous), after = mapOf("visibility" to visibility),
+        )
     }
 
     fun getDutyBatchTemplate(memberId: Long): DutyBatchTemplate? {
@@ -74,7 +95,7 @@ class MemberService(
         return member.team?.dutyBatchTemplate
     }
 
-    fun assignManager(managerId: Long, managedId: Long) {
+    fun assignManager(managerId: Long, managedId: Long, actor: LoginMember? = null) {
         val manager = memberRepository.findById(managerId).orElseThrow()
         val managed = memberRepository.findById(managedId).orElseThrow()
 
@@ -84,9 +105,14 @@ class MemberService(
 
         val entity = MemberManager(manager = manager, managed = managed, role = ManagerRole.MANAGER)
         memberManagerRepository.save(entity)
+        log.auditEventAfterCommit(
+            event = "member.manager.assigned", actor = actor?.toAuditActor() ?: managed.toAuditActor(),
+            target = mapOf("managedMemberId" to managedId, "managerId" to managerId),
+            details = mapOf("role" to ManagerRole.MANAGER),
+        )
     }
 
-    fun unassignManager(managerId: Long, managedId: Long) {
+    fun unassignManager(managerId: Long, managedId: Long, actor: LoginMember? = null) {
         val manager = memberRepository.findById(managerId).orElseThrow()
         val managed = memberRepository.findById(managedId).orElseThrow()
         if (!isManager(manager, managed)) {
@@ -94,6 +120,10 @@ class MemberService(
         }
         memberManagerRepository.findAllByManagerAndManaged(manager = manager, managed = managed)
             .forEach { memberManagerRepository.delete(it) }
+        log.auditEventAfterCommit(
+            event = "member.manager.unassigned", actor = actor?.toAuditActor() ?: managed.toAuditActor(),
+            target = mapOf("managedMemberId" to managedId, "managerId" to managerId),
+        )
     }
 
     fun canManageTeam(loginMember: LoginMember, team: Team?): Boolean {
@@ -165,6 +195,10 @@ class MemberService(
         )
         memberManagerRepository.save(managerEntity)
 
+        log.auditEventAfterCommit(
+            event = "member.auxiliary.created", actor = loginMember.toAuditActor(),
+            target = mapOf("memberId" to member.id), details = mapOf("managerId" to parentMember.id),
+        )
         return memberDtoAssembler.toDto(member)
     }
 

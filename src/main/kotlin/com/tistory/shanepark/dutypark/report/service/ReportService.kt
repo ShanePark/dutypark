@@ -2,7 +2,12 @@ package com.tistory.shanepark.dutypark.report.service
 
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -15,13 +20,14 @@ import com.tistory.shanepark.dutypark.report.domain.enums.ReportStatus
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
 import com.tistory.shanepark.dutypark.report.repository.ContentReportRepository
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
+import java.time.LocalDateTime
+import java.util.*
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDateTime
-import java.util.*
 
 @Service
 @Transactional
@@ -35,11 +41,17 @@ class ReportService(
     private val slackNotifier: ReportSlackNotifier,
 ) {
 
+    private val log = logger()
+
     /**
      * Reporting does not check whether the reporter can still see the target:
      * a member must stay able to report content of somebody they already blocked.
      */
-    fun createReport(loginMemberId: Long, request: CreateReportRequest): ReportCreateResult {
+    fun createReport(
+        loginMemberId: Long,
+        request: CreateReportRequest,
+        loginMember: LoginMember? = null,
+    ): ReportCreateResult {
         if (request.reason == ReportReason.OTHER && request.detail.isNullOrBlank()) {
             throw BadRequestException("report.detail.required")
         }
@@ -60,10 +72,26 @@ class ReportService(
             ?: ReportCreateResult(id = saveReport(reporter, owner, target, request).id, isNew = true)
 
         if (request.alsoBlock) {
-            blockService.block(reporter.id!!, owner.id!!)
+            blockService.block(
+                reporter.id!!,
+                owner.id!!,
+                actor = loginMember?.toAuditActor() ?: reporter.toAuditActor(),
+            )
         }
         slackNotifier.reportCreated(result = result, reporter = reporter, reported = owner, request = request)
 
+        if (result.isNew) {
+            log.auditEventAfterCommit(
+                "report.created", loginMember?.toAuditActor() ?: reporter.toAuditActor(),
+                target = mapOf(
+                    "reportId" to result.id,
+                    "targetType" to request.targetType,
+                    "targetId" to request.targetId,
+                    "reportedMemberId" to ownerId,
+                ),
+                details = mapOf("reason" to request.reason, "status" to ReportStatus.OPEN, "alsoBlock" to request.alsoBlock),
+            )
+        }
         return result
     }
 
@@ -80,7 +108,11 @@ class ReportService(
      * 신고자 본인의 철회. 레코드는 증거로 남기고 관리자 대기열에서만 뺀다.
      * resolvedBy 는 신고를 처리한 관리자를 가리키는 자리라 본인 철회에는 비워 둔다.
      */
-    fun cancelReport(loginMemberId: Long, reportId: UUID): MyReportDto {
+    fun cancelReport(
+        loginMemberId: Long,
+        reportId: UUID,
+        loginMember: LoginMember? = null,
+    ): MyReportDto {
         val report = contentReportRepository.findById(reportId).orElse(null)
             ?.takeIf { it.reporter?.id == loginMemberId }
             ?: notFound()
@@ -91,6 +123,12 @@ class ReportService(
         report.status = ReportStatus.CANCELED
         report.resolvedAt = LocalDateTime.now()
         slackNotifier.reportCanceled(report)
+        log.auditChangeAfterCommit(
+            "report.canceled", loginMember?.toAuditActor() ?: AuditActor(loginMemberId, report.reporterName),
+            target = mapOf("reportId" to report.id, "targetType" to report.targetType, "targetId" to report.targetId),
+            before = mapOf("status" to ReportStatus.OPEN),
+            after = mapOf("status" to report.status),
+        )
 
         return MyReportDto.of(report)
     }

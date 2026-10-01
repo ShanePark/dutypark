@@ -2,6 +2,9 @@ package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplateDto
@@ -40,16 +43,75 @@ class DutyBatchController(
         if (dutyService.canEdit(loginMember = loginMember, memberId = memberId).not())
             throw AuthException("duty.edit.forbidden")
 
-        val dutyBatchTemplate =
-            memberService.getDutyBatchTemplate(memberId) ?: throw IllegalArgumentException("dutyBatch.template.required")
+        val dutyBatchTemplate = memberService.getDutyBatchTemplate(memberId)
+            ?: throw IllegalArgumentException("dutyBatch.template.required")
 
         val dutyBatchService = applicationContext.getBean(dutyBatchTemplate.batchServiceClass)
+        val yearMonth = YearMonth.of(year, month)
+        val target = mapOf(
+            "type" to "Member",
+            "memberId" to memberId,
+        )
+        val uploadDetails = mapOf(
+            "template" to dutyBatchTemplate.name,
+            "year" to year,
+            "month" to month,
+            "fileName" to file.safeDutyBatchAuditFilename(),
+            "fileSizeBytes" to file.size,
+        )
         return try {
-            dutyBatchService.batchUploadMember(memberId = memberId, file = file, yearMonth = YearMonth.of(year, month))
+            val result = dutyBatchService.batchUploadMember(memberId = memberId, file = file, yearMonth = yearMonth)
+            if (result.result) {
+                log.auditEventAfterCommit(
+                    event = "duty_batch.member_uploaded",
+                    actor = loginMember.toAuditActor(),
+                    target = target,
+                    details = uploadDetails + mapOf(
+                        "startDate" to result.startDate,
+                        "endDate" to result.endDate,
+                        "workingDays" to result.workingDays,
+                        "offDays" to result.offDays,
+                    ),
+                )
+            } else {
+                log.warn(
+                    "Member duty batch upload failed {}",
+                    auditContext(
+                        mapOf(
+                            "event" to "duty_batch.member_upload_failed",
+                            "actor" to loginMember.toAuditActor(),
+                            "target" to target,
+                            "details" to uploadDetails + mapOf(
+                                "errorCode" to result.errorCode,
+                                "errorDetails" to result.errorDetails,
+                            ),
+                        )
+                    ),
+                )
+            }
+            result
         } catch (e: DutyBatchException) {
-            log.warn("Batch duty upload failed: memberId={}, year={}, month={}, error={}", memberId, year, month, e.errorCode)
+            log.warn(
+                "Member duty batch upload failed {}",
+                auditContext(
+                    mapOf(
+                        "event" to "duty_batch.member_upload_failed",
+                        "actor" to loginMember.toAuditActor(),
+                        "target" to target,
+                        "details" to uploadDetails + mapOf(
+                            "errorCode" to e.errorCode,
+                            "errorDetails" to e.errorDetails,
+                        ),
+                    )
+                ),
+            )
             DutyBatchResult.fail(e.errorCode, e.errorDetails)
         }
     }
 
 }
+
+private fun MultipartFile.safeDutyBatchAuditFilename(): String? = originalFilename
+    ?.substringAfterLast('/')
+    ?.substringAfterLast('\\')
+    ?.takeLast(120)

@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.notification.event
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
@@ -11,6 +12,7 @@ import com.tistory.shanepark.dutypark.notification.domain.payload.FamilyRequestR
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestAcceptedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.ActorNotificationPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationActorSnapshot
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleTaggedPayload
@@ -47,20 +49,18 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleFriendRequestSent(event: FriendRequestSentEvent) {
-        try {
-            val payload = FriendRequestReceivedPayload(
+        processNotificationEvent(
+            eventName = "friend_request_sent",
+            eventId = event.requestId,
+            memberId = event.toMemberId,
+            type = NotificationType.FRIEND_REQUEST_RECEIVED,
+            actorId = event.fromMemberId,
+            referenceType = NotificationReferenceType.FRIEND_REQUEST,
+            referenceId = event.requestId.toString(),
+        ) {
+            FriendRequestReceivedPayload(
                 actor = actorSnapshot(event.fromMemberId)
             )
-            createNotificationAndSendPush(
-                memberId = event.toMemberId,
-                type = NotificationType.FRIEND_REQUEST_RECEIVED,
-                actorId = event.fromMemberId,
-                referenceType = NotificationReferenceType.FRIEND_REQUEST,
-                referenceId = event.requestId.toString(),
-                payload = payload,
-            )
-        } catch (e: Exception) {
-            log.error("Failed to create friend request notification: {}", e.message, e)
         }
     }
 
@@ -68,20 +68,17 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleFriendRequestAccepted(event: FriendRequestAcceptedEvent) {
-        try {
-            val payload = FriendRequestAcceptedPayload(
+        processNotificationEvent(
+            eventName = "friend_request_accepted",
+            memberId = event.fromMemberId,
+            type = NotificationType.FRIEND_REQUEST_ACCEPTED,
+            actorId = event.toMemberId,
+            referenceType = NotificationReferenceType.FRIEND_REQUEST,
+            referenceId = null,
+        ) {
+            FriendRequestAcceptedPayload(
                 actor = actorSnapshot(event.toMemberId)
             )
-            createNotificationAndSendPush(
-                memberId = event.fromMemberId,
-                type = NotificationType.FRIEND_REQUEST_ACCEPTED,
-                actorId = event.toMemberId,
-                referenceType = NotificationReferenceType.FRIEND_REQUEST,
-                referenceId = null,
-                payload = payload,
-            )
-        } catch (e: Exception) {
-            log.error("Failed to create friend accepted notification: {}", e.message, e)
         }
     }
 
@@ -89,20 +86,18 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleFamilyRequestSent(event: FamilyRequestSentEvent) {
-        try {
-            val payload = FamilyRequestReceivedPayload(
+        processNotificationEvent(
+            eventName = "family_request_sent",
+            eventId = event.requestId,
+            memberId = event.toMemberId,
+            type = NotificationType.FAMILY_REQUEST_RECEIVED,
+            actorId = event.fromMemberId,
+            referenceType = NotificationReferenceType.FRIEND_REQUEST,
+            referenceId = event.requestId.toString(),
+        ) {
+            FamilyRequestReceivedPayload(
                 actor = actorSnapshot(event.fromMemberId)
             )
-            createNotificationAndSendPush(
-                memberId = event.toMemberId,
-                type = NotificationType.FAMILY_REQUEST_RECEIVED,
-                actorId = event.fromMemberId,
-                referenceType = NotificationReferenceType.FRIEND_REQUEST,
-                referenceId = event.requestId.toString(),
-                payload = payload,
-            )
-        } catch (e: Exception) {
-            log.error("Failed to create family request notification: {}", e.message, e)
         }
     }
 
@@ -110,20 +105,17 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleFamilyRequestAccepted(event: FamilyRequestAcceptedEvent) {
-        try {
-            val payload = FamilyRequestAcceptedPayload(
+        processNotificationEvent(
+            eventName = "family_request_accepted",
+            memberId = event.fromMemberId,
+            type = NotificationType.FAMILY_REQUEST_ACCEPTED,
+            actorId = event.toMemberId,
+            referenceType = NotificationReferenceType.FRIEND_REQUEST,
+            referenceId = null,
+        ) {
+            FamilyRequestAcceptedPayload(
                 actor = actorSnapshot(event.toMemberId)
             )
-            createNotificationAndSendPush(
-                memberId = event.fromMemberId,
-                type = NotificationType.FAMILY_REQUEST_ACCEPTED,
-                actorId = event.toMemberId,
-                referenceType = NotificationReferenceType.FRIEND_REQUEST,
-                referenceId = null,
-                payload = payload,
-            )
-        } catch (e: Exception) {
-            log.error("Failed to create family accepted notification: {}", e.message, e)
         }
     }
 
@@ -131,21 +123,19 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleScheduleTagged(event: ScheduleTaggedEvent) {
-        try {
-            val payload = ScheduleTaggedPayload(
+        processNotificationEvent(
+            eventName = "schedule_tagged",
+            eventId = event.scheduleId,
+            memberId = event.taggedMemberId,
+            type = NotificationType.SCHEDULE_TAGGED,
+            actorId = event.ownerId,
+            referenceType = NotificationReferenceType.SCHEDULE,
+            referenceId = event.scheduleId.toString(),
+        ) {
+            ScheduleTaggedPayload(
                 actor = actorSnapshot(event.ownerId),
                 scheduleTitle = event.scheduleTitle,
             )
-            createNotificationAndSendPush(
-                memberId = event.taggedMemberId,
-                type = NotificationType.SCHEDULE_TAGGED,
-                actorId = event.ownerId,
-                referenceType = NotificationReferenceType.SCHEDULE,
-                referenceId = event.scheduleId.toString(),
-                payload = payload,
-            )
-        } catch (e: Exception) {
-            log.error("Failed to create schedule tagged notification: {}", e.message, e)
         }
     }
 
@@ -153,21 +143,19 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleTodoTagged(event: TodoTaggedEvent) {
-        try {
-            val payload = TodoTaggedPayload(
+        processNotificationEvent(
+            eventName = "todo_tagged",
+            eventId = event.todoId,
+            memberId = event.taggedMemberId,
+            type = NotificationType.TODO_TAGGED,
+            actorId = event.ownerId,
+            referenceType = NotificationReferenceType.TODO,
+            referenceId = event.todoId.toString(),
+        ) {
+            TodoTaggedPayload(
                 actor = actorSnapshot(event.ownerId),
                 todoTitle = event.todoTitle,
             )
-            createNotificationAndSendPush(
-                memberId = event.taggedMemberId,
-                type = NotificationType.TODO_TAGGED,
-                actorId = event.ownerId,
-                referenceType = NotificationReferenceType.TODO,
-                referenceId = event.todoId.toString(),
-                payload = payload,
-            )
-        } catch (e: Exception) {
-            log.error("Failed to create todo tagged notification: {}", e.message, e)
         }
     }
 
@@ -175,18 +163,16 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleTodoStatusChanged(event: TodoStatusChangedEvent) {
-        try {
-            val payload = getTodoStatusPayload(event.actorId, event.todoTitle, event.newStatus)
-            createNotificationAndSendPush(
-                memberId = event.recipientMemberId,
-                type = getTodoStatusChangedNotificationType(event.newStatus),
-                actorId = event.actorId,
-                referenceType = NotificationReferenceType.TODO,
-                referenceId = event.todoId.toString(),
-                payload = payload,
-            )
-        } catch (e: Exception) {
-            log.error("Failed to create todo status changed notification: {}", e.message, e)
+        processNotificationEvent(
+            eventName = "todo_status_changed",
+            eventId = event.todoId,
+            memberId = event.recipientMemberId,
+            type = getTodoStatusChangedNotificationType(event.newStatus),
+            actorId = event.actorId,
+            referenceType = NotificationReferenceType.TODO,
+            referenceId = event.todoId.toString(),
+        ) {
+            getTodoStatusPayload(event.actorId, event.todoTitle, event.newStatus)
         }
     }
 
@@ -194,42 +180,116 @@ class NotificationEventListener(
     @Async("notificationExecutor")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun handleInquiryAnswered(event: InquiryAnsweredEvent) {
-        try {
-            createNotificationAndSendPush(
-                memberId = event.memberId,
-                type = NotificationType.INQUIRY_ANSWERED,
-                actorId = null,
-                referenceType = NotificationReferenceType.INQUIRY,
-                referenceId = event.inquiryId.toString(),
-                payload = InquiryAnsweredPayload(subject = event.subject),
-            )
-        } catch (e: Exception) {
-            log.error("Failed to create inquiry answered notification: {}", e.message, e)
+        processNotificationEvent(
+            eventName = "inquiry_answered",
+            eventId = event.inquiryId,
+            memberId = event.memberId,
+            type = NotificationType.INQUIRY_ANSWERED,
+            actorId = null,
+            referenceType = NotificationReferenceType.INQUIRY,
+            referenceId = event.inquiryId.toString(),
+        ) {
+            InquiryAnsweredPayload(subject = event.subject)
         }
     }
 
-    private fun createNotificationAndSendPush(
+    private fun processNotificationEvent(
+        eventName: String,
+        eventId: Any? = null,
         memberId: Long,
         type: NotificationType,
         actorId: Long?,
         referenceType: NotificationReferenceType?,
         referenceId: String?,
-        payload: NotificationPayload,
+        payloadFactory: () -> NotificationPayload,
     ) {
-        if (actorId != null && blockService.isBlockedEitherWay(actorId, memberId)) {
-            log.info("Skip {} notification because member {} and actor {} are blocked", type, memberId, actorId)
-            return
-        }
+        var payload: NotificationPayload? = null
+        var notificationId: Any? = null
+        try {
+            payload = payloadFactory()
+            val actorName = (payload as? ActorNotificationPayload)?.actor?.name
+            if (actorId != null && blockService.isBlockedEitherWay(actorId, memberId)) {
+                log.info(
+                    "Notification skipped for blocked members: {}",
+                    auditContext(
+                        mapOf(
+                            "event" to eventName,
+                            "eventId" to eventId,
+                            "notificationType" to type,
+                            "recipientMemberId" to memberId,
+                            "actorMemberId" to actorId,
+                            "actorName" to actorName,
+                            "referenceType" to referenceType,
+                            "referenceId" to referenceId,
+                            "reason" to "blocked_members",
+                        )
+                    ),
+                )
+                return
+            }
 
-        val notification = notificationService.createNotification(
-            memberId = memberId,
-            type = type,
-            actorId = actorId,
-            referenceType = referenceType,
-            referenceId = referenceId,
-            payload = payload,
+            val notification = notificationService.createNotification(
+                memberId = memberId,
+                type = type,
+                actorId = actorId,
+                referenceType = referenceType,
+                referenceId = referenceId,
+                payload = payload,
+            )
+            notificationId = notification.id
+            sendPushNotification(notification, NotificationDto.of(notification, payload))
+        } catch (e: Exception) {
+            logNotificationFailure(
+                eventName = eventName,
+                eventId = eventId,
+                notificationId = notificationId,
+                memberId = memberId,
+                type = type,
+                actorId = actorId,
+                actorName = (payload as? ActorNotificationPayload)?.actor?.name,
+                referenceType = referenceType,
+                referenceId = referenceId,
+                error = e,
+            )
+        }
+    }
+
+    private fun logNotificationFailure(
+        eventName: String,
+        eventId: Any?,
+        notificationId: Any?,
+        memberId: Long,
+        type: NotificationType,
+        actorId: Long?,
+        actorName: String?,
+        referenceType: NotificationReferenceType?,
+        referenceId: String?,
+        error: Exception,
+    ) {
+        val causes = generateSequence(error as Throwable?) { it.cause }.take(5).toList()
+        val stackFrames = causes.flatMap { cause ->
+            cause.stackTrace.take(8).map { frame ->
+                "${frame.className}.${frame.methodName}:${frame.lineNumber}"
+            }
+        }.take(24)
+        log.error(
+            "Notification event processing failed: {}",
+            auditContext(
+                mapOf(
+                    "event" to eventName,
+                    "eventId" to eventId,
+                    "notificationId" to notificationId,
+                    "notificationType" to type,
+                    "recipientMemberId" to memberId,
+                    "actorMemberId" to actorId,
+                    "actorName" to actorName,
+                    "referenceType" to referenceType,
+                    "referenceId" to referenceId,
+                    "causeTypes" to causes.map { it.javaClass.simpleName },
+                    "stackFrames" to stackFrames,
+                )
+            ),
         )
-        sendPushNotification(notification, NotificationDto.of(notification, payload))
     }
 
     private fun sendPushNotification(notification: Notification, notificationDto: NotificationDto) {

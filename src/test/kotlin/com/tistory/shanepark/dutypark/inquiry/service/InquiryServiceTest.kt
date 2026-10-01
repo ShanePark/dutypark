@@ -1,8 +1,13 @@
 package com.tistory.shanepark.dutypark.inquiry.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.inquiry.config.InquiryRateLimitConfig
+import com.tistory.shanepark.dutypark.inquiry.domain.dto.CreateInquiryRequest
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.UpdateInquiryStatusRequest
 import com.tistory.shanepark.dutypark.inquiry.domain.entity.Inquiry
+import com.tistory.shanepark.dutypark.inquiry.domain.entity.InquiryRateLimitLock
 import com.tistory.shanepark.dutypark.inquiry.domain.enums.InquiryStatus
 import com.tistory.shanepark.dutypark.inquiry.repository.InquiryRateLimitLockRepository
 import com.tistory.shanepark.dutypark.inquiry.repository.InquiryRepository
@@ -10,6 +15,12 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.event.InquiryAnsweredEvent
 import jakarta.persistence.LockModeType
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.util.Optional
+import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -19,15 +30,10 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.test.util.ReflectionTestUtils
-import java.time.Clock
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.util.Optional
-import java.util.UUID
 
 class InquiryServiceTest {
 
@@ -48,6 +54,48 @@ class InquiryServiceTest {
     )
 
     private val adminId = 99L
+
+    @Test
+    fun `guest inquiry submission audit excludes email subject content and IP`() {
+        whenever(rateLimitLockRepository.findByIdForUpdate(any())).thenReturn(Optional.of(
+            InquiryRateLimitLock(0)
+        ))
+        whenever(inquiryRepository.save(org.mockito.kotlin.any<Inquiry>())).thenAnswer { it.getArgument<Inquiry>(0) }
+        val logger = LoggerFactory.getLogger(InquiryService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            val result = inquiryService.createInquiry(null,
+                CreateInquiryRequest(
+                    email = "private@example.test", subject = "private subject", content = "private content",
+                ), "192.0.2.10")
+            assertThat(appender.list).hasSize(1)
+            assertThat(appender.list.single().formattedMessage).contains("inquiry.created", result.id.toString(), "\"actor\":null")
+                .doesNotContain("private@example.test", "private subject", "private content", "192.0.2.10")
+        } finally {
+            logger.detachAppender(appender)
+        }
+    }
+
+    @Test
+    fun `inquiry response audit records changes without private text and omits unchanged response`() {
+        val inquiry = inquiry(member = null, subject = "private subject")
+        whenever(inquiryRepository.findByIdForUpdate(inquiry.id)).thenReturn(Optional.of(inquiry))
+        val logger = LoggerFactory.getLogger(InquiryService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            val request = UpdateInquiryStatusRequest(status = InquiryStatus.CLOSED, memo = "private memo", answer = "private answer")
+            inquiryService.changeStatus(inquiry.id, request, adminId)
+            inquiryService.changeStatus(inquiry.id, request, adminId)
+            val messages = appender.list.map { it.formattedMessage }
+            assertThat(messages).hasSize(1)
+            assertThat(messages.single()).contains("inquiry.updated", inquiry.id.toString(), "\"id\":99", "OPEN", "CLOSED", "answerChanged")
+                .doesNotContain("private subject", "private memo", "private answer", "tester@dutypark.o-r.kr", "문의 내용")
+        } finally {
+            logger.detachAppender(appender)
+        }
+    }
 
     @Test
     fun `first answer publishes inquiry answered event only once`() {

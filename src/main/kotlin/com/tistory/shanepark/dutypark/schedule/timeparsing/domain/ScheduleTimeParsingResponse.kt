@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.domain
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+
 data class ScheduleTimeParsingResponse(
     val result: Boolean = false,
     val hasTime: Boolean = false,
@@ -8,11 +11,24 @@ data class ScheduleTimeParsingResponse(
     val content: String? = null,
     val errorMessage: String? = null,
     val rawResponse: String? = null,
+    @get:JsonIgnore
+    val errorType: String? = null,
 ) {
-    fun toLogMessage(request: ScheduleTimeParsingRequest): String {
-        return "date=${request.date}, content='${request.content}' -> '${contentForLog()}', " +
-                "time=${parsedTimeForLog()}, hasTime=$hasTime, result=$result"
-    }
+    fun toLogMessage(
+        request: ScheduleTimeParsingRequest,
+        context: Map<String, Any?> = emptyMap(),
+    ): String = auditContext(
+        context + linkedMapOf(
+            "date" to request.date,
+            "contentBefore" to request.content,
+            "contentAfter" to contentForLog(),
+            "time" to parsedTimeForLog(),
+            "hasTime" to hasTime,
+            "result" to result,
+            "errorType" to errorType,
+            "rawResponse" to rawResponse,
+        )
+    )
 
     private fun contentForLog(): String {
         return content ?: "<null>"

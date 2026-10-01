@@ -1,10 +1,9 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.config.AiProperties
+import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeIndicator
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
-import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeIndicator
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.openai.OpenAiChatOptions
@@ -29,10 +28,8 @@ class ScheduleTimeParsingService(
                 .maxRetries(maxRetries)
         )
         .build()
-    private val log = logger()
-
     fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
-        val response = if (!ScheduleTimeIndicator.existsIn(request.content)) {
+        return if (!ScheduleTimeIndicator.existsIn(request.content)) {
             ScheduleTimeParsingResponse(
                 result = true,
                 hasTime = false,
@@ -41,9 +38,6 @@ class ScheduleTimeParsingService(
         } else {
             parseScheduleTimeWithLlm(request)
         }
-
-        log.info("Time parsing result: {}", response.toLogMessage(request))
-        return response
     }
 
     private fun parseScheduleTimeWithLlm(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {
@@ -73,11 +67,11 @@ class ScheduleTimeParsingService(
         return try {
             jsonMapper.readValue(json, ScheduleTimeParsingResponse::class.java)
         } catch (e: Exception) {
-            log.warn("Failed to parse JSON: {}", json, e)
             ScheduleTimeParsingResponse(
                 result = false,
                 errorMessage = e.message,
-                rawResponse = json.take(500)
+                rawResponse = json.take(500),
+                errorType = e.javaClass.simpleName,
             )
         }
     }

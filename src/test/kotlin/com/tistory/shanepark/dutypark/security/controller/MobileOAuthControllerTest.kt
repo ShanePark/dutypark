@@ -1,8 +1,12 @@
 package com.tistory.shanepark.dutypark.security.controller
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSocialAccount
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
+import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSocialAccountRepository
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoTokenApi
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoTokenResponse
@@ -16,6 +20,7 @@ import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoResponse
 import com.tistory.shanepark.dutypark.security.oauth.apple.AppleNativeOAuthService
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthExchangeResponse
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthExchangeResult
+import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthService
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
@@ -23,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
@@ -43,7 +49,11 @@ import java.security.MessageDigest
 import java.util.Base64
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.clearInvocations
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 
 @AutoConfigureMockMvc
 @TestPropertySource(properties = ["oauth.kakao.app-id="])
@@ -55,6 +65,9 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var memberSocialAccountRepository: MemberSocialAccountRepository
+
+    @MockitoSpyBean
+    lateinit var memberRepositorySpy: MemberRepository
 
     @MockitoBean
     lateinit var appleNativeOAuthService: AppleNativeOAuthService
@@ -308,14 +321,28 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
     fun `mobile oauth redirects provider failure to the app and consumes state`() {
         val verifier = "h".repeat(43)
         val state = URI.create(authorize("KAKAO", verifier)).queryParam("state")
+        val events = captureMobileOAuthLogs {
+            mockMvc.perform(
+                get("/api/auth/mobile/oauth/callback/kakao")
+                    .param("code", "provider-failure")
+                    .param("state", state)
+            )
+                .andExpect(status().isFound)
+                .andExpect(header().string(HttpHeaders.LOCATION, "dutypark://oauth/callback?error=provider_failed"))
+        }
 
-        mockMvc.perform(
-            get("/api/auth/mobile/oauth/callback/kakao")
-                .param("code", "provider-failure")
-                .param("state", state)
-        )
-            .andExpect(status().isFound)
-            .andExpect(header().string(HttpHeaders.LOCATION, "dutypark://oauth/callback?error=provider_failed"))
+        assertThat(events).hasSize(1)
+        assertThat(events.single().formattedMessage)
+            .contains("\"operation\":\"authorization_code_exchange\"")
+            .contains("\"flow\":\"mobile_callback\"")
+            .contains("\"transactionId\":")
+            .contains("\"clientId\":")
+            .contains("\"provider\":\"KAKAO\"")
+            .contains("\"httpStatus\":null")
+            .contains("IllegalStateException")
+            .doesNotContain(state, "provider-failure", "provider failed")
+        assertThat(events.single().throwableProxy).isNull()
+        verify(memberRepositorySpy, never()).findById(any())
 
         mockMvc.perform(
             get("/api/auth/mobile/oauth/callback/kakao")
@@ -324,6 +351,46 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
         )
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("auth.oauth.mobile.state.invalid"))
+    }
+
+    @Test
+    fun `mobile oauth provider failure logs authenticated member id without member lookup`() {
+        val verifier = "j".repeat(43)
+        val state = URI.create(
+            authorize("KAKAO", verifier, purpose = "LINK", bearer = getJwt(TestData.member))
+        ).queryParam("state")
+        clearInvocations(memberRepositorySpy)
+
+        val events = captureMobileOAuthLogs {
+            mockMvc.perform(
+                get("/api/auth/mobile/oauth/callback/kakao")
+                    .param("code", "provider-failure")
+                    .param("state", state)
+            )
+                .andExpect(status().isFound)
+                .andExpect(header().string(HttpHeaders.LOCATION, "dutypark://oauth/callback?error=provider_failed"))
+        }
+
+        val message = events.single().formattedMessage
+        assertThat(message)
+            .contains("\"authenticatedMemberId\":${TestData.member.id}")
+            .doesNotContain("\"authenticatedMemberName\"", "\"memberLookupExceptionType\"")
+            .doesNotContain(state, "provider-failure", "provider failed", TestData.member.email)
+        assertThat(events.single().throwableProxy).isNull()
+        verify(memberRepositorySpy, never()).findById(any())
+    }
+
+    private fun captureMobileOAuthLogs(block: () -> Unit): List<ILoggingEvent> {
+        val serviceLogger = LoggerFactory.getLogger(MobileOAuthService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        serviceLogger.addAppender(appender)
+        try {
+            block()
+            return appender.list.toList()
+        } finally {
+            serviceLogger.detachAppender(appender)
+            appender.stop()
+        }
     }
 
     private fun authorize(

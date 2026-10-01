@@ -6,39 +6,66 @@ import Foundation
 ///
 /// The grid sits inside a vertical scroll view and its cells are tappable, so the
 /// gesture has to stay a passenger: it only claims a drag that is clearly sideways,
-/// and while the finger is down it lets the grid follow only a short, damped distance.
+/// and leaves vertical travel to the enclosing scroll view.
 nonisolated enum CalendarMonthSwipe {
-    /// How far the finger has to travel sideways before lifting it changes the month.
-    static let threshold: CGFloat = 56
+    /// A deliberate page drag covers about a third of the calendar's width.
+    static let releaseDistanceFraction: CGFloat = 1.0 / 3.0
 
-    /// A vertical scroll drifts sideways as the thumb rolls, so the horizontal travel
-    /// has to beat the vertical travel by this much before the drag counts as a swipe.
-    static let verticalTolerance: CGFloat = 28
+    /// A quick flick can page before reaching the distance threshold, but only after
+    /// the finger has moved far enough to distinguish a swipe from a small adjustment.
+    static let minimumFlickTravel: CGFloat = 24
+    static let outwardFlickVelocity: CGFloat = 650
+    static let minimumInwardReleaseVelocity: CGFloat = 80
 
-    /// The furthest the grid follows the finger. A drag that turns out to be a scroll
-    /// therefore never pulls the calendar meaningfully off its column.
-    static let maximumFollowDistance: CGFloat = 72
-
-    static let slideOutDuration: TimeInterval = 0.16
+    static let slideOutDuration: TimeInterval = 0.22
     static let slideInDuration: TimeInterval = 0.22
 
-    /// The month offset a finished drag asks for: `-1` for the previous month when the
-    /// finger travelled left to right, `+1` for the next month, and `0` when the drag
-    /// was too short or too vertical to be a month swipe.
-    static func monthOffset(translation: CGSize) -> Int {
-        guard abs(translation.width) >= threshold,
-              abs(translation.width) > abs(translation.height) + verticalTolerance
-        else { return 0 }
+    /// The resting position of the three-page body track, with the current month
+    /// centered and its neighbours exactly one viewport away.
+    static func trackOffset(width: CGFloat, drag: CGFloat) -> CGFloat {
+        -width + drag
+    }
+
+    /// The destination after a committed swipe: `+1` moves the next slot to center,
+    /// while `-1` moves the previous slot to center.
+    static func settledTrackOffset(width: CGFloat, monthOffset: Int) -> CGFloat {
+        monthOffset > 0 ? -2 * width : monthOffset < 0 ? 0 : -width
+    }
+
+    /// The month offset a finished horizontal pan asks for. Once the recognizer has
+    /// classified the gesture as horizontal, vertical drift no longer changes the
+    /// decision. A short release commits only when it was a quick outward flick; a
+    /// deliberate inward release settles back to the current month.
+    static func monthOffset(translation: CGSize, velocity: CGSize, viewportWidth: CGFloat) -> Int {
+        guard viewportWidth > 0, translation.width != 0 else { return 0 }
+        let isClearlyReturning = translation.width * velocity.width < 0
+            && abs(velocity.width) >= minimumInwardReleaseVelocity
+        guard !isClearlyReturning else { return 0 }
+
+        let travel = abs(translation.width)
+        let reachedReleaseDistance = travel >= viewportWidth * releaseDistanceFraction
+        let madeOutwardFlick = travel >= minimumFlickTravel
+            && abs(velocity.width) >= outwardFlickVelocity
+            && translation.width * velocity.width > 0
+        guard reachedReleaseDistance || madeOutwardFlick else { return 0 }
+
         return translation.width > 0 ? -1 : 1
     }
 
-    /// How far the grid sits from its column while the finger is down. The travel is
-    /// rubber-banded towards `maximumFollowDistance`: the first few points follow the
-    /// finger almost exactly, and a long drag stops well before the grid leaves.
-    static func followOffset(translation: CGSize) -> CGFloat {
-        guard abs(translation.width) > abs(translation.height) else { return 0 }
-        let magnitude = maximumFollowDistance
-            * (1 - exp(-abs(translation.width) / maximumFollowDistance))
-        return translation.width < 0 ? -magnitude : magnitude
+    /// Once UIKit has started a horizontal pan, the month track follows only its
+    /// horizontal translation. Later vertical drift must not make the page jump back.
+    static func followOffset(translation: CGSize, viewportWidth: CGFloat) -> CGFloat {
+        guard viewportWidth > 0 else { return 0 }
+        return min(max(translation.width, -viewportWidth), viewportWidth)
+    }
+}
+
+/// Hold the surrounding layout still until the month swipe completes. Adjacent
+/// pages can load taller content while the finger reverses or cancels its drag.
+nonisolated struct CalendarMonthBodyViewport {
+    let height: CGFloat
+
+    init(sourceHeight: CGFloat) {
+        height = sourceHeight
     }
 }

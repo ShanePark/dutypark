@@ -7,6 +7,8 @@ import com.tistory.shanepark.dutypark.team.domain.dto.TeamDto
 import com.tistory.shanepark.dutypark.team.domain.enums.TeamNameCheckResult
 import com.tistory.shanepark.dutypark.team.domain.enums.TeamNameCheckResult.*
 import com.tistory.shanepark.dutypark.team.service.TeamService
+import com.tistory.shanepark.dutypark.member.domain.annotation.Login
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.validation.Valid
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
@@ -27,8 +29,8 @@ class TeamAdminController(
     }
 
     @PostMapping
-    fun create(@RequestBody @Valid teamCreateDto: TeamCreateDto): TeamDto {
-        return teamService.create(teamCreateDto)
+    fun create(@RequestBody @Valid teamCreateDto: TeamCreateDto, @Login actor: LoginMember? = null): TeamDto {
+        return teamService.create(teamCreateDto, actor = actor)
     }
 
     @PostMapping("/check")
@@ -44,8 +46,8 @@ class TeamAdminController(
     }
 
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long) {
-        teamService.delete(id)
+    fun delete(@PathVariable id: Long, @Login actor: LoginMember? = null) {
+        teamService.delete(id, actor = actor)
     }
 
 }

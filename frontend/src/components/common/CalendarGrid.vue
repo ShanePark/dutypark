@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
+import { dutyCalendarWeekendColor } from '@/utils/dutyTypePalette'
 import { getCalendarGridSlice } from '@/utils/calendarGrid'
 import type { HolidayDto } from '@/types'
 
@@ -116,8 +117,8 @@ function getBackgroundColor(day: CalendarDay): string {
 
 function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
   const bgColor = props.getDutyColor(day)
-  if (dayOfWeek === 0) return 'var(--dp-sunday)'
-  if (dayOfWeek === 6) return 'var(--dp-saturday)'
+  if (dayOfWeek === 0) return dutyCalendarWeekendColor(bgColor, 'sunday')
+  if (dayOfWeek === 6) return dutyCalendarWeekendColor(bgColor, 'saturday')
   if (bgColor) {
     return isLightColor(bgColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
   }
@@ -125,7 +126,7 @@ function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
 }
 
 function getHolidayColor(day: CalendarDay, holiday: HolidayDto): string {
-  if (holiday.isHoliday) return 'var(--dp-sunday)'
+  if (holiday.isHoliday) return dutyCalendarWeekendColor(props.getDutyColor(day), 'sunday')
   const bgColor = props.getDutyColor(day)
   if (bgColor) {
     return isLightColor(bgColor) ? 'var(--dp-text-muted)' : 'var(--dp-text-on-dark-muted)'

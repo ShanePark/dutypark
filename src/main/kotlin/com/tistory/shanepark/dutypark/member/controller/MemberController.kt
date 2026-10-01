@@ -57,7 +57,7 @@ class MemberController(
         @Login loginMember: LoginMember,
         @PathVariable managerId: Long,
     ) {
-        memberService.assignManager(managerId = managerId, managedId = loginMember.id)
+        memberService.assignManager(managerId = managerId, managedId = loginMember.id, actor = loginMember)
     }
 
     @DeleteMapping("/manager/{managerId}")
@@ -65,7 +65,7 @@ class MemberController(
         @Login loginMember: LoginMember,
         @PathVariable managerId: Long,
     ) {
-        memberService.unassignManager(managerId = managerId, managedId = loginMember.id)
+        memberService.unassignManager(managerId = managerId, managedId = loginMember.id, actor = loginMember)
     }
 
     @GetMapping("/family")

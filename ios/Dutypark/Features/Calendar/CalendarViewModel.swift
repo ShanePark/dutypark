@@ -278,24 +278,35 @@ final class CalendarViewModel: ObservableObject {
     /// returns to the calendar tab. Team management can change duty colors while
     /// this tab remains mounted, so its in-memory month must not be reused.
     func refreshAfterCalendarTabReturn() async {
-        guard let currentMember = me, isMyCalendar else { return }
+        guard let currentMember = me, isMyCalendar, !isLoading else { return }
+        guard days.count == 42,
+              days.contains(where: { $0.cell.isCurrentMonth && $0.cell.year == year && $0.cell.month == month })
+        else {
+            await load()
+            return
+        }
         identityLoadGeneration &+= 1
         monthLoadGeneration += 1
         invalidatePrefetch()
 
         let identityGeneration = identityLoadGeneration
+        let refreshMonthGeneration = monthLoadGeneration
         let accountID = currentMember.id
-        isLoading = true
+        // The displayed month stays interactive during a tab refresh. A foreground
+        // month request supersedes this refresh and owns its own loading lock.
         errorMessage = nil
-        defer { isLoading = false }
+
+        func isCurrentRefresh(monthGeneration: Int) -> Bool {
+            isCurrentIdentityLoad(identityGeneration, accountID: accountID)
+                && isMyCalendar
+                && monthLoadGeneration == monthGeneration
+        }
 
         var teamRefreshFailed = false
         if let teamID = currentMember.teamId {
             do {
                 let refreshedTeam = try await repository.team(id: teamID)
-                guard isCurrentIdentityLoad(identityGeneration, accountID: accountID),
-                      isMyCalendar
-                else { return }
+                guard isCurrentRefresh(monthGeneration: refreshMonthGeneration) else { return }
                 team = refreshedTeam
             } catch is CancellationError {
                 return
@@ -305,15 +316,18 @@ final class CalendarViewModel: ObservableObject {
         } else {
             team = nil
         }
+        guard isCurrentRefresh(monthGeneration: refreshMonthGeneration) else { return }
 
         do {
             try await loadMonth(forceOnlineRequest: true)
         } catch is CancellationError {
             return
         } catch {
+            guard isCurrentRefresh(monthGeneration: refreshMonthGeneration + 1) else { return }
             errorMessage = CalendarLocalization.text("calendar.error.load")
             return
         }
+        guard isCurrentRefresh(monthGeneration: refreshMonthGeneration + 1) else { return }
 
         if teamRefreshFailed {
             errorMessage = CalendarLocalization.text("calendar.error.load")
@@ -765,6 +779,40 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
+    /// Reads an adjacent month for the swipe preview without changing the active
+    /// month request or its loading state. Only the account owner's month cache is
+    /// valid here; another member's calendar must use date-only placeholder cells.
+    func cachedMonthPreview(year: Int, month: Int) async -> [CalendarDayContent]? {
+        guard let memberID = targetMemberID,
+              isMyCalendar,
+              let accountID = cacheAccountID,
+              accountID == memberID
+        else { return nil }
+
+        let comparisonIDs = activeComparedMemberIDs
+        let key = OfflineMonthKey(year: year, month: month)
+        guard let snapshot = await cache.loadMonth(accountID: accountID, key: key),
+              snapshot.accountID == accountID,
+              snapshot.key == key,
+              snapshot.isCurrentSchema,
+              targetMemberID == memberID,
+              cacheAccountID == accountID,
+              isMyCalendar,
+              activeComparedMemberIDs == comparisonIDs
+        else { return nil }
+
+        let compared = snapshot.comparedMemberIDs == comparisonIDs
+            ? snapshot.otherDuties.filter { comparisonIDs.contains($0.memberId) }
+            : []
+        return makeMonthDays(
+            cells: CalendarDateSupport.cells(year: year, month: month, serverDays: snapshot.calendar),
+            schedules: snapshot.schedules,
+            duties: snapshot.duties,
+            holidays: snapshot.holidays,
+            compared: compared
+        )
+    }
+
     private func applyMonth(
         year: Int,
         month: Int,
@@ -777,10 +825,27 @@ final class CalendarViewModel: ObservableObject {
     ) {
         let cells = CalendarDateSupport.cells(year: year, month: month, serverDays: calendar)
         guard cells.count == 42 else { return }
-        let activeTodos = (todoBoard?.todo ?? []) + (todoBoard?.inProgress ?? [])
         let pinKey = pinnedDDayKey(memberID)
         pinnedDDayID = UserDefaults.standard.object(forKey: pinKey) == nil ? nil : Int64(UserDefaults.standard.integer(forKey: pinKey))
-        days = cells.enumerated().map { index, cell in
+        days = makeMonthDays(
+            cells: cells,
+            schedules: schedules,
+            duties: duties,
+            holidays: holidays,
+            compared: compared
+        )
+        rebindPresentedDays()
+    }
+
+    private func makeMonthDays(
+        cells: [CalendarCell],
+        schedules: [[ScheduleDTO]],
+        duties: [DutyDTO],
+        holidays: [[HolidayDTO]],
+        compared: [OtherDutyResponse]
+    ) -> [CalendarDayContent] {
+        let activeTodos = (todoBoard?.todo ?? []) + (todoBoard?.inProgress ?? [])
+        return cells.enumerated().map { index, cell in
             CalendarDayContent(
                 cell: cell,
                 duty: duties.first { $0.year == cell.year && $0.month == cell.month && $0.day == cell.day },
@@ -802,7 +867,6 @@ final class CalendarViewModel: ObservableObject {
                 }
             )
         }
-        rebindPresentedDays()
     }
 
     /// Refreshes the rolling thirteen-month self-calendar without delaying the
@@ -1326,11 +1390,15 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
-    func changeMonth(by offset: Int) async {
+    @discardableResult
+    func changeMonth(by offset: Int) async -> Bool {
+        guard !isLoading else { return false }
+        let previousYear = year
+        let previousMonth = month
         var components = DateComponents(year: year, month: month, day: 1)
         guard let date = CalendarDateSupport.calendar.date(from: components),
               let changed = CalendarDateSupport.calendar.date(byAdding: .month, value: offset, to: date)
-        else { return }
+        else { return false }
         components = CalendarDateSupport.calendar.dateComponents([.year, .month], from: changed)
         let nextYear = components.year ?? year
         let nextMonth = components.month ?? month
@@ -1339,11 +1407,20 @@ final class CalendarViewModel: ObservableObject {
             fromMonth: month,
             toYear: nextYear,
             toMonth: nextMonth
-        ) != nil else { return }
+        ) != nil else { return false }
         year = nextYear
         month = nextMonth
         emit(.routine)
         await reloadMonth()
+        guard year == nextYear, month == nextMonth else { return false }
+        guard days.contains(where: {
+            $0.cell.isCurrentMonth && $0.cell.year == nextYear && $0.cell.month == nextMonth
+        }) else {
+            year = previousYear
+            month = previousMonth
+            return false
+        }
+        return true
     }
 
     func goToToday(emitFeedback: Bool = true) async {

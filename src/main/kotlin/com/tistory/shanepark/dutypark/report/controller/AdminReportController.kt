@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.report.domain.enums.ReportStatus
 import com.tistory.shanepark.dutypark.report.service.AdminReportService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.validation.Valid
+import java.util.*
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -19,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import java.util.*
 
 @RestController
 @RequestMapping("/admin/api/reports")
@@ -52,14 +52,16 @@ class AdminReportController(
             reportId = reportId,
             adminMemberId = loginMember.id,
             request = request,
+            loginMember = loginMember,
         )
     }
 
     @DeleteMapping("/{reportId}/target")
     fun deleteTarget(
+        @Login loginMember: LoginMember,
         @PathVariable reportId: UUID,
     ): AdminReportDetailDto {
-        return adminReportService.deleteTarget(reportId)
+        return adminReportService.deleteTarget(reportId, loginMember = loginMember)
     }
 
     /** An omitted or `ALL` status means "every report"; anything else must name a [ReportStatus]. */

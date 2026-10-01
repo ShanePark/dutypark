@@ -1,7 +1,12 @@
 package com.tistory.shanepark.dutypark.push.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
+import com.tistory.shanepark.dutypark.notification.domain.payload.ActorNotificationPayload
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.dto.PushSubscriptionRequest
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
@@ -24,11 +29,15 @@ class WebPushService(
 
     fun isEnabled(): Boolean = pushService != null
 
-    fun subscribe(refreshToken: RefreshToken, request: PushSubscriptionRequest): Boolean {
+    fun subscribe(refreshToken: RefreshToken, request: PushSubscriptionRequest, actor: AuditActor? = null): Boolean {
         if (!isEnabled()) return false
 
+        val subscriptionChanged = refreshToken.pushEndpoint != request.endpoint ||
+            refreshToken.pushP256dh != request.keys.p256dh || refreshToken.pushAuth != request.keys.auth
+        var reassignedFromRefreshTokenId: Long? = null
         refreshTokenRepository.findByPushEndpoint(request.endpoint)?.let { existingToken ->
             if (existingToken.id != refreshToken.id) {
+                reassignedFromRefreshTokenId = existingToken.id
                 existingToken.unsubscribePush()
                 refreshTokenRepository.saveAndFlush(existingToken)
             }
@@ -40,15 +49,27 @@ class WebPushService(
             auth = request.keys.auth,
         )
         refreshTokenRepository.save(refreshToken)
+        if (subscriptionChanged || reassignedFromRefreshTokenId != null) {
+            log.auditEventAfterCommit(
+                event = "web_push_subscription_registered",
+                actor = actor,
+                target = mapOf("memberId" to refreshToken.member.id, "refreshTokenId" to refreshToken.id),
+                details = mapOf("reassignedFromRefreshTokenId" to reassignedFromRefreshTokenId),
+            )
+        }
         return true
     }
 
-    fun unsubscribe(refreshToken: RefreshToken): Boolean {
+    fun unsubscribe(refreshToken: RefreshToken, actor: AuditActor? = null): Boolean {
         if (!refreshToken.hasPushSubscription()) return false
 
         refreshToken.unsubscribePush()
         refreshTokenRepository.save(refreshToken)
-        log.info("Push subscription removed for token {}", refreshToken.id)
+        log.auditEventAfterCommit(
+            event = "web_push_subscription_removed",
+            actor = actor ?: refreshToken.member.toAuditActor(),
+            target = mapOf("refreshTokenId" to refreshToken.id),
+        )
         return true
     }
 
@@ -65,15 +86,21 @@ class WebPushService(
         tokens.forEach { token ->
             try {
                 if (token.pushEndpoint.isNullOrBlank() || token.pushP256dh.isNullOrBlank() || token.pushAuth.isNullOrBlank()) {
-                    log.warn("Push subscription data missing for token {}, removing", token.id)
                     token.unsubscribePush()
                     refreshTokenRepository.save(token)
+                    log.warn(
+                        "Incomplete Web Push subscription removed: {}",
+                        auditContext(pushContext("web_push_subscription_removed_incomplete", memberId, token, payload)),
+                    )
                     return@forEach
                 }
                 val payloadJson = serializePayload(memberId, token, payload) ?: return@forEach
-                sendNotification(token, payloadJson)
+                sendNotification(token, memberId, payload, payloadJson)
             } catch (e: Exception) {
-                log.error("Failed to send push to token {}: {}", token.id, e.message)
+                log.error(
+                    "Web Push delivery failed: {}",
+                    auditContext(pushContext("web_push_delivery_failed", memberId, token, payload) + safeFailureContext(e)),
+                )
                 handleSendError(token, e)
             }
         }
@@ -83,12 +110,20 @@ class WebPushService(
         return try {
             objectMapper.writeValueAsString(payload)
         } catch (e: Exception) {
-            log.error("Failed to serialize push payload for member {} token {}: {}", memberId, token.id, e.message, e)
+            log.error(
+                "Web Push payload serialization failed: {}",
+                auditContext(pushContext("web_push_payload_serialization_failed", memberId, token, payload) + safeFailureContext(e)),
+            )
             null
         }
     }
 
-    private fun sendNotification(token: RefreshToken, payloadJson: String) {
+    private fun sendNotification(
+        token: RefreshToken,
+        memberId: Long,
+        payload: PushNotificationPayload,
+        payloadJson: String,
+    ) {
         val notification = Notification(
             token.pushEndpoint,
             token.pushP256dh,
@@ -102,11 +137,17 @@ class WebPushService(
         val statusCode = response.statusLine.statusCode
 
         if (statusCode in listOf(404, 410)) {
-            log.info("Push subscription expired, removing from token: {}", token.id)
             token.unsubscribePush()
             refreshTokenRepository.save(token)
+            log.info(
+                "Expired Web Push subscription removed: {}",
+                auditContext(pushContext("web_push_subscription_expired", memberId, token, payload) + mapOf("status" to statusCode)),
+            )
         } else if (statusCode !in 200..299) {
-            log.warn("Push may have failed for token {}: status={}", token.id, statusCode)
+            log.warn(
+                "Web Push provider returned a failure status: {}",
+                auditContext(pushContext("web_push_provider_failure", memberId, token, payload) + mapOf("status" to statusCode)),
+            )
         }
     }
 
@@ -115,5 +156,36 @@ class WebPushService(
             token.unsubscribePush()
             refreshTokenRepository.save(token)
         }
+    }
+
+    private fun pushContext(
+        event: String,
+        memberId: Long,
+        token: RefreshToken,
+        payload: PushNotificationPayload?,
+    ): Map<String, Any?> {
+        val actorPayload = payload?.notification?.payload as? ActorNotificationPayload
+        return linkedMapOf(
+            "event" to event,
+            "memberId" to memberId,
+            "refreshTokenId" to token.id,
+            "notificationId" to (payload?.notificationId ?: payload?.notification?.id),
+            "notificationType" to payload?.type,
+            "actorMemberId" to payload?.notification?.actorId,
+            "actorName" to actorPayload?.actor?.name,
+        )
+    }
+
+    private fun safeFailureContext(error: Throwable): Map<String, Any?> {
+        val causes = generateSequence(error) { it.cause }.take(5).toList()
+        val stackFrames = causes.flatMap { cause ->
+            cause.stackTrace.take(8).map { frame ->
+                "${frame.className}.${frame.methodName}:${frame.lineNumber}"
+            }
+        }.take(24)
+        return mapOf(
+            "causeTypes" to causes.map { it.javaClass.simpleName },
+            "stackFrames" to stackFrames,
+        )
     }
 }

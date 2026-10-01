@@ -17,7 +17,7 @@ const types = [
   { id: null, name: '휴무', color: '#aabbcc' },
 ]
 
-function mountBar(isMyCalendar: boolean, batchEditMode = true) {
+function mountBar(isMyCalendar: boolean, batchEditMode = true, isCalendarMonthLoaded = true) {
   const selected: Array<number | null> = []
   const mounted = mountHost(createHostWrapper(() => h(DutyTypesBar, {
     batchEditMode,
@@ -29,6 +29,7 @@ function mountBar(isMyCalendar: boolean, batchEditMode = true) {
     currentYear: 2026,
     currentMonth: 9,
     lastDayInMonth: 30,
+    isCalendarMonthLoaded,
     canEdit: true,
     canEditMyCalendar: isMyCalendar,
     otherDutyCount: 0,
@@ -57,6 +58,15 @@ describe('duty quick input abbreviations', () => {
   it('keeps full names for somebody else even when the viewer can edit', () => {
     const mounted = mountBar(false)
     expect(mounted.buttons.map(button => hostText(button).trim())).toEqual(['야간근무', '심야근무', '휴무'])
+    mounted.app.unmount()
+  })
+
+  it('disables quick duty controls while the displayed month is still loading', () => {
+    const mounted = mountBar(true, true, false)
+    expect(mounted.buttons.every(button => button.props.disabled === true)).toBe(true)
+    const nextDayButton = findHostNodes(mounted.root, node => node.type === 'button'
+      && node.props['aria-label'] === 'duty.typesBar.nextDay')[0]
+    expect(nextDayButton?.props.disabled).toBe(true)
     mounted.app.unmount()
   })
 

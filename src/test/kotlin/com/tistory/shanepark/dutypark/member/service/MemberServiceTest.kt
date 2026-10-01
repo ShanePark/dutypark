@@ -252,6 +252,27 @@ class MemberServiceTest {
         })
     }
 
+    @Test
+    fun `signup logs provider and persisted member id without signup credentials`() {
+        val registration = MemberSsoRegister(SsoType.KAKAO, "private-social-id")
+        whenever(memberSsoRegisterRepository.findByUuid("private-signup-uuid")).thenReturn(Optional.of(registration))
+        whenever(memberRepository.save(any<Member>())).thenAnswer {
+            (it.arguments[0] as Member).also { member -> ReflectionTestUtils.setField(member, "id", 42L) }
+        }
+        val logger = org.slf4j.LoggerFactory.getLogger(MemberService::class.java) as ch.qos.logback.classic.Logger
+        val appender = ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            memberService.createSsoMember("new member", "private-signup-uuid")
+            val logs = appender.list.joinToString("\n") { it.formattedMessage }
+            assertThat(logs).contains("member.signup.completed", "KAKAO", "42")
+                .doesNotContain("private-social-id", "private-signup-uuid")
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+    }
+
     private fun createMember(id: Long, name: String, email: String): Member {
         val member = Member(name, email, "password")
         ReflectionTestUtils.setField(member, "id", id)

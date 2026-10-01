@@ -28,6 +28,16 @@ class AuthController(
     private val jwtConfig: JwtConfig,
     private val loginAttemptService: LoginAttemptService,
 ) {
+    companion object {
+        private val LOGGABLE_AUTH_CODES = setOf(
+            "auth.refresh.invalid", "auth.refresh.expired", "auth.account.inactive", AuthService.SUSPENDED_MESSAGE,
+            "auth.impersonation.alreadyImpersonating", "auth.impersonation.managerNotFound",
+            "auth.impersonation.targetNotFound", "auth.impersonation.forbidden", "auth.impersonation.sessionInvalid",
+            "auth.restore.notImpersonating", "auth.restore.originalMissing", "auth.restore.originalNotFound",
+            "auth.restore.sessionInvalid",
+        )
+    }
+
     @PutMapping("password")
     fun changePassword(
         @Login loginMember: LoginMember,
@@ -37,7 +47,7 @@ class AuthController(
             throw AuthException("auth.password.changeUnauthorized")
         }
         val byAdmin = loginMember.isAdmin && loginMember.id != param.memberId
-        authService.changePassword(param, byAdmin)
+        authService.changePassword(param, byAdmin, actor = loginMember)
         return ResponseEntity.noContent().build()
     }
 
@@ -63,6 +73,7 @@ class AuthController(
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: RateLimitException) {
+            recordError(req, "auth.login.rateLimited", e)
             ResponseEntity.status(429).body(
                 DutyParkErrorResponse.of(
                     status = 429,
@@ -70,6 +81,7 @@ class AuthController(
                 )
             )
         } catch (e: AuthException) {
+            recordError(req, if (e.message == AuthService.SUSPENDED_MESSAGE) AuthService.SUSPENDED_MESSAGE else "auth.login.failed", e)
             if (e.message == AuthService.SUSPENDED_MESSAGE) {
                 return ResponseEntity.status(401).body(
                     DutyParkErrorResponse.of(
@@ -102,13 +114,14 @@ class AuthController(
         resp: HttpServletResponse
     ): ResponseEntity<*> {
         val refreshToken = cookieService.extractRefreshToken(req.cookies)
-            ?: return unauthorizedRefresh(resp, "auth.refresh.invalid")
+            ?: return unauthorizedRefresh(req, resp, "auth.refresh.invalid")
         return try {
             val tokenResponse = authService.refreshAccessToken(refreshToken, req)
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
-            unauthorizedRefresh(resp, e.message ?: "auth.refresh.invalid")
+            recordError(req, safeAuthCode(e.message, "auth.refresh.invalid"), e)
+            unauthorizedRefresh(req, resp, e.message ?: "auth.refresh.invalid")
         }
     }
 
@@ -148,6 +161,7 @@ class AuthController(
             cookieService.setAccessTokenCookie(resp, accessToken)
             ResponseEntity.ok(mapOf("expiresIn" to jwtConfig.tokenValidityInSeconds))
         } catch (e: AuthException) {
+            recordError(req, safeAuthCode(e.message, "auth.impersonation.failed"), e)
             ResponseEntity.status(403).body(
                 DutyParkErrorResponse.of(
                     status = 403,
@@ -173,6 +187,7 @@ class AuthController(
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
             ResponseEntity.ok(tokenResponse.toPublicResponse())
         } catch (e: AuthException) {
+            recordError(req, safeAuthCode(e.message, "auth.restore.failed"), e)
             ResponseEntity.status(400).body(
                 DutyParkErrorResponse.of(
                     status = 400,
@@ -182,13 +197,22 @@ class AuthController(
         }
     }
 
+    private fun recordError(req: HttpServletRequest, code: String, error: Exception? = null) {
+        req.setAttribute("dutypark.logging.errorCode", code)
+        error?.let { req.setAttribute("dutypark.logging.exceptionType", it.javaClass.name) }
+    }
+
+    private fun safeAuthCode(candidate: String?, fallback: String): String =
+        candidate?.takeIf { it in LOGGABLE_AUTH_CODES } ?: fallback
+
     private fun TokenResponse.toPublicResponse(): Map<String, Any> {
         return mapOf(
             "expiresIn" to expiresIn
         )
     }
 
-    private fun unauthorizedRefresh(resp: HttpServletResponse, code: String): ResponseEntity<DutyParkErrorResponse> {
+    private fun unauthorizedRefresh(req: HttpServletRequest, resp: HttpServletResponse, code: String): ResponseEntity<DutyParkErrorResponse> {
+        recordError(req, safeAuthCode(code, "auth.refresh.invalid"))
         cookieService.clearTokenCookies(resp)
         return ResponseEntity.status(401).body(
             DutyParkErrorResponse.of(

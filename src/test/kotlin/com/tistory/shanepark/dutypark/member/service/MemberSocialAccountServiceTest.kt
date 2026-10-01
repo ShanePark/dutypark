@@ -41,6 +41,71 @@ class MemberSocialAccountServiceTest {
     }
 
     @Test
+    fun `social link emits one safe event and idempotent retry stays silent`() {
+        val member = memberWithId(1L)
+        val account = MemberSocialAccount(member, SsoType.KAKAO, "private-provider-subject")
+        whenever(memberSocialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, account.socialId))
+            .thenReturn(null, account)
+        whenever(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.KAKAO)).thenReturn(null)
+        whenever(memberSocialAccountRepository.saveAndFlush(any<MemberSocialAccount>())).thenReturn(account)
+        val logger = org.slf4j.LoggerFactory.getLogger(MemberSocialAccountService::class.java) as ch.qos.logback.classic.Logger
+        val appender = ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            service.link(member, SsoType.KAKAO, account.socialId)
+            service.link(member, SsoType.KAKAO, account.socialId)
+            assertThat(appender.list).hasSize(1)
+            assertThat(appender.list.single().formattedMessage).contains("member.social.linked", "KAKAO")
+                .doesNotContain(account.socialId, member.email!!)
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+    }
+
+    @Test
+    fun `social link preserves impersonating actor without credentials`() {
+        val member = memberWithId(1L)
+        val actor = LoginMember(id = 1L, name = "effective actor", isImpersonating = true, originalMemberId = 7L)
+        val account = MemberSocialAccount(member, SsoType.KAKAO, "private-provider-subject")
+        whenever(memberSocialAccountRepository.saveAndFlush(any<MemberSocialAccount>())).thenReturn(account)
+        val logger = org.slf4j.LoggerFactory.getLogger(MemberSocialAccountService::class.java) as ch.qos.logback.classic.Logger
+        val appender = ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            service.link(member, SsoType.KAKAO, account.socialId, actor)
+            assertThat(appender.list.single().formattedMessage)
+                .contains("member.social.linked", "\"id\":1", "\"name\":\"effective actor\"", "\"originalMemberId\":7")
+                .doesNotContain(account.socialId, member.email!!)
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+    }
+
+    @Test
+    fun `denied social link preserves impersonating actor without credentials`() {
+        val member = memberWithId(1L)
+        val actor = LoginMember(id = 1L, name = "effective actor", isImpersonating = true, originalMemberId = 7L)
+        val account = MemberSocialAccount(memberWithId(2L), SsoType.KAKAO, "private-provider-subject")
+        whenever(memberSocialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, account.socialId)).thenReturn(account)
+        val logger = org.slf4j.LoggerFactory.getLogger(MemberSocialAccountService::class.java) as ch.qos.logback.classic.Logger
+        val appender = ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            assertThrows<SocialAccountAlreadyLinkedException> {
+                service.link(member, SsoType.KAKAO, account.socialId, actor)
+            }
+            assertThat(appender.list.single().formattedMessage)
+                .contains("member.social.link_denied", "already_linked", "\"id\":1", "\"name\":\"effective actor\"", "\"originalMemberId\":7")
+                .doesNotContain(account.socialId, member.email!!)
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+    }
+
+    @Test
     fun `findMemberByProviderAndSocialId returns linked member`() {
         val member = memberWithId(1L)
         whenever(memberSocialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, "kakao-1"))

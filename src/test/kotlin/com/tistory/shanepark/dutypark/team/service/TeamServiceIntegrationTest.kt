@@ -66,7 +66,7 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(workDutyType.id).isNotNull
         assertThat(workDutyType.position).isEqualTo(0)
         assertThat(workDutyType.name).isEqualTo("WORK")
-        assertThat(workDutyType.color).isEqualTo("#98fb98")
+        assertThat(workDutyType.color).isEqualTo("#F6D365")
         assertThat(workDutyType.hidden).isFalse
     }
 

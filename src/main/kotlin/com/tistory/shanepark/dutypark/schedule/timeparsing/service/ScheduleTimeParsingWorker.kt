@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -46,16 +47,26 @@ class ScheduleTimeParsingWorker(
         val response: ScheduleTimeParsingResponse
         try {
             response = scheduleTimeParsingService.parseScheduleTime(request)
+            val responseMessage = response.toLogMessage(request, parsingLogContext(task, schedule))
+            if (response.result) {
+                log.info("AI schedule time parsing result: {}", responseMessage)
+            } else {
+                log.warn("AI schedule time parsing failed: {}", responseMessage)
+            }
         } catch (e: Exception) {
             if (e.isInterruption()) {
                 Thread.currentThread().interrupt()
-                log.info("AI parsing interrupted during shutdown: scheduleId={}", task.scheduleId)
+                log.info("AI parsing interrupted during shutdown: {}", auditContext(parsingLogContext(task, schedule)))
                 return false
             }
             log.error(
-                "AI parsing failed: scheduleId={}, exceptionType={}",
-                task.scheduleId,
-                e.javaClass.simpleName,
+                "AI parsing failed: {}",
+                auditContext(
+                    parsingLogContext(task, schedule) + mapOf(
+                        "exceptionType" to e.javaClass.simpleName,
+                        "causeType" to e.cause?.javaClass?.simpleName,
+                    )
+                ),
             )
             if (updateStatusIfCurrent(task, schedule, FAILED)) {
                 notifyLlmError(failureKind = "REQUEST_EXCEPTION")
@@ -73,7 +84,16 @@ class ScheduleTimeParsingWorker(
                 parsedEnd.toLocalDate() != request.date ||
                 parsedEnd.isBefore(parsedStart)
             ) {
-                log.warn("Rejected out-of-range parsed dateTime: scheduleId={}", task.scheduleId)
+                log.warn(
+                    "Rejected out-of-range AI dateTime: {}",
+                    auditContext(
+                        parsingLogContext(task, schedule) + mapOf(
+                            "expectedDate" to request.date,
+                            "parsedStart" to parsedStart,
+                            "parsedEnd" to parsedEnd,
+                        )
+                    ),
+                )
                 updateStatusIfCurrent(task, schedule, FAILED)
                 return true
             }
@@ -85,7 +105,12 @@ class ScheduleTimeParsingWorker(
                 contentWithoutTime = response.content ?: "",
             )
         } catch (e: DateTimeParseException) {
-            log.warn("Failed to parse AI dateTime fields: scheduleId={}", task.scheduleId)
+            log.warn(
+                "Failed to parse AI dateTime fields: {}",
+                auditContext(
+                    parsingLogContext(task, schedule) + mapOf("exceptionType" to e.javaClass.simpleName)
+                ),
+            )
             updateStatusIfCurrent(task, schedule, FAILED)
         }
         return true
@@ -99,6 +124,12 @@ class ScheduleTimeParsingWorker(
         }
         return false
     }
+
+    private fun parsingLogContext(task: ScheduleTimeParsingTask, schedule: Schedule): Map<String, Any?> = mapOf(
+        "scheduleId" to task.scheduleId,
+        "parsingGeneration" to task.parsingGeneration,
+        "memberId" to schedule.member.id,
+    )
 
     private fun findCurrentSchedule(task: ScheduleTimeParsingTask): Schedule? {
         val schedule = scheduleRepository.findById(task.scheduleId).orElse(null) ?: return null

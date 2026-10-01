@@ -10,6 +10,7 @@ import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.PARSED
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.WAIT
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.AfterEach
@@ -228,14 +229,29 @@ class ScheduleTimeParsingQueueManagerTest {
         whenever(worker.run(any()))
             .thenThrow(RuntimeException("temporary repository failure"))
             .thenReturn(false)
+        val logger = LoggerFactory.getLogger(ScheduleTimeParsingQueueManager::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
         queueManager.addTask(first)
         queueManager.addTask(second)
 
-        ReflectionTestUtils.invokeMethod<Unit>(queueManager, "run")
-        ReflectionTestUtils.invokeMethod<Unit>(queueManager, "run")
+        try {
+            ReflectionTestUtils.invokeMethod<Unit>(queueManager, "run")
+            ReflectionTestUtils.invokeMethod<Unit>(queueManager, "run")
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
 
         verify(worker, times(3)).run(any())
         assertEquals(0, queueManager.queueSize())
+        val failureLog = appender.list.first().formattedMessage
+        assertThat(failureLog)
+            .contains(first.id.toString())
+            .contains(first.parsingGeneration.toString())
+            .contains("\"causeTypes\":[\"RuntimeException\"]")
+            .contains("\"stackFrames\":[")
+            .doesNotContain("temporary repository failure")
     }
 
     @Test

@@ -2,6 +2,8 @@ package com.tistory.shanepark.dutypark.holiday.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
 import com.tistory.shanepark.dutypark.holiday.service.HolidayService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
@@ -24,10 +26,20 @@ class HolidayController(
     @DeleteMapping
     fun resetHolidayInfo(@Login loginMember: LoginMember) {
         if (loginMember.isAdmin.not()) {
-            log.warn("Only admin can access this API. : {}", loginMember)
+            log.warn(
+                "Holiday information reset denied {}",
+                auditContext(
+                    mapOf(
+                        "actor" to loginMember.toAuditActor(),
+                        "operation" to "reset_holiday_info",
+                        "requiredRole" to "ADMIN",
+                        "isAdmin" to loginMember.isAdmin,
+                    )
+                ),
+            )
             throw IllegalAccessException()
         }
-        holidayService.resetHolidayInfo()
+        holidayService.resetHolidayInfo(loginMember.toAuditActor())
     }
 
 }

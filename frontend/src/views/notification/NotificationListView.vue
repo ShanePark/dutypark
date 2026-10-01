@@ -296,12 +296,12 @@ watch(
                 <Trash2 class="w-4 h-4" />
               </button>
             </div>
-            <div class="flex items-center gap-2 mt-1.5">
-              <span class="notification-list-item-time text-xs">
+            <div class="flex min-w-0 items-center justify-between gap-2 mt-1.5">
+              <span class="notification-list-item-time min-w-0 truncate text-xs">
                 {{ formatTimeAgo(notification.createdAt) }}
               </span>
-              <span class="notification-list-item-date text-xs">
-                ({{ formatDate(notification.createdAt) }})
+              <span class="notification-list-item-date flex-shrink-0 whitespace-nowrap text-right text-xs tabular-nums">
+                {{ formatDate(notification.createdAt) }}
               </span>
             </div>
           </div>

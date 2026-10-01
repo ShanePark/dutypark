@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.holiday.service.holidayAPI
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.datagokr.DataGoKrApi
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
 import org.springframework.beans.factory.annotation.Value
@@ -26,12 +27,28 @@ class HolidayAPIDataGoKr(
     override fun requestHolidays(year: Int): List<HolidayDto> {
         val stopWatch = StopWatch()
         stopWatch.start()
-        val result = dataGoKrApi.getHolidays(serviceKey = serviceKey, year = year)
-        stopWatch.stop()
-        if (stopWatch.totalTimeMillis > 5000) {
-            log.warn("DataGoKr API call took {} ms for year {}", stopWatch.totalTimeMillis, year)
+        try {
+            val result = dataGoKrApi.getHolidays(serviceKey = serviceKey, year = year)
+            stopWatch.stop()
+            if (stopWatch.totalTimeMillis > 5000) {
+                log.warn("DataGoKr API call took {} ms for year {}", stopWatch.totalTimeMillis, year)
+            }
+            val holidays = parse(result)
+            log.info("Holiday API fetch completed: {}", auditContext(mapOf(
+                "event" to "holiday_api_fetch_completed", "provider" to "DATA_GO_KR",
+                "year" to year, "holidayCount" to holidays.size, "durationMs" to stopWatch.totalTimeMillis,
+            )))
+            return holidays
+        } catch (error: Exception) {
+            if (stopWatch.isRunning) stopWatch.stop()
+            log.error("Holiday API fetch failed: {}", auditContext(mapOf(
+                "event" to "holiday_api_fetch_failed", "provider" to "DATA_GO_KR",
+                "year" to year, "durationMs" to stopWatch.totalTimeMillis,
+                "exceptionType" to error.javaClass.simpleName,
+                "status" to (error as? org.springframework.web.client.RestClientResponseException)?.statusCode?.value(),
+            )))
+            throw error
         }
-        return parse(result)
     }
 
     internal fun parse(xmlResult: String): List<HolidayDto> {

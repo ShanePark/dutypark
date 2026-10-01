@@ -21,7 +21,7 @@ interface DutyRepository : JpaRepository<Duty, Long> {
     @Query("delete from Duty d where d.member = :member and d.dutyDate between :start and :end")
     fun deleteDutiesByMemberAndDutyDateBetween(member: Member, start: LocalDate, end: LocalDate)
 
-    fun deleteByMemberAndDutyDate(member: Member, dutyDate: LocalDate)
+    fun deleteByMemberAndDutyDate(member: Member, dutyDate: LocalDate): Long
 
     @Modifying(flushAutomatically = true)
     @Query("delete from Duty d where d.member = :member and d.dutyDate >= :from")

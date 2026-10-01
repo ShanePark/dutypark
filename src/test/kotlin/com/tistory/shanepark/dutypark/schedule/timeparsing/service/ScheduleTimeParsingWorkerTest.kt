@@ -1,3 +1,6 @@
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -25,6 +28,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDateTime
 import java.util.*
@@ -60,12 +64,49 @@ class ScheduleTimeParsingWorkerTest {
         ).thenReturn(1)
     }
 
-    private fun createSchedule(content: String = "3시 회의"): Schedule {
+    private fun createSchedule(content: String = "3시 회의", memberName: String = ""): Schedule {
         val randomDay = LocalDateTime.of(2025, 3, 3, 0, 0, 0, 0)
-        val member = Member("")
+        val member = Member(memberName)
         ReflectionTestUtils.setField(member, "id", 1L)
         val schedule = Schedule(member = member, content = content, startDateTime = randomDay, endDateTime = randomDay)
         return schedule
+    }
+
+    @Test
+    fun `time parsing result log includes schedule and owner id without loading member name`() {
+        val schedule = createSchedule(content = "비공개 진료\n3시", memberName = "로그 사용자")
+        val task = ScheduleTimeParsingTask(schedule)
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
+            ScheduleTimeParsingResponse(
+                result = true,
+                hasTime = true,
+                startDateTime = "2025-03-03T15:00:00",
+                endDateTime = "2025-03-03T15:00:00",
+                content = "진료 후\n확인",
+            )
+        )
+        val logger = LoggerFactory.getLogger(ScheduleTimeParsingWorker::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            worker.run(task)
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+
+        verify(scheduleRepository).findById(schedule.id)
+        val logMessage = appender.list.single().formattedMessage
+        assertThat(logMessage)
+            .contains(schedule.id.toString())
+            .contains(schedule.parsingGeneration.toString())
+            .contains("\"memberId\":1")
+            .doesNotContain("\"memberName\"")
+            .contains("비공개 진료\\n3시")
+            .contains("진료 후\\n확인")
+            .doesNotContain("\n")
     }
 
     @Test

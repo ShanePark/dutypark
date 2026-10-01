@@ -22,11 +22,11 @@ class DutyPatternController(
     fun updateMine(
         @Login loginMember: LoginMember,
         @Valid @RequestBody request: DutyPatternUpdateDto,
-    ): DutyPatternDto = dutyPatternService.updateMine(loginMember.id, request)
+    ): DutyPatternDto = dutyPatternService.updateMine(loginMember.id, request, actor = loginMember)
 
     @DeleteMapping
     fun deleteMine(@Login loginMember: LoginMember): ResponseEntity<Void> {
-        dutyPatternService.deleteMine(loginMember.id)
+        dutyPatternService.deleteMine(loginMember.id, actor = loginMember)
         return ResponseEntity.noContent().build()
     }
 }

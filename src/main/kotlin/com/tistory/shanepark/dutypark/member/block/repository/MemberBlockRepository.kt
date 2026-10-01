@@ -10,7 +10,7 @@ interface MemberBlockRepository : JpaRepository<MemberBlock, UUID> {
 
     fun existsByBlockerIdAndBlockedId(blockerId: Long, blockedId: Long): Boolean
 
-    fun deleteByBlockerIdAndBlockedId(blockerId: Long, blockedId: Long)
+    fun deleteByBlockerIdAndBlockedId(blockerId: Long, blockedId: Long): Long
 
     @EntityGraph(attributePaths = ["blocked"])
     fun findAllByBlockerIdOrderByCreatedDateDesc(blockerId: Long): List<MemberBlock>

@@ -47,7 +47,7 @@ class KakaoLoginService(
     fun setKakaoIdToMember(code: String, redirectUrl: String, loginMember: LoginMember) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         val kakaoId = getKakaoId(redirectUrl, code)
-        memberSocialAccountService.link(member, SsoType.KAKAO, kakaoId)
+        memberSocialAccountService.link(member, SsoType.KAKAO, kakaoId, actor = loginMember)
     }
 
     fun login(
@@ -62,6 +62,7 @@ class KakaoLoginService(
 
         val member = memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.KAKAO, kakaoId)
         if (member != null) {
+            req.setAttribute("dutypark.logging.authProvider", SsoType.KAKAO)
             val tokenResponse = authService.getTokenResponseByMemberId(member.id!!, req)
 
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)

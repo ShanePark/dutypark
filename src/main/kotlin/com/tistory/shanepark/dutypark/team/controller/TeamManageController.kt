@@ -2,6 +2,9 @@ package com.tistory.shanepark.dutypark.team.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTeamResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyBatchException
@@ -47,8 +50,7 @@ class TeamManageController(
         @RequestParam memberId: Long?
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        teamService.changeTeamAdmin(teamId = teamId, memberId = memberId)
-        log.info("Team admin changed: teamId={}, newAdminId={}, by={}", teamId, memberId, loginMember.id)
+        teamService.changeTeamAdmin(teamId = teamId, memberId = memberId, actor = loginMember)
     }
 
     @PatchMapping("/{teamId}/batch-template")
@@ -58,7 +60,7 @@ class TeamManageController(
         @RequestParam(name = "templateName", required = false) dutyBatchTemplate: DutyBatchTemplate?
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        teamService.updateBatchTemplate(teamId, dutyBatchTemplate)
+        teamService.updateBatchTemplate(teamId, dutyBatchTemplate, actor = loginMember)
     }
 
     @PostMapping("/{teamId}/duty")
@@ -73,14 +75,73 @@ class TeamManageController(
         val team = teamRepository.findById(teamId).orElseThrow()
         val batchTemplate = team.dutyBatchTemplate ?: throw IllegalArgumentException("dutyBatch.template.required")
         val dutyBatchService = applicationContext.getBean(batchTemplate.batchServiceClass)
+        val yearMonth = YearMonth.of(year, month)
+        val target = mapOf("type" to "Team", "teamId" to team.id, "teamName" to team.name)
+        val uploadDetails = mapOf(
+            "template" to batchTemplate.name,
+            "year" to year,
+            "month" to month,
+            "fileName" to file.safeAuditFilename(),
+            "fileSizeBytes" to file.size,
+        )
         return try {
-            log.info("Batch duty upload: teamId={}, year={}, month={}, by={}", team.id, year, month, loginMember.id)
-            dutyBatchService.batchUploadTeam(
+            val result = dutyBatchService.batchUploadTeam(
                 teamId = teamId,
                 file = file,
-                yearMonth = YearMonth.of(year, month)
+                yearMonth = yearMonth,
             )
+            val successfulMembers = result.dutyBatchResult.count { it.second.result }
+            val failedMembers = result.dutyBatchResult.size - successfulMembers
+            val memberFailures = result.dutyBatchResult
+                .filterNot { it.second.result }
+                .map { (memberName, memberResult) ->
+                    mapOf("memberName" to memberName, "errorCode" to memberResult.errorCode)
+                }
+            val details = uploadDetails + mapOf(
+                "startDate" to result.startDate,
+                "endDate" to result.endDate,
+                "successfulMembers" to successfulMembers,
+                "failedMembers" to failedMembers,
+                "memberFailures" to memberFailures,
+                "errorCode" to result.errorCode,
+                "errorDetails" to result.errorDetails,
+            )
+            if (result.result) {
+                log.auditEventAfterCommit(
+                    event = "duty_batch.team_uploaded",
+                    actor = loginMember.toAuditActor(),
+                    target = target,
+                    details = details,
+                )
+            } else {
+                log.warn(
+                    "Team duty batch upload failed {}",
+                    auditContext(
+                        mapOf(
+                            "event" to "duty_batch.team_upload_failed",
+                            "actor" to loginMember.toAuditActor(),
+                            "target" to target,
+                            "details" to details,
+                        )
+                    ),
+                )
+            }
+            result
         } catch (e: DutyBatchException) {
+            log.warn(
+                "Team duty batch upload failed {}",
+                auditContext(
+                    mapOf(
+                        "event" to "duty_batch.team_upload_failed",
+                        "actor" to loginMember.toAuditActor(),
+                        "target" to target,
+                        "details" to uploadDetails + mapOf(
+                            "errorCode" to e.errorCode,
+                            "errorDetails" to e.errorDetails,
+                        ),
+                    )
+                ),
+            )
             DutyBatchTeamResult.fail(e.errorCode, e.errorDetails)
         }
     }
@@ -94,7 +155,7 @@ class TeamManageController(
         @RequestParam(required = false) abbreviation: String? = null,
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        teamService.updateDefaultDuty(teamId, name, color, abbreviation)
+        teamService.updateDefaultDuty(teamId, name, color, abbreviation, actor = loginMember)
     }
 
     @PostMapping("/{teamId}/members")
@@ -104,7 +165,7 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        teamService.addMemberToTeam(teamId = teamId, memberId = memberId)
+        teamService.addMemberToTeam(teamId = teamId, memberId = memberId, actor = loginMember)
     }
 
     @DeleteMapping("/{teamId}/members")
@@ -114,7 +175,7 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        teamService.removeMemberFromTeam(teamId, memberId)
+        teamService.removeMemberFromTeam(teamId, memberId, actor = loginMember)
     }
 
     @GetMapping("/members")
@@ -139,8 +200,7 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanAdmin(login = loginMember, teamId = teamId)
-        teamService.addTeamManager(teamId = teamId, memberId = memberId)
-        log.info("Manager added to team: teamId={}, memberId={}, by={}", teamId, memberId, loginMember.id)
+        teamService.addTeamManager(teamId = teamId, memberId = memberId, actor = loginMember)
     }
 
     @DeleteMapping("/{teamId}/manager")
@@ -150,8 +210,7 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanAdmin(login = loginMember, teamId = teamId)
-        teamService.removeTeamManager(teamId = teamId, memberId = memberId)
-        log.info("Manager removed from team: teamId={}, memberId={}, by={}", teamId, memberId, loginMember.id)
+        teamService.removeTeamManager(teamId = teamId, memberId = memberId, actor = loginMember)
     }
 
     private fun checkCanManage(login: LoginMember, teamId: Long) {
@@ -163,3 +222,8 @@ class TeamManageController(
     }
 
 }
+
+private fun MultipartFile.safeAuditFilename(): String? = originalFilename
+    ?.substringAfterLast('/')
+    ?.substringAfterLast('\\')
+    ?.takeLast(120)

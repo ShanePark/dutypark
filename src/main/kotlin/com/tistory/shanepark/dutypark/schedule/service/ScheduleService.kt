@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType.SCHEDULE
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
@@ -7,6 +9,8 @@ import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -41,6 +45,7 @@ class ScheduleService(
     private val eventPublisher: ApplicationEventPublisher,
     private val aiScheduleParsingConsentService: AiScheduleParsingConsentService,
 ) {
+    private val log = logger()
 
     @Transactional(readOnly = true)
     fun findSchedulesByYearAndMonth(
@@ -165,8 +170,16 @@ class ScheduleService(
             orderedAttachmentIds = scheduleSaveDto.orderedAttachmentIds
         )
 
+        log.auditEventAfterCommit("schedule.created", loginMember.toAuditActor(), scheduleAuditTarget(schedule),
+            mapOf("visibility" to schedule.visibility.name, "parsingStatus" to schedule.parsingTimeStatus.name,
+                "attachmentCount" to scheduleSaveDto.orderedAttachmentIds.size,
+                "startDateTime" to schedule.startDateTime, "endDateTime" to schedule.endDateTime))
         return schedule
     }
+
+    private fun scheduleAuditTarget(schedule: Schedule) = mapOf(
+        "scheduleId" to schedule.id, "memberId" to schedule.member.id,
+    )
 
     private fun findNextPosition(
         member: Member,
@@ -180,6 +193,15 @@ class ScheduleService(
         val schedule = scheduleRepository.findById(scheduleSaveDto.id).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
+        val changedFields = mutableListOf<String>()
+        if (schedule.content() != scheduleSaveDto.content) changedFields.add("content")
+        if (schedule.description != scheduleSaveDto.description) changedFields.add("description")
+        if (schedule.startDateTime != scheduleSaveDto.startDateTime) changedFields.add("startDateTime")
+        if (schedule.endDateTime != scheduleSaveDto.endDateTime) changedFields.add("endDateTime")
+        val previousStart = schedule.startDateTime
+        val previousEnd = schedule.endDateTime
+        val previousVisibility = schedule.visibility
+        val previousParsingStatus = schedule.parsingTimeStatus
         val parsingInputChanged = schedule.updateParsingInput(
             content = scheduleSaveDto.content,
             startDateTime = scheduleSaveDto.startDateTime,
@@ -187,7 +209,7 @@ class ScheduleService(
         )
         schedule.description = scheduleSaveDto.description
         schedule.visibility = scheduleSaveDto.visibility
-        scheduleSaveDto.tagFriendIds?.let { syncScheduleTags(schedule, it) }
+        scheduleSaveDto.tagFriendIds?.let { if (syncScheduleTags(schedule, it)) changedFields.add("tags") }
 
         if (
             parsingInputChanged ||
@@ -211,6 +233,16 @@ class ScheduleService(
             orderedAttachmentIds = orderedIds
         )
 
+        if (previousVisibility != schedule.visibility) changedFields.add("visibility")
+        if (previousParsingStatus != schedule.parsingTimeStatus) changedFields.add("parsingStatus")
+        if (changedFields.isNotEmpty()) {
+            log.auditEventAfterCommit("schedule.updated", loginMember.toAuditActor(), scheduleAuditTarget(schedule),
+                mapOf("changedFields" to changedFields, "visibilityBefore" to previousVisibility.name,
+                    "visibilityAfter" to schedule.visibility.name,
+                    "startDateTimeBefore" to previousStart, "startDateTimeAfter" to schedule.startDateTime,
+                    "endDateTimeBefore" to previousEnd, "endDateTimeAfter" to schedule.endDateTime,
+                    "parsingStatusBefore" to previousParsingStatus.name, "parsingStatusAfter" to schedule.parsingTimeStatus.name))
+        }
         return schedule
     }
 
@@ -237,9 +269,17 @@ class ScheduleService(
             schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
         }
 
+        val positionChanges = mutableListOf<Map<String, Any?>>()
         scheduleIds.forEachIndexed { index, scheduleId ->
             val schedule = schedules.find { it.id == scheduleId }!!
+            if (schedule.position != index) {
+                positionChanges.add(mapOf("scheduleId" to scheduleId, "before" to schedule.position, "after" to index))
+            }
             schedule.position = index
+        }
+        if (positionChanges.isNotEmpty()) {
+            log.auditEventAfterCommit("schedule.reordered", loginMember.toAuditActor(),
+                details = mapOf("scheduleCount" to scheduleIds.size, "positionChanges" to positionChanges))
         }
     }
 
@@ -247,23 +287,27 @@ class ScheduleService(
         val schedule = scheduleRepository.findById(id).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
-        deleteScheduleInternal(schedule)
+        deleteScheduleInternal(schedule, actor = loginMember.toAuditActor())
     }
 
     /**
      * Deletes a schedule with its attachments and context directory, without any permission check.
      * Callers are responsible for authorization (admin moderation calls this directly).
      */
-    internal fun deleteScheduleInternal(schedule: Schedule) {
+    internal fun deleteScheduleInternal(schedule: Schedule, actor: AuditActor? = null) {
         val contextId = schedule.id.toString()
         val attachments = attachmentRepository.findAllByContextTypeAndContextId(SCHEDULE, contextId)
 
-        attachments.forEach(attachmentService::deleteAttachment)
+        attachments.forEach { attachment ->
+            attachmentService.deleteAttachment(attachment, actor = actor, reason = "schedule_deleted")
+        }
 
         val contextDir = pathResolver.resolveContextDirectory(SCHEDULE, contextId)
         fileSystemService.deleteDirectory(contextDir)
 
         scheduleRepository.delete(schedule)
+        log.auditEventAfterCommit("schedule.deleted", actor, scheduleAuditTarget(schedule),
+            mapOf("attachmentCount" to attachments.size))
     }
 
     fun tagFriend(loginMember: LoginMember, scheduleId: UUID, friendId: Long) {
@@ -272,6 +316,8 @@ class ScheduleService(
 
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
         addTagToSchedule(schedule, friend)
+        log.auditEventAfterCommit("schedule.tag_added", loginMember.toAuditActor(), scheduleAuditTarget(schedule),
+            mapOf("taggedMemberId" to friendId))
     }
 
     fun untagFriend(loginMember: LoginMember, scheduleId: UUID, memberId: Long) {
@@ -280,33 +326,37 @@ class ScheduleService(
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.removeTag(member)
+        log.auditEventAfterCommit("schedule.tag_removed", loginMember.toAuditActor(), scheduleAuditTarget(schedule),
+            mapOf("taggedMemberId" to member.id))
     }
 
     fun untagSelf(loginMember: LoginMember, scheduleId: UUID) {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         schedule.removeTag(member)
+        log.auditEventAfterCommit("schedule.tag_removed", loginMember.toAuditActor(), scheduleAuditTarget(schedule),
+            mapOf("taggedMemberId" to member.id))
     }
 
-    private fun syncScheduleTags(schedule: Schedule, tagFriendIds: List<Long>) {
+    private fun syncScheduleTags(schedule: Schedule, tagFriendIds: List<Long>): Boolean {
         val desiredTagIds = tagFriendIds.distinct()
         val desiredTagSet = desiredTagIds.toSet()
 
-        schedule.tags
+        val removedTagIds = schedule.tags
             .mapNotNull { it.member.id }
             .filterNot(desiredTagSet::contains)
-            .forEach { memberId ->
-                val member = memberRepository.findById(memberId).orElseThrow()
-                schedule.removeTag(member)
-            }
+        removedTagIds.forEach { memberId ->
+            val member = memberRepository.findById(memberId).orElseThrow()
+            schedule.removeTag(member)
+        }
 
         val existingTagIds = schedule.tags.mapNotNull { it.member.id }.toSet()
-        desiredTagIds
-            .filterNot(existingTagIds::contains)
-            .forEach { friendId ->
-                val friend = memberRepository.findById(friendId).orElseThrow()
-                addTagToSchedule(schedule, friend)
-            }
+        val addedTagIds = desiredTagIds.filterNot(existingTagIds::contains)
+        addedTagIds.forEach { friendId ->
+            val friend = memberRepository.findById(friendId).orElseThrow()
+            addTagToSchedule(schedule, friend)
+        }
+        return removedTagIds.isNotEmpty() || addedTagIds.isNotEmpty()
     }
 
     private fun addTagToSchedule(schedule: Schedule, friend: Member) {

@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.security.oauth.web
 
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
@@ -30,6 +32,7 @@ class WebOAuthService(
     @param:Value("\${oauth.kakao.rest-api-key}") private val kakaoClientId: String,
     @param:Value("\${oauth.naver.client-id}") private val naverClientId: String,
 ) {
+    private val log = logger()
     private val secureRandom = SecureRandom()
 
     @Transactional
@@ -50,7 +53,10 @@ class WebOAuthService(
         } catch (_: TransientDataAccessException) {
             false
         }
-        if (!quotaAcquired) throw RateLimitException()
+        if (!quotaAcquired) {
+            logDenied(provider, "rate_limited", memberId, purpose)
+            throw RateLimitException()
+        }
         val state = randomToken()
         val now = clock.instant()
         val sessionId = servletRequest.getSession(true).id
@@ -95,23 +101,36 @@ class WebOAuthService(
         servletRequest: HttpServletRequest,
     ): WebOAuthClaim {
         val now = clock.instant()
-        val browserSession = servletRequest.getSession(false)?.id ?: throw WebOAuthStateException()
+        val browserSession = servletRequest.getSession(false)?.id ?: throw denied(provider, "browser_session_missing", loginMember?.id)
         val transaction = transactionRepository.findByStateHashForUpdate(sha256Hex(state))
-            .orElseThrow(::WebOAuthStateException)
+            .orElseThrow { denied(provider, "state_not_found", loginMember?.id) }
         val memberMatches = when (transaction.purpose) {
             WebOAuthPurpose.LOGIN -> true
             WebOAuthPurpose.LINK -> loginMember?.id == transaction.authenticatedMemberId
         }
-        if (
-            transaction.provider != provider || transaction.stateConsumedAt != null ||
-            !now.isBefore(transaction.stateExpiresAt) ||
-            !secureEquals(transaction.browserSessionHash, sha256Hex(browserSession)) ||
-            !memberMatches
-        ) {
-            throw WebOAuthStateException()
+        val reason = when {
+            transaction.provider != provider -> "provider_mismatch"
+            transaction.stateConsumedAt != null -> "state_consumed"
+            !now.isBefore(transaction.stateExpiresAt) -> "state_expired"
+            !secureEquals(transaction.browserSessionHash, sha256Hex(browserSession)) -> "browser_session_mismatch"
+            !memberMatches -> "member_mismatch"
+            else -> null
         }
+        if (reason != null) throw denied(provider, reason, loginMember?.id, transaction.purpose)
         transaction.consume(now)
         return WebOAuthClaim(transaction.purpose, transaction.referer)
+    }
+
+    private fun denied(provider: SsoType, reason: String, memberId: Long?, purpose: WebOAuthPurpose? = null): WebOAuthStateException {
+        logDenied(provider, reason, memberId, purpose)
+        return WebOAuthStateException()
+    }
+
+    private fun logDenied(provider: SsoType, reason: String, memberId: Long?, purpose: WebOAuthPurpose? = null) {
+        log.warn("Web OAuth denied {}", auditContext(mapOf(
+            "event" to "auth.oauth.web.denied", "provider" to provider, "memberId" to memberId,
+            "purpose" to purpose, "reason" to reason,
+        )))
     }
 
     fun callbackUri(provider: SsoType): String =

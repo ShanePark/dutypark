@@ -1,7 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
+import { createHostWrapper, findHostNode, mountHost, triggerHost } from '@/test/hostRenderer'
 import calendarGrid from '@/components/common/CalendarGrid.vue?raw'
 import dayDetailModal from '@/components/duty/DayDetailModal.vue?raw'
-import dutyCalendarContent from '@/components/duty/DutyCalendarContent.vue?raw'
+vi.mock('@/i18n', () => ({ getCurrentLocale: () => 'ko' }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'ko' } }) }))
+vi.mock('@/components/common/CalendarGrid.vue', () => ({
+  default: defineComponent({
+    props: ['days', 'isDayClickable'],
+    emits: ['day-click'],
+    setup: (props, { emit }) => () => h('button', {
+      'data-test': 'calendar-day',
+      disabled: !props.isDayClickable(props.days[0], 0),
+      onClick: () => {
+        if (props.isDayClickable(props.days[0], 0)) emit('day-click', props.days[0], 0)
+      },
+    }),
+  }),
+}))
+import DutyCalendarContent from '@/components/duty/DutyCalendarContent.vue'
 
 describe('calendar cell clickability', () => {
   it('preserves duty colours while using inset today and search borders with hover corner markers', () => {
@@ -48,14 +65,35 @@ describe('calendar cell clickability', () => {
     expect(calendarGrid).toContain("clickable && isDayClickable(day, getSourceIndex(idx)) ? 'cursor-pointer")
   })
 
-  it('shuts a read-only day holding no schedule and leaves batch edit untouched', () => {
-    expect(dutyCalendarContent).toContain(
-      "import { canOpenCalendarDay } from '@/utils/calendarDayOpening'"
-    )
-    expect(dutyCalendarContent).toMatch(
-      /function isDayClickable\(_day: CalendarDay, index: number\): boolean \{\s*if \(props\.batchEditMode\) return true\s*return canOpenCalendarDay\(props\.canEdit, props\.schedulesByDays\[index\]\?\.length \?\? 0\)/
-    )
-    expect(dutyCalendarContent).toContain(':is-day-clickable="isDayClickable"')
+  it.each([
+    { loaded: true, canEdit: false, batch: false, schedules: false, clickable: false },
+    { loaded: true, canEdit: false, batch: false, schedules: true, clickable: true },
+    { loaded: true, canEdit: true, batch: false, schedules: false, clickable: true },
+    { loaded: true, canEdit: true, batch: true, schedules: false, clickable: true },
+    { loaded: false, canEdit: true, batch: false, schedules: false, clickable: false },
+    { loaded: false, canEdit: true, batch: true, schedules: true, clickable: false },
+  ])('guards calendar day clicks for $loaded loaded, $canEdit editing, $batch batch, $schedules schedules', (testCase) => {
+    const clicked = vi.fn()
+    const day = { year: 2026, month: 10, day: 2, isCurrentMonth: true }
+    const props = {
+      days: [day], currentYear: 2026, currentMonth: 10, calendarDataYear: 2026, calendarDataMonth: 10,
+      isCalendarMonthLoaded: testCase.loaded, holidays: [], getDutyColorForDay: () => null,
+      highlightDay: null, batchEditMode: testCase.batch, focusedDay: null, canEdit: testCase.canEdit,
+      duties: [], dutyTypes: [], otherDuties: [], dDays: [], pinnedDDay: null, todosDueByDays: [],
+      isMyCalendar: true, memberId: 1,
+      schedulesByDays: testCase.schedules ? [[{ id: 'test', content: 'Schedule' }]] : [],
+      'onDay-click': clicked,
+    } as unknown as InstanceType<typeof DutyCalendarContent>['$props']
+    const mounted = mountHost(createHostWrapper(() => h(DutyCalendarContent, props)))
+    try {
+      const cell = findHostNode(mounted.root, node => node.props['data-test'] === 'calendar-day')!
+      expect(cell.props.disabled).toBe(!testCase.clickable)
+      triggerHost(cell, 'onClick')
+      expect(clicked).toHaveBeenCalledTimes(testCase.clickable ? 1 : 0)
+      if (testCase.clickable) expect(clicked).toHaveBeenCalledWith(day, 0)
+    } finally {
+      mounted.app.unmount()
+    }
   })
 
   // The rule above only holds while the modal has nothing but schedules to show a

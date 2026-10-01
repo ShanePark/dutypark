@@ -6,6 +6,9 @@ import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
 import org.springframework.core.MethodParameter
 import org.springframework.dao.CannotAcquireLockException
 import org.springframework.validation.BeanPropertyBindingResult
@@ -15,6 +18,18 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 class RestExceptionControllerAdviceTest {
 
     private val advice = RestExceptionControllerAdvice()
+
+    @Test
+    fun `normalized error code is available for request outcome diagnostics`() {
+        val request = MockHttpServletRequest()
+        RequestContextHolder.setRequestAttributes(ServletRequestAttributes(request))
+        try {
+            advice.dutyparkExceptionHandler(AuthException("auth.required"))
+            assertThat(request.getAttribute("dutypark.logging.errorCode")).isEqualTo("auth.required")
+        } finally {
+            RequestContextHolder.resetRequestAttributes()
+        }
+    }
 
     @Test
     fun `dutyparkExceptionHandler returns code-based response`() {

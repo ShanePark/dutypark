@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.security.filters
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.Filter
 import jakarta.servlet.FilterChain
@@ -18,13 +20,36 @@ class AdminAuthFilter : Filter {
 
         val loginMember = request.getAttribute(LoginMember.ATTR_NAME) as? LoginMember
         if (loginMember == null) {
-            log.warn("Admin access denied: no login member. ip={}", request.remoteAddr)
+            log.warn(
+                "Admin access denied {}",
+                auditContext(
+                    linkedMapOf(
+                        "event" to "admin.access.denied",
+                        "actor" to null,
+                        "request" to mapOf("method" to request.method, "path" to request.requestURI),
+                        "status" to HttpServletResponse.SC_UNAUTHORIZED,
+                        "reason" to "missing_login_member",
+                        "ipAddress" to request.remoteAddr,
+                    )
+                ),
+            )
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
             return
         }
 
         if (!loginMember.isAdmin) {
-            log.warn("Admin access denied for memberId={}", loginMember.id)
+            log.warn(
+                "Admin access denied {}",
+                auditContext(
+                    linkedMapOf(
+                        "event" to "admin.access.denied",
+                        "actor" to loginMember.toAuditActor(),
+                        "request" to mapOf("method" to request.method, "path" to request.requestURI),
+                        "status" to HttpServletResponse.SC_UNAUTHORIZED,
+                        "reason" to "not_admin",
+                    )
+                ),
+            )
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
             return
         }

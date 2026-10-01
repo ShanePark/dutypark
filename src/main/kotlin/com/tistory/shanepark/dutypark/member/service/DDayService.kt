@@ -2,6 +2,10 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
@@ -33,6 +37,9 @@ class DDayService(
             isPrivate = dDaySaveDto.isPrivate,
         )
         dDayRepository.save(dDayEvent)
+        log.auditEventAfterCommit("dday.created", loginMember.toAuditActor(),
+            target = mapOf("type" to "DDayEvent", "id" to dDayEvent.id, "ownerId" to loginMember.id),
+            details = mapOf("date" to dDayEvent.date, "isPrivate" to dDayEvent.isPrivate))
         return DDayDto.of(dDayEvent)
     }
 
@@ -41,7 +48,7 @@ class DDayService(
         val dDayEvent = dDayRepository.findById(id).orElseThrow()
         friendService.checkVisibility(loginMember, dDayEvent.member)
         if (dDayEvent.isPrivate) {
-            authenticationCheck(dDayEvent, loginMember)
+            authenticationCheck(dDayEvent, loginMember, operation = "view")
         }
         return DDayDto.of(dDayEvent)
     }
@@ -59,26 +66,50 @@ class DDayService(
     fun updateDDay(loginMember: LoginMember, dDaySaveDto: DDaySaveDto): DDayDto {
         val id = dDaySaveDto.id ?: throw IllegalArgumentException("DDay ID must not be null")
         val dDayEvent = dDayRepository.findById(id).orElseThrow()
-        authenticationCheck(dDayEvent, loginMember)
+        authenticationCheck(dDayEvent, loginMember, operation = "update")
         validatePublicTitle(dDaySaveDto)
+        val before = mapOf("date" to dDayEvent.date, "isPrivate" to dDayEvent.isPrivate, "titleChanged" to false)
+        val titleChanged = dDayEvent.title != dDaySaveDto.title
         dDayEvent.title = dDaySaveDto.title
         dDayEvent.date = dDaySaveDto.date
         dDayEvent.isPrivate = dDaySaveDto.isPrivate
+        log.auditChangeAfterCommit("dday.updated", loginMember.toAuditActor(),
+            target = mapOf("type" to "DDayEvent", "id" to dDayEvent.id, "ownerId" to loginMember.id),
+            before = before,
+            after = mapOf("date" to dDayEvent.date, "isPrivate" to dDayEvent.isPrivate, "titleChanged" to titleChanged))
         return DDayDto.of(dDayEvent)
     }
 
     fun deleteDDay(loginMember: LoginMember, id: Long) {
         val dDayEvent = dDayRepository.findById(id).orElseThrow()
-        authenticationCheck(dDayEvent, loginMember)
+        authenticationCheck(dDayEvent, loginMember, operation = "delete")
         dDayRepository.delete(dDayEvent)
+        log.auditEventAfterCommit("dday.deleted", loginMember.toAuditActor(),
+            target = mapOf("type" to "DDayEvent", "id" to id, "ownerId" to loginMember.id))
     }
 
     private fun authenticationCheck(
         dDayEvent: DDayEvent,
-        loginMember: LoginMember?
+        loginMember: LoginMember?,
+        operation: String,
     ) {
         if (dDayEvent.member.id != loginMember?.id) {
-            log.warn("D-Day access denied: loginMemberId={}, dDayEventId={}", loginMember?.id, dDayEvent.id)
+            log.warn(
+                "D-day access denied {}",
+                auditContext(
+                    mapOf(
+                        "actor" to loginMember?.toAuditActor(),
+                        "target" to mapOf(
+                            "type" to "d_day_event",
+                            "id" to dDayEvent.id,
+                            "ownerId" to dDayEvent.member.id,
+                            "ownerName" to dDayEvent.member.name,
+                            "isPrivate" to dDayEvent.isPrivate,
+                        ),
+                        "operation" to operation,
+                    )
+                ),
+            )
             throw AuthException("dday.access.forbidden")
         }
     }

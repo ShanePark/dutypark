@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.oauth.mobile
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoAccessTokenInfoApi
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoTokenApi
@@ -99,7 +100,16 @@ class MobileOAuthProviderGateway(
             state = state,
         )
         val accessToken = token.accessToken ?: run {
-            log.warn("Failed to exchange Naver mobile OAuth token. error={}", token.error)
+            log.warn(
+                "Naver native OAuth token exchange failed: {}",
+                auditContext(
+                    mapOf(
+                        "provider" to SsoType.NAVER,
+                        "flow" to "native_refresh_token",
+                        "errorCode" to token.error,
+                    )
+                ),
+            )
             throw IllegalArgumentException("auth.oauth.mobile.provider.failed")
         }
         val userInfo = naverUserInfoApi.getUserInfo("Bearer $accessToken")
@@ -188,9 +198,15 @@ class MobileOAuthProviderGateway(
             throw e
         } catch (e: Exception) {
             log.warn(
-                "Native OAuth provider call failed. provider={}, error={}",
-                provider,
-                e.javaClass.simpleName,
+                "Native OAuth provider call failed: {}",
+                auditContext(
+                    mapOf(
+                        "provider" to provider,
+                        "exceptionType" to e.javaClass.simpleName,
+                        "causeType" to e.cause?.javaClass?.simpleName,
+                        "httpStatus" to (e as? RestClientResponseException)?.statusCode?.value(),
+                    )
+                ),
             )
             throw MobileOAuthNativeException(
                 message = "auth.oauth.mobile.provider.failed",

@@ -5,12 +5,17 @@ import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextT
 import com.tistory.shanepark.dutypark.attachment.domain.enums.ThumbnailStatus
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.config.StorageProperties
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentCaptor
 import org.mockito.kotlin.*
+import org.slf4j.LoggerFactory
 import org.springframework.util.unit.DataSize
 import java.awt.Color
 import java.awt.image.BufferedImage
@@ -88,11 +93,28 @@ class ThumbnailServiceTest {
         val contentType = "image/png"
 
         whenever(mockGenerator.canGenerate(contentType)).thenReturn(true)
-        whenever(mockGenerator.generate(any(), any(), any())).thenThrow(RuntimeException("Generation failed"))
+        whenever(mockGenerator.generate(any(), any(), any()))
+            .thenThrow(RuntimeException("Generation failed\ninjected line", IllegalStateException("cause\nmessage")))
 
-        val result = thumbnailService.generateThumbnail(sourcePath, targetPath, contentType)
+        val logger = LoggerFactory.getLogger(ThumbnailService::class.java) as LogbackLogger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        val result = try {
+            thumbnailService.generateThumbnail(sourcePath, targetPath, contentType)
+        } finally {
+            logger.detachAppender(appender)
+        }
 
         assertThat(result).isFalse()
+        assertThat(appender.list).hasSize(1)
+        val event = appender.list.single()
+        assertThat(event.throwableProxy).isNull()
+        assertThat(event.formattedMessage)
+            .doesNotContain("\n")
+            .contains("\"exceptionType\":\"java.lang.RuntimeException\"")
+            .contains("\"causeTypes\":[\"java.lang.IllegalStateException\"]")
+            .contains("\"stackFrames\":[\"")
+            .doesNotContain("injected line")
     }
 
     @Test
@@ -270,7 +292,14 @@ class ThumbnailServiceTest {
         whenever(mockAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment))
         whenever(mockPathResolver.resolveThumbnailPath(any(), any())).thenThrow(RuntimeException("Storage error"))
 
-        thumbnailService.generateThumbnailAsync(attachmentId, filePath)
+        val logger = LoggerFactory.getLogger(ThumbnailService::class.java) as LogbackLogger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            thumbnailService.generateThumbnailAsync(attachmentId, filePath)
+        } finally {
+            logger.detachAppender(appender)
+        }
 
         verify(mockAttachmentRepository, times(2)).findById(attachmentId)
         val captor = ArgumentCaptor.forClass(Attachment::class.java)
@@ -278,6 +307,43 @@ class ThumbnailServiceTest {
 
         val savedAttachment = captor.value
         assertThat(savedAttachment.thumbnailStatus).isEqualTo(ThumbnailStatus.FAILED)
+        assertThat(appender.list.first().throwableProxy).isNull()
+        assertThat(appender.list.first().formattedMessage)
+            .contains("\"contentType\":\"image/png\"")
+            .contains(attachment.id.toString())
+    }
+
+    @Test
+    fun `generateThumbnailAsync logs original lookup failure before retry lookup`() {
+        val attachmentId = UUID.randomUUID()
+        val filePath = tempDir.resolve("test.png")
+        val originalFailure = IllegalStateException("original lookup failed\nunsafe detail")
+        val retryFailure = IllegalArgumentException("retry lookup failed")
+        whenever(mockAttachmentRepository.findById(attachmentId))
+            .thenThrow(originalFailure)
+            .thenThrow(retryFailure)
+
+        val logger = LoggerFactory.getLogger(ThumbnailService::class.java) as LogbackLogger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            assertThatThrownBy {
+                thumbnailService.generateThumbnailAsync(attachmentId, filePath)
+            }.isInstanceOf(IllegalArgumentException::class.java)
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        verify(mockAttachmentRepository, times(2)).findById(attachmentId)
+        assertThat(appender.list).hasSize(1)
+        val event = appender.list.single()
+        assertThat(event.throwableProxy).isNull()
+        assertThat(event.formattedMessage)
+            .doesNotContain("\n")
+            .contains(attachmentId.toString())
+            .contains("\"exceptionType\":\"java.lang.IllegalStateException\"")
+            .contains("\"stackFrames\":[\"")
+            .doesNotContain("unsafe detail", "retry lookup failed")
     }
 
     private fun createTestImage(width: Int, height: Int): BufferedImage {

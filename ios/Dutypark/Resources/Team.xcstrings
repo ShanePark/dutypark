@@ -1,6 +1,18 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "team.dutyType.palette.blush" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Blush"}},"ko":{"stringUnit":{"state":"translated","value":"블러시"}}}},
+    "team.dutyType.palette.orange" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Orange"}},"ko":{"stringUnit":{"state":"translated","value":"오렌지"}}}},
+    "team.dutyType.palette.yellow" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Yellow"}},"ko":{"stringUnit":{"state":"translated","value":"노랑"}}}},
+    "team.dutyType.palette.sand" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Sand"}},"ko":{"stringUnit":{"state":"translated","value":"샌드"}}}},
+    "team.dutyType.palette.lime" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Lime"}},"ko":{"stringUnit":{"state":"translated","value":"라임"}}}},
+    "team.dutyType.palette.leaf" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Leaf"}},"ko":{"stringUnit":{"state":"translated","value":"리프"}}}},
+    "team.dutyType.palette.mint" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Mint"}},"ko":{"stringUnit":{"state":"translated","value":"민트"}}}},
+    "team.dutyType.palette.aqua" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Aqua"}},"ko":{"stringUnit":{"state":"translated","value":"아쿠아"}}}},
+    "team.dutyType.palette.lilac" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Lilac"}},"ko":{"stringUnit":{"state":"translated","value":"라일락"}}}},
+    "team.dutyType.palette.magenta" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Magenta"}},"ko":{"stringUnit":{"state":"translated","value":"마젠타"}}}},
+    "team.dutyType.palette.stone" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Stone"}},"ko":{"stringUnit":{"state":"translated","value":"스톤"}}}},
+    "team.dutyType.palette.custom" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Custom"}},"ko":{"stringUnit":{"state":"translated","value":"커스텀"}}}},
     "team.dutyType.abbreviation.label" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Abbreviation"}},"ko":{"stringUnit":{"state":"translated","value":"단축어"}}}},
     "team.dutyType.abbreviation.hint" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Leave blank to use the first character of the duty name. Enter 1 to 3 English letters or complete Korean syllables."}},"ko":{"stringUnit":{"state":"translated","value":"비워 두면 근무명의 첫 글자를 사용합니다. 영문 또는 완성형 한글 1~3글자를 입력할 수 있습니다."}}}},
     "team.dutyType.abbreviation.preview" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Abbreviation preview"}},"ko":{"stringUnit":{"state":"translated","value":"단축어 미리보기"}}}},

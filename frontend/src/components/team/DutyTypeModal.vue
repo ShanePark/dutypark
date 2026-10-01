@@ -4,11 +4,11 @@ import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 import { teamApi } from '@/api/team'
-import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import Pickr from '@simonwep/pickr'
 import '@simonwep/pickr/dist/themes/monolith.min.css'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { DutyTypeDto } from '@/types'
-import { X } from '@lucide/vue'
+import { Check, X } from '@lucide/vue'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import {
@@ -17,6 +17,7 @@ import {
   normalizeDutyAbbreviation,
 } from '@/utils/dutyAbbreviation'
 import { isLightColor } from '@/utils/color'
+import { dutyCalendarWeekendColor, defaultDutyTypeColor, dutyTypePalette, isDutyTypePaletteColor } from '@/utils/dutyTypePalette'
 
 const props = defineProps<{
   isOpen: boolean
@@ -33,10 +34,10 @@ const emit = defineEmits<{
 }>()
 
 const { showWarning, showError, toastSuccess } = useSwal()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const contentFilterStore = useContentFilterStore()
 
-const defaultDutyColor = '#ffb3ba'
+const defaultDutyColor: string = defaultDutyTypeColor
 
 const dutyTypeForm = ref({
   id: null as number | null,
@@ -53,6 +54,21 @@ const dutyTypePreviewStyle = computed(() => ({
   backgroundColor: dutyTypeForm.value.color || 'var(--dp-duty-type-fallback)',
   color: isLightColor(dutyTypeForm.value.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)',
 }))
+const weekendPreviews = computed(() => {
+  const formatter = new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
+  return [
+    { day: 'saturday' as const, label: formatter.format(new Date(2024, 0, 6)) },
+    { day: 'sunday' as const, label: formatter.format(new Date(2024, 0, 7)) },
+  ]
+})
+
+function dutyWeekendPreviewStyle(day: 'saturday' | 'sunday') {
+  return {
+    backgroundColor: dutyTypePreviewStyle.value.backgroundColor,
+    color: dutyCalendarWeekendColor(dutyTypeForm.value.color, day),
+  }
+}
+
 const submitting = ref(false)
 const isDutyAbbreviationComposing = ref(false)
 const hasDuplicateDutyTypeName = computed(() =>
@@ -63,10 +79,14 @@ const hasDuplicateDutyTypeName = computed(() =>
 const isDutyTypeNameInvalid = computed(() => !trimmedDutyTypeName.value || hasDuplicateDutyTypeName.value)
 const isDutyTypeSaveDisabled = computed(() => props.saving || submitting.value || isDutyTypeNameInvalid.value || isDutyAbbreviationInvalid.value)
 
-let pickrInstance: Pickr | null = null
+const customColorMode = ref(false)
 const colorPickerRef = ref<HTMLElement | null>(null)
+let pickrInstance: Pickr | null = null
+
+const hasLegacyColor = computed(() => !!props.dutyType?.color && !isDutyTypePaletteColor(props.dutyType.color))
 
 function setFormFromProps() {
+  customColorMode.value = !!props.dutyType?.color && !isDutyTypePaletteColor(props.dutyType.color)
   if (!props.dutyType) {
       dutyTypeForm.value = {
         id: null,
@@ -102,62 +122,64 @@ function finishDutyAbbreviationComposition(event: CompositionEvent) {
   handleDutyAbbreviationInput(event)
 }
 
-function initPickr(defaultColor: string) {
-  destroyPickr()
-  nextTick(() => {
-    if (colorPickerRef.value && !pickrInstance) {
-      pickrInstance = Pickr.create({
-        el: colorPickerRef.value,
-        theme: 'monolith',
-        default: defaultColor,
-        inline: true,
-        showAlways: true,
-        components: {
-          preview: true,
-          opacity: false,
-          hue: true,
-          interaction: {
-            hex: true,
-            rgba: false,
-            hsla: false,
-            hsva: false,
-            cmyk: false,
-            input: true,
-            save: false,
-          },
-        },
-      })
+watch(
+  () => props.isOpen,
+  (open) => { if (open) setFormFromProps() },
+  { immediate: true }
+)
 
-      pickrInstance.on('change', (color: Pickr.HSVaColor) => {
-        dutyTypeForm.value.color = color.toHEXA().toString()
-      })
-    }
-  })
+function selectColor(color: string) {
+  if (props.saving || submitting.value) return
+  customColorMode.value = false
+  if (dutyTypeForm.value.color.toLowerCase() !== color.toLowerCase()) dutyTypeForm.value.color = color
+}
+
+function selectCustomColor() {
+  if (props.saving || submitting.value || customColorMode.value) return
+  customColorMode.value = true
 }
 
 function destroyPickr() {
-  if (pickrInstance) {
-    pickrInstance.destroyAndRemove()
-    pickrInstance = null
-  }
+  pickrInstance?.destroyAndRemove()
+  pickrInstance = null
 }
 
 watch(
-  () => props.isOpen,
-  (open) => {
-    if (open) {
-      setFormFromProps()
-      initPickr(dutyTypeForm.value.color)
-    } else {
-      destroyPickr()
-    }
+  () => props.isOpen && customColorMode.value,
+  async (showCustomPicker) => {
+    destroyPickr()
+    if (!showCustomPicker) return
+    await nextTick()
+    if (!props.isOpen || !customColorMode.value || !colorPickerRef.value || pickrInstance) return
+    const instance = Pickr.create({
+      el: colorPickerRef.value,
+      theme: 'monolith',
+      default: dutyTypeForm.value.color,
+      defaultRepresentation: 'HEXA',
+      inline: true,
+      showAlways: true,
+      components: {
+        preview: true,
+        opacity: false,
+        hue: true,
+        interaction: { hex: true, rgba: false, hsla: false, hsva: false, cmyk: false, input: true, save: false },
+      },
+    })
+    pickrInstance = instance
+    // Pickr initializes its internal color to black before applying the configured default.
+    instance.setColor(dutyTypeForm.value.color, true)
+    let initialized = false
+    instance.on('init', () => { initialized = true })
+    instance.on('change', (color: Pickr.HSVaColor) => {
+      if (!initialized || pickrInstance !== instance || !props.isOpen || !customColorMode.value || props.saving || submitting.value) return
+      const selectedColor = color.toHEXA().toString()
+      if (dutyTypeForm.value.color.toLowerCase() !== selectedColor.toLowerCase()) dutyTypeForm.value.color = selectedColor
+    })
   },
   { immediate: true }
 )
 
-onUnmounted(() => {
-  destroyPickr()
-})
+onUnmounted(destroyPickr)
 
 function close() {
   if (props.saving || submitting.value) return
@@ -304,25 +326,80 @@ async function saveDutyType() {
         </div>
       </div>
 
-      <div class="color-picker-container !gap-2 !mt-0">
-        <label class="form-label mb-0">
-          {{ t('team.dutyType.fields.color') }}
-        </label>
-        <div class="color-picker-wrapper !flex-row justify-center items-center">
-          <div ref="colorPickerRef" class="color-picker color-picker--compact"></div>
+      <fieldset class="min-w-0">
+        <legend class="form-label">{{ t('team.dutyType.fields.color') }}</legend>
+        <div class="grid grid-cols-2 gap-2">
+          <label v-for="option in dutyTypePalette" :key="option.color" class="relative cursor-pointer">
+            <input
+              type="radio"
+              name="duty-type-color"
+              :value="option.color"
+              :checked="!customColorMode && dutyTypeForm.color.toLowerCase() === option.color.toLowerCase()"
+              :disabled="saving || submitting"
+              :aria-label="t(`team.dutyType.palette.${option.name}`)"
+              class="peer sr-only"
+              @change="selectColor(option.color)"
+            />
+            <span class="duty-color-option">
+              <span
+                class="h-6 w-6 shrink-0 rounded-full border border-dp-border-secondary"
+                :style="{ backgroundColor: option.color }"
+                aria-hidden="true"
+              ></span>
+              <span class="min-w-0 truncate">{{ t(`team.dutyType.palette.${option.name}`) }}</span>
+              <Check v-if="!customColorMode && dutyTypeForm.color.toLowerCase() === option.color.toLowerCase()" class="ml-auto h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            </span>
+          </label>
+          <label class="relative cursor-pointer">
+            <input
+              type="radio"
+              name="duty-type-color"
+              value="custom"
+              :checked="customColorMode"
+              :disabled="saving || submitting"
+              :aria-label="t('team.dutyType.palette.custom')"
+              class="peer sr-only"
+              @change="selectCustomColor"
+            />
+            <span class="duty-color-option">
+              <span class="min-w-0 truncate">{{ t('team.dutyType.palette.custom') }}</span>
+              <Check v-if="customColorMode" class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span class="duty-color-custom-well ml-auto" aria-hidden="true">
+                <span :style="{ backgroundColor: dutyTypeForm.color }"></span>
+              </span>
+            </span>
+          </label>
         </div>
+        <div v-if="hasLegacyColor" class="mt-2 flex items-center gap-2 text-xs text-dp-text-secondary">
+          <span class="h-5 w-5 shrink-0 rounded border border-dp-border-primary" :style="{ backgroundColor: dutyType?.color || undefined }" aria-hidden="true"></span>
+          {{ t('team.dutyType.palette.currentColor') }}
+        </div>
+      </fieldset>
+
+      <div v-if="customColorMode" class="color-picker-wrapper items-center" :inert="saving || submitting" :aria-disabled="saving || submitting">
+        <div ref="colorPickerRef" class="color-picker color-picker--compact"></div>
       </div>
 
       <div class="flex items-center gap-3">
         <label class="form-label mb-0 shrink-0">
           {{ t('team.dutyType.fields.preview') }}
         </label>
-        <span
-          class="duty-type-preview px-2.5 py-0.5 rounded-md font-semibold text-sm"
-          :style="dutyTypePreviewStyle"
-        >
-          {{ dutyTypeForm.name || t('team.dutyType.placeholders.preview') }}
-        </span>
+        <div class="flex min-w-0 flex-wrap items-center gap-2">
+          <span
+            class="duty-type-preview max-w-full truncate px-2.5 py-0.5 rounded-md font-semibold text-sm"
+            :style="dutyTypePreviewStyle"
+          >
+            {{ dutyTypeForm.name || t('team.dutyType.placeholders.preview') }}
+          </span>
+          <span
+            v-for="preview in weekendPreviews"
+            :key="preview.day"
+            class="duty-weekend-preview px-2.5 py-0.5 rounded-md font-semibold text-sm"
+            :style="dutyWeekendPreviewStyle(preview.day)"
+          >
+            {{ preview.label }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -344,3 +421,60 @@ async function saveDutyType() {
     </div>
   </BaseModal>
 </template>
+
+
+<style scoped>
+.duty-color-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 0.625rem;
+  border: 1px solid var(--dp-border-secondary);
+  border-radius: 0.375rem;
+  background-color: var(--dp-bg-input);
+  color: var(--dp-text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: border-color 150ms, background-color 150ms;
+}
+
+.peer:checked + .duty-color-option {
+  border-color: var(--dp-text-primary);
+  box-shadow: inset 0 0 0 1px var(--dp-text-primary);
+}
+
+.peer:focus-visible + .duty-color-option {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
+}
+
+.peer:disabled + .duty-color-option {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (hover: hover) {
+  .peer:not(:disabled) + .duty-color-option:hover {
+    background-color: var(--dp-bg-hover);
+  }
+}
+
+.duty-color-custom-well {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: conic-gradient(#f87171, #fbbf24, #a3e635, #34d399, #22d3ee, #818cf8, #e879f9, #f87171);
+}
+
+.duty-color-custom-well > span {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--dp-bg-input);
+  border-radius: 50%;
+}
+</style>

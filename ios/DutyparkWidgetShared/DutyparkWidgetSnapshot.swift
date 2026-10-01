@@ -83,17 +83,6 @@ nonisolated enum DutyparkWidgetDayNumberStyle: Equatable, Sendable {
     case secondary
     case primary
 
-    var calendarForegroundComponents: DutyparkWidgetColorComponents? {
-        switch self {
-        case .sundayOrHoliday:
-            DutyparkWidgetColorComponents(red: 0xDC, green: 0x26, blue: 0x26)
-        case .saturday:
-            DutyparkWidgetColorComponents(red: 0x25, green: 0x63, blue: 0xEB)
-        case .duty, .secondary, .primary:
-            nil
-        }
-    }
-
     static func resolve(
         weekday: Int,
         holidayName: String?,
@@ -141,9 +130,11 @@ nonisolated struct DutyparkWidgetColorComponents: Equatable, Sendable {
         return luminance <= 127.5
     }
 
-    func needsDateNumberContrastBacking(for style: DutyparkWidgetDayNumberStyle) -> Bool {
-        guard let foreground = style.calendarForegroundComponents else { return false }
-        return contrastRatio(with: foreground) < 4.5
+    func readableForeground(preferred: Self) -> Self {
+        guard contrastRatio(with: preferred) < 4.5 else { return preferred }
+        let white = Self(red: 255, green: 255, blue: 255)
+        let black = Self(red: 0, green: 0, blue: 0)
+        return contrastRatio(with: white) >= contrastRatio(with: black) ? white : black
     }
 
     private func contrastRatio(with other: Self) -> Double {
@@ -155,14 +146,9 @@ nonisolated struct DutyparkWidgetColorComponents: Equatable, Sendable {
     private var relativeLuminance: Double {
         func linearized(_ component: UInt8) -> Double {
             let value = Double(component) / 255
-            return value <= 0.04045
-                ? value / 12.92
-                : pow((value + 0.055) / 1.055, 2.4)
+            return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
         }
-
-        return 0.2126 * linearized(red)
-            + 0.7152 * linearized(green)
-            + 0.0722 * linearized(blue)
+        return 0.2126 * linearized(red) + 0.7152 * linearized(green) + 0.0722 * linearized(blue)
     }
 }
 

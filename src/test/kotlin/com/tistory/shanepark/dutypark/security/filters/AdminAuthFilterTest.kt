@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.security.filters
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -10,6 +13,8 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.Mockito.*
 import org.mockito.junit.jupiter.MockitoExtension
+import org.assertj.core.api.Assertions.assertThat
+import org.slf4j.LoggerFactory
 
 @ExtendWith(MockitoExtension::class)
 class AdminAuthFilterTest {
@@ -45,23 +50,50 @@ class AdminAuthFilterTest {
     @Test
     fun `should 401 error for non-admin user`() {
         val loginMember = mock(LoginMember::class.java)
+        `when`(loginMember.id).thenReturn(42L)
+        `when`(loginMember.name).thenReturn("Ordinary Member")
         `when`(loginMember.isAdmin).thenReturn(false)
         `when`(request.getAttribute(LoginMember.ATTR_NAME)).thenReturn(loginMember)
+        `when`(request.method).thenReturn("DELETE")
+        `when`(request.requestURI).thenReturn("/api/admin/members/73")
 
-        adminAuthFilter.doFilter(request, response, filterChain)
+        val logs = captureAdminAuthLogs {
+            adminAuthFilter.doFilter(request, response, filterChain)
+        }
 
         verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED)
         verify(filterChain, never()).doFilter(any(), any())
+        assertThat(logs)
+            .contains("Ordinary Member", "42", "/api/admin/members/73", "DELETE", "401", "not_admin")
+            .doesNotContain("private@example.com")
     }
 
     @Test
     fun `should 401 error when access token is missing`() {
         `when`(request.getAttribute(LoginMember.ATTR_NAME)).thenReturn(null)
+        `when`(request.method).thenReturn("GET")
+        `when`(request.requestURI).thenReturn("/api/admin/members")
 
-        adminAuthFilter.doFilter(request, response, filterChain)
+        val logs = captureAdminAuthLogs {
+            adminAuthFilter.doFilter(request, response, filterChain)
+        }
 
         verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED)
         verify(filterChain, never()).doFilter(any(), any())
+        assertThat(logs).contains("/api/admin/members", "GET", "401", "missing_login_member")
+    }
+
+    private fun captureAdminAuthLogs(block: () -> Unit): String {
+        val logger = LoggerFactory.getLogger(AdminAuthFilter::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            block()
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+        return appender.list.joinToString("\n") { it.formattedMessage }
     }
 
 }

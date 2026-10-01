@@ -7,20 +7,28 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.core.read.ListAppender
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
+import org.mockito.kotlin.spy
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.whenever
 import org.mockito.junit.jupiter.MockitoExtension
+import org.slf4j.LoggerFactory
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.Clock
 import java.time.Instant
@@ -59,17 +67,60 @@ class DutyTypeServiceTest {
 
     @Test
     fun `Create duty Type success`() {
-        val dutyTypeCreateDto = DutyTypeCreateDto(team.id!!, "dutyType", "#f0f8ff")
+        val dutyTypeCreateDto = DutyTypeCreateDto(team.id!!, "dutyType", "#F6D365")
         `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
 
         val created = dutyTypeService.addDutyType(dutyTypeCreateDto)
 
         assertThat(created).isNotNull
         assertThat(created.name).isEqualTo("dutyType")
-        assertThat(created.color).isEqualTo("#f0f8ff")
+        assertThat(created.color).isEqualTo("#F6D365")
         assertThat(created.team).isEqualTo(team)
         assertThat(team.dutyTypes).contains(created)
         verify(publicContentService).validateContent("dutyType")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["#000000", "#ffffff", "#ff0000", "#0000ff", "#123456"])
+    fun `creating a duty type accepts custom hex colors outside the palette`(color: String) {
+        whenever(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+
+        val created = dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "new", color))
+
+        assertThat(created.color).isEqualTo(color)
+        assertThat(team.dutyTypes).containsExactly(created)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["#000000", "#ffffff", "#ff0000", "#0000ff", "#123456"])
+    fun `changing a duty type accepts custom hex colors outside the palette`(color: String) {
+        val existing = DutyType("before", 0, team, "#abcdef", abbreviation = "B")
+        ReflectionTestUtils.setField(existing, "id", 10L)
+        team.dutyTypes.add(existing)
+        whenever(dutyTypeRepository.findById(10L)).thenReturn(Optional.of(existing))
+        whenever(teamRepository.findByIdWithDutyTypes(team.id!!)).thenReturn(Optional.of(team))
+
+        val request = DutyTypeUpdateDto(10L, "after", color).apply { abbreviation = "A" }
+        dutyTypeService.update(request)
+
+        assertThat(existing.name).isEqualTo("after")
+        assertThat(existing.color).isEqualTo(color)
+        assertThat(existing.abbreviation).isEqualTo("A")
+    }
+
+    @Test
+    fun `legacy duty color allows name and abbreviation edits`() {
+        val existing = DutyType("before", 0, team, "#abcdef", abbreviation = "B")
+        ReflectionTestUtils.setField(existing, "id", 10L)
+        team.dutyTypes.add(existing)
+        whenever(dutyTypeRepository.findById(10L)).thenReturn(Optional.of(existing))
+        whenever(teamRepository.findByIdWithDutyTypes(team.id!!)).thenReturn(Optional.of(team))
+
+        dutyTypeService.update(DutyTypeUpdateDto(10L, "after", "#abcdef").apply { abbreviation = "A" })
+
+        assertThat(existing.name).isEqualTo("after")
+        assertThat(existing.color).isEqualTo("#abcdef")
+        assertThat(existing.abbreviation).isEqualTo("A")
     }
 
     @Test
@@ -93,7 +144,7 @@ class DutyTypeServiceTest {
         ReflectionTestUtils.setField(existing, "id", 10L)
         team.dutyTypes.add(existing)
         `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
-        dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "second", "#222222"))
+        dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "second", "#F6D365"))
 
         assertThat(team.dutyTypes.count { !it.hidden }).isEqualTo(2)
         verifyNoInteractions(dutyRepository)
@@ -105,7 +156,7 @@ class DutyTypeServiceTest {
         team.dutyTypes.add(DutyType("second", 1, team, "#222222"))
         `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
 
-        dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "third", "#333333"))
+        dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "third", "#F6D365"))
 
         assertThat(team.dutyTypes.count { !it.hidden }).isEqualTo(3)
         verifyNoInteractions(dutyRepository)
@@ -176,17 +227,17 @@ class DutyTypeServiceTest {
     fun `can't create same duty type name in same team`() {
         `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
 
-        val dutyTypeCreateDto = DutyTypeCreateDto(team.id!!, "dutyType", "#f0f8ff")
+        val dutyTypeCreateDto = DutyTypeCreateDto(team.id!!, "dutyType", "#F6D365")
         dutyTypeService.addDutyType(dutyTypeCreateDto)
 
-        val dutyTypeCreateDto2 = DutyTypeCreateDto(team.id!!, "dutyType2", "#f0f8ff")
+        val dutyTypeCreateDto2 = DutyTypeCreateDto(team.id!!, "dutyType2", "#F6D365")
         dutyTypeService.addDutyType(dutyTypeCreateDto2)
 
         assertThrows<IllegalArgumentException> {
-            dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "dutyType", "#f0f8ff"))
+            dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "dutyType", "#F6D365"))
         }
         assertThrows<IllegalArgumentException> {
-            dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "dutyType2", "#f0f8ff"))
+            dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "dutyType2", "#F6D365"))
         }
     }
 
@@ -199,13 +250,46 @@ class DutyTypeServiceTest {
         `when`(dutyTypeRepository.findById(dutyType.id!!)).thenReturn(Optional.of(dutyType))
         `when`(teamRepository.findByIdWithDutyTypes(team.id!!)).thenReturn(Optional.of(team))
 
-        val dutyTypeUpdateDto = DutyTypeUpdateDto(dutyType.id!!, "changed", "#aabbcc")
+        val dutyTypeUpdateDto = DutyTypeUpdateDto(dutyType.id!!, "changed", "#D3BCE2")
         val updated = dutyTypeService.update(dutyTypeUpdateDto)
 
         assertThat(updated.id).isEqualTo(dutyType.id)
         assertThat(updated.name).isEqualTo("changed")
-        assertThat(updated.color).isEqualTo("#aabbcc")
+        assertThat(updated.color).isEqualTo("#D3BCE2")
         verify(publicContentService).validateContent("changed")
+    }
+
+    @Test
+    fun `update duty type logs a before and after snapshot with normalized abbreviation`() {
+        val dutyType = DutyType("original", 0, team, "#f0f8ff", abbreviation = "N")
+        ReflectionTestUtils.setField(dutyType, "id", 1L)
+        team.dutyTypes.add(dutyType)
+
+        `when`(dutyTypeRepository.findById(dutyType.id!!)).thenReturn(Optional.of(dutyType))
+        `when`(teamRepository.findByIdWithDutyTypes(team.id!!)).thenReturn(Optional.of(team))
+        val update = DutyTypeUpdateDto(dutyType.id!!, "changed", "#D3BCE2").also {
+            it.abbreviation = " U "
+        }
+
+        val logger = LoggerFactory.getLogger(DutyTypeService::class.java) as LogbackLogger
+        val appender = ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply {
+            context = logger.loggerContext
+            start()
+        }
+        logger.addAppender(appender)
+        val actor = LoginMember(id = 7L, name = "Manager", isImpersonating = true, originalMemberId = 9L)
+        try {
+            dutyTypeService.update(update, actor = actor)
+            dutyTypeService.update(update, actor = actor)
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("original", "changed", "#f0f8ff", "#D3BCE2", "N", "U", team.name)
+            .contains("\"name\":\"Manager\"", "\"originalMemberId\":9")
     }
 
     @Test
@@ -221,7 +305,7 @@ class DutyTypeServiceTest {
             .validateContent("blocked")
 
         assertThrows<BadRequestException> {
-            dutyTypeService.update(DutyTypeUpdateDto(dutyType.id!!, "blocked", "#aabbcc"))
+            dutyTypeService.update(DutyTypeUpdateDto(dutyType.id!!, "blocked", "#D3BCE2"))
         }
 
         assertThat(dutyType.name).isEqualTo("original")
@@ -250,9 +334,10 @@ class DutyTypeServiceTest {
 
     @Test
     fun `swap dutyType position`() {
-        val dutyType1 = DutyType("type1", 0, team, "#f0f8ff")
+        val teamSpy = spy(team)
+        val dutyType1 = DutyType("type1", 0, teamSpy, "#f0f8ff")
         ReflectionTestUtils.setField(dutyType1, "id", 1L)
-        val dutyType2 = DutyType("type2", 1, team, "#f0f8ff")
+        val dutyType2 = DutyType("type2", 1, teamSpy, "#f0f8ff")
         ReflectionTestUtils.setField(dutyType2, "id", 2L)
 
         val position1 = dutyType1.position
@@ -265,6 +350,7 @@ class DutyTypeServiceTest {
 
         assertThat(dutyType1.position).isEqualTo(position2)
         assertThat(dutyType2.position).isEqualTo(position1)
+        verify(teamSpy, never()).name
     }
 
     @Test

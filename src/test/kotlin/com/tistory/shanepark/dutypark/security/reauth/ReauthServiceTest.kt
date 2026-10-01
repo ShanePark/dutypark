@@ -89,6 +89,28 @@ class ReauthServiceTest {
         assertInvalidProof { service.consume(1L, ReauthPurpose.DELETE_ACCOUNT, "proof") }
     }
 
+    @Test
+    fun `proof lifecycle logs purpose and member without proof or hash`() {
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(memberWithId(1L)))
+        whenever(proofRepository.save(any<ReauthProof>())).thenAnswer { it.arguments[0] as ReauthProof }
+        val logger = org.slf4j.LoggerFactory.getLogger(ReauthService::class.java) as ch.qos.logback.classic.Logger
+        val appender = ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            val issued = service.issue(1L, ReauthPurpose.DELETE_ACCOUNT)
+            val stored = ReauthProof(ReauthPurpose.DELETE_ACCOUNT, sha256Hex(issued.reauthProof), 1L, now.plusSeconds(300), now)
+            whenever(proofRepository.findByProofHashForUpdate(sha256Hex(issued.reauthProof))).thenReturn(Optional.of(stored))
+            service.consume(1L, ReauthPurpose.DELETE_ACCOUNT, issued.reauthProof)
+            assertInvalidProof { service.consume(1L, ReauthPurpose.DELETE_ACCOUNT, issued.reauthProof) }
+            val logs = appender.list.joinToString("\n") { it.formattedMessage }
+            assertThat(logs).contains("auth.reauth.issued", "auth.reauth.consumed", "auth.reauth.denied", "already_consumed", "DELETE_ACCOUNT")
+                .doesNotContain(issued.reauthProof, sha256Hex(issued.reauthProof), "member@duty.park", "password")
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+    }
+
     private fun proof(
         memberId: Long,
         purpose: ReauthPurpose = ReauthPurpose.DELETE_ACCOUNT,

@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.consent.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.consent.domain.AiScheduleParsingConsentEvent
 import com.tistory.shanepark.dutypark.consent.domain.AiScheduleParsingConsentEventType
@@ -23,6 +26,8 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.reset
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
+import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Optional
@@ -108,6 +113,31 @@ class AiScheduleParsingConsentServiceTest {
         assertThat(result.previouslyConsentedToCurrentPolicy).isTrue()
         assertThat(result.needsRenewal).isFalse()
         assertThat(result.consentedAt).isNotNull()
+    }
+
+    @Test
+    fun `consent change log records actor and before after state without request metadata`() {
+        ReflectionTestUtils.setField(member, "id", 1L)
+        val previousEvent = event(AiScheduleParsingConsentEventType.REVOKED, null)
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
+        whenever(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L)).thenReturn(previousEvent)
+        whenever(consentEventRepository.save(any<AiScheduleParsingConsentEvent>()))
+            .thenAnswer { it.arguments[0] as AiScheduleParsingConsentEvent }
+
+        val logger = LoggerFactory.getLogger(AiScheduleParsingConsentService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            consentService.updateConsent(1L, true, currentPolicy.version, "203.0.113.5", "private-agent-value")
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("\"name\":\"member\"", "REVOKED", "GRANTED", currentPolicy.version)
+            .doesNotContain("203.0.113.5", "private-agent-value")
     }
 
     @Test

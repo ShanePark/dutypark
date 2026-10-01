@@ -6,7 +6,11 @@ import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentValidationService
 import com.tistory.shanepark.dutypark.attachment.service.ImageThumbnailGenerator
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
+import com.tistory.shanepark.dutypark.attachment.service.toAttachmentLogDiagnostics
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
@@ -53,9 +57,11 @@ class ProfilePhotoService(
         validateImageFile(file)
 
         val member = memberRepository.findById(loginMember.id).orElseThrow()
+        val previousPhotoPath = member.profilePhotoPath
+        val previousVersion = member.profilePhotoVersion
 
-        deleteExistingPhotos(member.profilePhotoPath)
-        deleteLegacyProfilePhotos(member.id!!)
+        deleteExistingPhotos(previousPhotoPath, loginMember)
+        deleteLegacyProfilePhotos(member.id!!, loginMember)
 
         val directory = storagePathResolver.resolvePermanentDirectory(
             AttachmentContextType.PROFILE,
@@ -77,25 +83,39 @@ class ProfilePhotoService(
         member.profilePhotoPath = relativePath
         member.incrementProfilePhotoVersion()
 
-        log.info("Profile photo set: memberId={}, path={}, version={}", loginMember.id, relativePath, member.profilePhotoVersion)
+        log.auditChangeAfterCommit(
+            event = "profile_photo_updated",
+            actor = loginMember.toAuditActor(),
+            target = mapOf("memberId" to member.id),
+            before = mapOf("profilePhotoPath" to previousPhotoPath, "profilePhotoVersion" to previousVersion),
+            after = mapOf("profilePhotoPath" to member.profilePhotoPath, "profilePhotoVersion" to member.profilePhotoVersion),
+        )
     }
 
     fun deleteProfilePhoto(loginMember: LoginMember) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
+        val previousPhotoPath = member.profilePhotoPath
+        val previousVersion = member.profilePhotoVersion
 
-        deleteExistingPhotos(member.profilePhotoPath)
-        deleteLegacyProfilePhotos(member.id!!)
+        deleteExistingPhotos(previousPhotoPath, loginMember)
+        deleteLegacyProfilePhotos(member.id!!, loginMember)
         member.profilePhotoPath = null
         member.incrementProfilePhotoVersion()
 
-        log.info("Profile photo deleted: memberId={}, version={}", loginMember.id, member.profilePhotoVersion)
+        log.auditChangeAfterCommit(
+            event = "profile_photo_deleted",
+            actor = loginMember.toAuditActor(),
+            target = mapOf("memberId" to member.id),
+            before = mapOf("profilePhotoPath" to previousPhotoPath, "profilePhotoVersion" to previousVersion),
+            after = mapOf("profilePhotoPath" to member.profilePhotoPath, "profilePhotoVersion" to member.profilePhotoVersion),
+        )
     }
 
-    private fun deleteExistingPhotos(photoPath: String?) {
+    private fun deleteExistingPhotos(photoPath: String?, actor: LoginMember) {
         if (photoPath == null) return
 
-        deleteFile(photoPath)
-        deleteFile(toThumbnailPath(photoPath))
+        deleteFile(photoPath, actor)
+        deleteFile(toThumbnailPath(photoPath), actor)
     }
 
     /**
@@ -103,23 +123,38 @@ class ProfilePhotoService(
      * together with the current path so an explicit replacement/deletion cannot
      * expose the old file through the legacy read fallback.
      */
-    private fun deleteLegacyProfilePhotos(memberId: Long) {
+    private fun deleteLegacyProfilePhotos(memberId: Long, actor: LoginMember) {
         val legacyAttachments = attachmentRepository.findAllByContextTypeAndContextId(
             AttachmentContextType.PROFILE,
             memberId.toString(),
         )
 
-        legacyAttachments.forEach(attachmentService::deleteAttachment)
+        legacyAttachments.forEach { attachment ->
+            attachmentService.deleteAttachment(
+                attachment,
+                actor = actor.toAuditActor(),
+                reason = "legacy_profile_photo",
+            )
+        }
     }
 
-    private fun deleteFile(relativePath: String) {
+    private fun deleteFile(relativePath: String, actor: LoginMember) {
         try {
             val fullPath = storagePathResolver.getStorageRoot().resolve(relativePath)
             if (Files.exists(fullPath)) {
                 Files.delete(fullPath)
             }
         } catch (e: Exception) {
-            log.warn("Failed to delete file: {}", relativePath, e)
+            log.warn(
+                "Profile photo file deletion failed {}",
+                auditContext(
+                    mapOf(
+                        "actor" to actor.toAuditActor(),
+                        "operation" to "delete_profile_photo_file",
+                        "relativePath" to relativePath,
+                    ) + e.toAttachmentLogDiagnostics()
+                ),
+            )
         }
     }
 

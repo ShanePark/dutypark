@@ -234,7 +234,7 @@ struct DutyparkMonthlyWidgetView: View {
     private var header: some View {
         ZStack {
             Text(String(format: "%04d-%02d", entry.year, entry.month))
-                .font(.system(size: 19, weight: .heavy, design: .rounded))
+                .font(DPFont.bold(size: 19, relativeTo: .headline))
                 .monospacedDigit()
                 .foregroundStyle(WidgetPalette.primaryText(for: colorScheme))
                 .minimumScaleFactor(0.8)
@@ -287,7 +287,7 @@ struct DutyparkMonthlyWidgetView: View {
         LazyVGrid(columns: calendarColumns, spacing: 0) {
             ForEach(Array(weekdayLabels.enumerated()), id: \.offset) { index, label in
                 Text(label)
-                    .font(.system(size: isKorean ? 12 : 10, weight: .bold, design: .rounded))
+                    .font(DPFont.bold(size: isKorean ? 12 : 10, relativeTo: .caption))
                     .foregroundStyle(weekdayColor(index))
                     .frame(maxWidth: .infinity, minHeight: DutyparkWidgetLayout.weekdayHeaderHeight)
                     .overlay(alignment: .trailing) {
@@ -316,7 +316,7 @@ struct DutyparkMonthlyWidgetView: View {
             ProgressView()
                 .tint(WidgetPalette.secondaryText(for: colorScheme))
             Text(isKorean ? "근무표를 불러오는 중" : "Loading duty schedule")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(DPFont.light(size: 12, relativeTo: .caption))
                 .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -329,11 +329,11 @@ struct DutyparkMonthlyWidgetView: View {
                 .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
                 .accessibilityHidden(true)
             Text(isKorean ? "저장된 근무표가 없습니다" : "No saved duty schedule")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(DPFont.bold(size: 13, relativeTo: .caption))
                 .foregroundStyle(WidgetPalette.primaryText(for: colorScheme))
                 .multilineTextAlignment(.center)
             Text(isKorean ? "앱을 열어 근무표를 동기화해 주세요" : "Open Dutypark to sync your schedule")
-                .font(.system(size: 10, weight: .regular, design: .rounded))
+                .font(DPFont.light(size: 10, relativeTo: .caption2))
                 .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -391,22 +391,15 @@ private struct DutyparkWidgetDayCell: View {
     var body: some View {
         VStack(alignment: .center, spacing: Layout.verticalSpacing) {
             Text(dayNumber)
-                .font(.system(size: dayNumberFontSize, weight: .bold, design: .rounded))
+                .font(DPFont.bold(size: dayNumberFontSize, relativeTo: .caption2))
                 .monospacedDigit()
                 .foregroundStyle(dayNumberColor)
-                .padding(.horizontal, needsDayNumberContrastBacking ? 3 : 0)
-                .background {
-                    if needsDayNumberContrastBacking {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(.white)
-                    }
-                }
                 .frame(height: dayNumberHeight)
                 .frame(maxWidth: .infinity)
             dutySlot
             if showsHolidayName {
                 Text(displayHolidayName ?? " ")
-                    .font(.system(size: Layout.holidayFontSize, weight: .medium, design: .rounded))
+                    .font(DPFont.light(size: Layout.holidayFontSize, relativeTo: .caption2))
                     .foregroundStyle(holidayForeground)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -491,7 +484,7 @@ private struct DutyparkWidgetDayCell: View {
 
     private var dutySlot: some View {
         Text(displayAbbreviation ?? " ")
-            .font(.system(size: dutyFontSize, weight: .heavy, design: .rounded))
+            .font(DPFont.bold(size: dutyFontSize, relativeTo: .caption2))
             .foregroundStyle(dutyForeground)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
@@ -526,9 +519,15 @@ private struct DutyparkWidgetDayCell: View {
     private var dayNumberColor: Color {
         switch dayNumberStyle {
         case .sundayOrHoliday:
-            return WidgetPalette.sunday(for: colorScheme)
+            return calendarForeground(
+                preferredHex: usesPaletteBackground ? DutyTypeColorPalette.sundayHex : "#DC2626",
+                fallback: WidgetPalette.sunday(for: colorScheme)
+            )
         case .saturday:
-            return WidgetPalette.saturday(for: colorScheme)
+            return calendarForeground(
+                preferredHex: usesPaletteBackground ? DutyTypeColorPalette.saturdayHex : "#2563EB",
+                fallback: WidgetPalette.saturday(for: colorScheme)
+            )
         case .duty:
             return dutyForeground
         case .secondary:
@@ -547,15 +546,28 @@ private struct DutyparkWidgetDayCell: View {
         )
     }
 
-    private var needsDayNumberContrastBacking: Bool {
-        guard hasConfiguredDutyColor,
-              let background = DutyparkWidgetColorComponents(hex: day.colorHex)
-        else { return false }
-        return background.needsDateNumberContrastBacking(for: dayNumberStyle)
+    private var usesPaletteBackground: Bool {
+        displayAbbreviation != nil && DutyTypeColorPalette.contains(day.colorHex)
     }
 
     private var holidayForeground: Color {
-        WidgetPalette.holiday(for: colorScheme)
+        calendarForeground(
+            preferredHex: usesPaletteBackground ? DutyTypeColorPalette.sundayHex : "#DC2626",
+            fallback: WidgetPalette.holiday(for: colorScheme)
+        )
+    }
+
+    private func calendarForeground(preferredHex: String, fallback: Color) -> Color {
+        guard hasConfiguredDutyColor,
+              let background = DutyparkWidgetColorComponents(hex: day.colorHex),
+              let preferred = DutyparkWidgetColorComponents(hex: preferredHex)
+        else { return fallback }
+        let foreground = background.readableForeground(preferred: preferred)
+        return Color(
+            red: Double(foreground.red) / 255,
+            green: Double(foreground.green) / 255,
+            blue: Double(foreground.blue) / 255
+        )
     }
 
     private var dutyForeground: Color {
@@ -851,6 +863,9 @@ struct DutyparkTodoWidgetView: View {
     private static let statusBadgeHeight: CGFloat = 20
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.widgetFamily) private var widgetFamily
+
+    private var isSmall: Bool { widgetFamily == .systemSmall }
 
     private var isKorean: Bool {
         DutyparkWidgetLocalization.isKorean
@@ -891,7 +906,7 @@ struct DutyparkTodoWidgetView: View {
                 todoRows
             }
         }
-        .padding(14)
+        .padding(isSmall ? 12 : 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) {
             WidgetPalette.background(for: colorScheme)
@@ -905,9 +920,17 @@ struct DutyparkTodoWidgetView: View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(entry.todos.prefix(Self.maximumVisibleTodoCount))) { todo in
                 HStack(spacing: 7) {
-                    statusBadge(for: todo.status)
+                    if isSmall {
+                        Image(systemName: todo.status == .inProgress ? "clock.fill" : "circle")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(statusBadgeForeground(for: todo.status))
+                            .frame(width: 14, height: Self.statusBadgeHeight)
+                            .accessibilityHidden(true)
+                    } else {
+                        statusBadge(for: todo.status)
+                    }
                     Text(todo.title)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: isSmall ? 12 : 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(WidgetPalette.primaryText(for: colorScheme))
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
@@ -1042,7 +1065,7 @@ struct DutyparkTodoWidget: Widget {
         }
         .configurationDisplayName("할 일")
         .description("완료하지 않은 할 일을 확인합니다.")
-        .supportedFamilies([.systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium])
         .contentMarginsDisabled()
     }
 }
@@ -1073,6 +1096,17 @@ struct DutyparkMonthlyWidget: Widget {
         updatedAt: Date().addingTimeInterval(-60 * 60),
         isPlaceholder: false,
         hasCurrentMonthData: true
+    )
+}
+
+#Preview(as: .systemSmall) {
+    DutyparkTodoWidget()
+} timeline: {
+    DutyparkTodoWidgetEntry(
+        date: Date(),
+        accountID: 1,
+        todos: DutyparkTodoWidgetPreviewData.todos,
+        updatedAt: Date().addingTimeInterval(-60 * 60)
     )
 }
 

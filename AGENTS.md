@@ -65,6 +65,7 @@ The source code, tests, and task-specific documentation are the source of truth 
 - iOS: when affected, run the build and `DutyparkTests` unit tests documented in `ios/README.md` by default.
 - Do not run `DutyparkUITests` as part of default verification, including UI tests related to the changed area. Run specific or full iOS UI tests only when the user explicitly requests them; full iOS UI test runs are strictly opt-in.
 - After completing an iOS app change, install the latest successfully verified build on the simulator named exactly `iPhone 13 mini` so the user can inspect it immediately. This does not authorize starting a development server. If that simulator is unavailable or installation is blocked by CoreSimulator or another error, report the exact reason.
+- Also build and install the latest verified version on the user's connected physical iPhone after every iOS app change. If multiple physical iPhones are available and the user's device cannot be identified, ask which one to use. If the device is disconnected or signing, pairing, or installation is blocked, report the exact reason.
 
 ### iOS Interaction Feedback
 

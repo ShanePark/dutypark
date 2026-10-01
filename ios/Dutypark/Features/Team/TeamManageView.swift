@@ -701,7 +701,7 @@ private extension View {
     }
 }
 
-private struct TeamDutyTypeEditor: View {
+struct TeamDutyTypeEditor: View {
     @ObservedObject var viewModel: TeamManageViewModel
     let maximumHeight: CGFloat
     @Binding var interaction: TeamModalInteractionState
@@ -710,7 +710,7 @@ private struct TeamDutyTypeEditor: View {
     @State private var name = ""
     @State private var abbreviation = ""
     @State private var initialAbbreviation = ""
-    @State private var color = Color(teamHex: TeamManageModalLogic.defaultDutyTypeColor)
+    @State private var color = TeamManageModalLogic.defaultDutyTypeColor
     @State private var isSubmitting = false
     @State private var initialName = ""
     @State private var initialColorHex = TeamManageModalLogic.defaultDutyTypeColor
@@ -739,7 +739,7 @@ private struct TeamDutyTypeEditor: View {
 
     var body: some View {
         DPModalPanel(
-            maximumPanelHeight: min(maximumHeight * 0.64, 500),
+            maximumPanelHeight: min(maximumHeight * 0.88, 640),
             scrollTarget: focusedField
         ) {
             teamModalHeader(
@@ -810,31 +810,14 @@ private struct TeamDutyTypeEditor: View {
                     .id(Field.abbreviation)
                 }
 
-                HStack {
-                    Text("team.dutyType.fields.color", tableName: "Team")
-                        .font(DPTypography.label)
-                    Spacer()
-                    ColorPicker(
-                        teamLocalized("team.dutyType.fields.color"),
-                        selection: $color,
-                        supportsOpacity: false
-                    )
-                    .labelsHidden()
-                    .accessibilityLabel(Text("team.dutyType.fields.color", tableName: "Team"))
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                }
+                DPDutyTypeColorPicker(selection: $color)
+                    .disabled(isSubmitting || viewModel.isWorking)
 
                 VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                     Text("team.dutyType.fields.preview", tableName: "Team")
                         .font(DPTypography.label)
                         .foregroundStyle(DPColor.textMuted)
-                    TeamDutyTypeBadge(
-                        name: trimmedName.isEmpty
-                            ? teamLocalized("team.dutyType.placeholders.preview")
-                            : trimmedName,
-                        color: color.teamHexRGB,
-                        memberCount: nil
-                    )
+                    TeamDutyColorPreview(name: trimmedName, color: color)
                 }
             }
             .padding(DPSpacing.medium)
@@ -852,7 +835,7 @@ private struct TeamDutyTypeEditor: View {
                     guard canSave else { return }
                     isSubmitting = true
                     Task {
-                        await viewModel.saveDutyType(name: trimmedName, color: color.teamHexRGB, abbreviation: abbreviation)
+                        await viewModel.saveDutyType(name: trimmedName, color: color, abbreviation: abbreviation)
                         isSubmitting = false
                         updateInteractionState()
                         if !viewModel.showsError { dismissAfterSuccess() }
@@ -871,25 +854,20 @@ private struct TeamDutyTypeEditor: View {
             if let dutyType = viewModel.editingDutyType {
                 name = dutyType.name
                 abbreviation = dutyType.abbreviation ?? ""
-                color = Color(teamHex: dutyType.color)
+                color = DutyTypeColorPalette.initialColor(existing: dutyType.color)
             } else {
                 name = ""
                 abbreviation = ""
-                color = Color(teamHex: TeamManageModalLogic.defaultDutyTypeColor)
+                color = TeamManageModalLogic.defaultDutyTypeColor
             }
             initialName = name
             initialAbbreviation = abbreviation
-            initialColorHex = color.teamHexRGB
+            initialColorHex = color
             updateInteractionState()
         }
         .onChange(of: name) { _, _ in updateInteractionState() }
         .onChange(of: abbreviation) { _, _ in updateInteractionState() }
-        .onChange(of: color) { oldValue, newValue in
-            if oldValue != newValue {
-                DPHapticCenter.shared.emit(.selection)
-            }
-            updateInteractionState()
-        }
+        .onChange(of: color) { _, _ in updateInteractionState() }
         .onChange(of: isSubmitting) { _, _ in updateInteractionState() }
         .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
         .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }
@@ -901,7 +879,7 @@ private struct TeamDutyTypeEditor: View {
 
     private func updateInteractionState() {
         interaction.isDirty = name != initialName || abbreviation != initialAbbreviation
-            || color.teamHexRGB != initialColorHex
+            || color != initialColorHex
         interaction.isWorking = isSubmitting || viewModel.isWorking
     }
 
@@ -914,6 +892,50 @@ private struct TeamDutyTypeEditor: View {
         case .dismiss:
             dismiss()
         }
+    }
+}
+
+struct TeamDutyColorPreview: View {
+    let name: String
+    let color: String
+
+    struct Indicator: Identifiable {
+        let id: String
+        let text: String
+        let foreground: Color
+    }
+
+    func indicators(locale: Locale? = nil) -> [Indicator] {
+        let weekdays = TeamLocalization.shortStandaloneWeekdaySymbols(locale: locale)
+        return [Indicator(
+            id: "work",
+            text: name.isEmpty ? AppLocalization.string("team.dutyType.placeholders.preview", table: "Team", locale: locale) : name,
+            foreground: DPCalendarCellStyle.primaryForeground(dutyColor: color)
+        ), Indicator(
+            id: "saturday",
+            text: weekdays[6],
+            foreground: DPCalendarCellStyle.dayNumberColor(dutyColor: color, weekdayIndex: 6, hasHoliday: false)
+        ), Indicator(
+            id: "sunday",
+            text: weekdays[0],
+            foreground: DPCalendarCellStyle.dayNumberColor(dutyColor: color, weekdayIndex: 0, hasHoliday: false)
+        )]
+    }
+
+    var body: some View {
+        HStack(spacing: DPSpacing.medium) {
+            ForEach(indicators()) { indicator in
+                Text(verbatim: indicator.text)
+                    .font(DPTypography.bodyMedium)
+                    .foregroundStyle(indicator.foreground)
+                    .lineLimit(1)
+                    .frame(maxWidth: indicator.id == "work" ? .infinity : nil, alignment: .leading)
+                    .fixedSize(horizontal: indicator.id != "work", vertical: false)
+                    .accessibilityIdentifier("team.dutyType.preview.\(indicator.id)")
+            }
+        }
+        .padding(DPSpacing.compact)
+        .background(DPCalendarCellStyle.cellBackground(dutyColor: color, isCurrentMonth: true))
     }
 }
 
@@ -1504,7 +1526,7 @@ nonisolated enum TeamConfirmationSubmissionPolicy {
 
 nonisolated enum TeamManageModalLogic {
     static let maximumDutyNameLength = 10
-    static let defaultDutyTypeColor = "#FFB3BA"
+    static let defaultDutyTypeColor = DutyTypeColorPalette.defaultColor
 
     static func limitedDutyName(_ value: String) -> String {
         String(value.prefix(maximumDutyNameLength))
@@ -1530,24 +1552,5 @@ nonisolated enum TeamManageModalLogic {
             if let editingID, dutyType.id == editingID { return false }
             return dutyType.name.trimmingCharacters(in: .whitespacesAndNewlines) == name
         }
-    }
-}
-
-private extension Color {
-    var teamHexRGB: String {
-        let uiColor = UIColor(self)
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        var alpha: CGFloat = 0
-        guard uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
-            return "#3B82F6"
-        }
-        return String(
-            format: "#%02X%02X%02X",
-            Int(round(red * 255)),
-            Int(round(green * 255)),
-            Int(round(blue * 255))
-        )
     }
 }

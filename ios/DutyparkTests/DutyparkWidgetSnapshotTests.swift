@@ -91,15 +91,21 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         )
     }
 
-    func testWidgetWeekendDateNumberNeedsContrastBackingWhenConfiguredDutyColorMatches() throws {
-        let redDutyColor = try XCTUnwrap(DutyparkWidgetColorComponents(hex: "#DC2626"))
-        let blueDutyColor = try XCTUnwrap(DutyparkWidgetColorComponents(hex: "#2563EB"))
-        let contrastingDutyColor = try XCTUnwrap(DutyparkWidgetColorComponents(hex: "#FFFFFF"))
-
-        XCTAssertTrue(redDutyColor.needsDateNumberContrastBacking(for: .sundayOrHoliday))
-        XCTAssertTrue(blueDutyColor.needsDateNumberContrastBacking(for: .saturday))
-        XCTAssertFalse(contrastingDutyColor.needsDateNumberContrastBacking(for: .sundayOrHoliday))
-        XCTAssertFalse(contrastingDutyColor.needsDateNumberContrastBacking(for: .saturday))
+    func testWidgetWeekendForegroundRemainsReadableOnCustomDutyColorsWithoutBacking() throws {
+        let white = DutyparkWidgetColorComponents(red: 255, green: 255, blue: 255)
+        let black = DutyparkWidgetColorComponents(red: 0, green: 0, blue: 0)
+        for hex in ["#DC2626", "#2563EB"] {
+            let background = try XCTUnwrap(DutyparkWidgetColorComponents(hex: hex))
+            XCTAssertEqual(background.readableForeground(preferred: background), white)
+        }
+        let gray = try XCTUnwrap(DutyparkWidgetColorComponents(hex: "#808080"))
+        XCTAssertEqual(gray.readableForeground(preferred: gray), black)
+        let weekend = try XCTUnwrap(DutyparkWidgetColorComponents(hex: "#991B1B"))
+        for option in DutyTypeColorPalette.options {
+            let background = try XCTUnwrap(DutyparkWidgetColorComponents(hex: option.hex))
+            XCTAssertEqual(background.readableForeground(preferred: weekend), weekend)
+        }
+        XCTAssertEqual(white.readableForeground(preferred: weekend), weekend)
     }
 
     func testMonthlyWidgetShowsOnlyTheWeeksNeededForEachMonth() {

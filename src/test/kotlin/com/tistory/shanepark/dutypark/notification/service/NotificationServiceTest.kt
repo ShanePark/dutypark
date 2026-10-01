@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.notification.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
@@ -20,9 +23,11 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.test.util.ReflectionTestUtils
@@ -399,6 +404,47 @@ class NotificationServiceTest {
         assertThat(result[0].id).isEqualTo(invalidNotification.id)
         assertThat(result[0].payload.version).isEqualTo(0)
         assertThat(result[1].id).isEqualTo(validNotification.id)
+    }
+
+    @Test
+    fun `payload fallback logs stable decode status without exception details or payload contents`() {
+        val notificationId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000")
+        val invalidPayload = "payload-secret-marker"
+        val codec = mock<NotificationPayloadCodec>()
+        whenever(codec.safeDeserialize(any(), any(), any())).thenReturn(
+            NotificationPayloadDecodeResult.Invalid("Unsafe decoding exception containing $invalidPayload")
+        )
+        val service = NotificationService(
+            notificationRepository = notificationRepository,
+            memberRepository = memberRepository,
+            friendRequestRepository = friendRequestRepository,
+            notificationPayloadCodec = codec,
+        )
+        val notification = Notification(
+            member = testMember,
+            type = NotificationType.FRIEND_REQUEST_RECEIVED,
+            referenceType = NotificationReferenceType.FRIEND_REQUEST,
+            referenceId = "456",
+            actorId = actorMember.id,
+            payloadJson = invalidPayload,
+            payloadVersion = 1,
+        ).also { ReflectionTestUtils.setField(it, "id", notificationId) }
+        whenever(notificationRepository.findByMemberIdAndIsReadFalseOrderByCreatedDateDesc(testMember.id!!))
+            .thenReturn(listOf(notification))
+        val logger = LoggerFactory.getLogger(NotificationService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            service.getUnreadNotifications(testMember.id!!)
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        val event = appender.list.single()
+        assertThat(event.formattedMessage)
+            .contains(notificationId.toString(), "1", "FRIEND_REQUEST_RECEIVED", "getUnreadNotifications", "INVALID")
+            .doesNotContain(invalidPayload, "Unsafe decoding exception")
     }
 
     @Test

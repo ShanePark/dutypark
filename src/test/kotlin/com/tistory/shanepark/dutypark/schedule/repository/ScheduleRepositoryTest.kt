@@ -200,4 +200,5 @@ class ScheduleRepositoryTest {
         assertThat(schedule1.member.name).isEqualTo("owner1")
         assertThat(schedule1.tags.map { it.member.id }).containsExactlyInAnyOrder(taggedMemberId, otherTagMemberId)
     }
+
 }

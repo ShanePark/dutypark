@@ -3,6 +3,9 @@ package com.tistory.shanepark.dutypark.attachment.service
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentUploadSessionRepository
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import java.time.Clock
@@ -14,6 +17,7 @@ class AttachmentUploadSessionService(
     private val permissionEvaluator: AttachmentPermissionEvaluator,
     private val clock: Clock
 ) {
+    private val log = logger()
 
     fun createSession(
         loginMember: LoginMember,
@@ -32,7 +36,14 @@ class AttachmentUploadSessionService(
 
         permissionEvaluator.checkSessionWritePermission(loginMember, session)
 
-        return sessionRepository.save(session)
+        val saved = sessionRepository.save(session)
+        log.auditEventAfterCommit(
+            "attachment_upload_session_created", loginMember.toAuditActor(),
+            mapOf("sessionId" to saved.id, "ownerId" to saved.ownerId,
+                "contextType" to saved.contextType, "targetContextId" to saved.targetContextId),
+            mapOf("expiresAt" to saved.expiresAt),
+        )
+        return saved
     }
 
     fun findById(sessionId: UUID): AttachmentUploadSession? {

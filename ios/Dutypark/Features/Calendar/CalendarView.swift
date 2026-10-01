@@ -18,6 +18,75 @@ private struct CalendarTodoSelection: Identifiable {
     var id: String { todo.id }
 }
 
+private struct CalendarMonthPage: Identifiable {
+    let key: OfflineMonthKey
+    let days: [CalendarDayContent]
+
+    var id: OfflineMonthKey { key }
+}
+
+private struct CalendarMonthTransition: Identifiable {
+    let id: UUID
+    var pages: [CalendarMonthPage]
+    let viewport: CalendarMonthBodyViewport
+}
+
+private struct CalendarMonthBodyHeightsPreferenceKey: PreferenceKey {
+    static let defaultValue: [OfflineMonthKey: CGFloat] = [:]
+
+    static func reduce(value: inout [OfflineMonthKey: CGFloat], nextValue: () -> [OfflineMonthKey: CGFloat]) {
+        value.merge(nextValue(), uniquingKeysWith: { max($0, $1) })
+    }
+}
+
+struct CalendarMonthCellGrid<Item: Identifiable, Cell: View>: View {
+    let items: [Item]
+    @ViewBuilder let content: (Int, Item) -> Cell
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                content(index, item)
+            }
+        }
+    }
+}
+
+struct CalendarMonthPageTrack<Page: Identifiable, Content: View>: View {
+    let pages: [Page]
+    let width: CGFloat
+    let height: CGFloat
+    let offset: CGFloat
+    @ViewBuilder let content: (Page, Int) -> Content
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
+                content(page, index)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: width, height: height, alignment: .top)
+                    .clipped()
+            }
+        }
+        .offset(x: offset)
+        .frame(width: width, height: height, alignment: .topLeading)
+        .clipped()
+    }
+}
+
+struct CalendarWeekdayStrip: View {
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
+            ForEach(Array(["sun", "mon", "tue", "wed", "thu", "fri", "sat"].enumerated()), id: \.element) { index, weekday in
+                DPCalendarWeekdayHeaderCell(
+                    label: CalendarLocalization.text("calendar.weekday.\(weekday)"),
+                    weekdayIndex: index
+                )
+            }
+        }
+    }
+}
+
 nonisolated enum CalendarMainLayout {
     static func shouldShowDutyToolbar(
         hasDutySummary: Bool,
@@ -141,8 +210,12 @@ struct CalendarView: View {
     @State private var reportTarget: ReportTarget?
     @State private var reportCanDismiss = true
     @State private var showsBlockConfirmation = false
-    @State private var monthSlideOffset: CGFloat = 0
+    @State private var monthTrackOffset: CGFloat = 0
     @State private var calendarGridWidth: CGFloat = 0
+    @State private var calendarBodyHeight: CGFloat = 0
+    @State private var monthTransition: CalendarMonthTransition?
+    @State private var monthPreviewTask: Task<Void, Never>?
+    @State private var monthSlideTask: Task<Void, Never>?
     @State private var isSlidingMonth = false
     @State private var isSwipingMonth = false
     @State private var leavesAfterBlock = false
@@ -209,7 +282,19 @@ struct CalendarView: View {
             guard session.availability == .online else { return }
             Task { await model.refreshAfterCalendarTabReturn() }
         }
-        .onDisappear { model.cancelBackgroundTasks() }
+        .onDisappear {
+            monthPreviewTask?.cancel()
+            monthPreviewTask = nil
+            monthSlideTask?.cancel()
+            monthSlideTask = nil
+            withTransaction(Transaction(animation: nil)) {
+                monthTransition = nil
+                monthTrackOffset = 0
+                isSlidingMonth = false
+                isSwipingMonth = false
+            }
+            model.cancelBackgroundTasks()
+        }
         .onChange(of: session.availability) { _, availability in
             configureFromSession()
             Task {
@@ -431,6 +516,10 @@ struct CalendarView: View {
                 .padding(.horizontal, DPSpacing.small)
                 .padding(.top, DPSpacing.extraSmall)
                 .padding(.bottom, DPSpacing.large)
+                .animation(
+                    reduceMotion ? nil : .easeInOut(duration: CalendarMonthSwipe.slideInDuration),
+                    value: visibleCalendarDays.count
+                )
             }
 
             thisMonthCalloutLayer
@@ -687,6 +776,7 @@ struct CalendarView: View {
         .accessibilityLabel(CalendarLocalization.text("calendar.month.choose"))
         .accessibilityValue(String(format: "%04d-%02d", model.year, model.month))
         .accessibilityIdentifier("calendar.month.display")
+        .disabled(model.isLoading || isSlidingMonth)
     }
 
     // The trailing search control is narrower than `DPSize.minimumTouchTarget`; the 44pt-tall
@@ -769,6 +859,7 @@ struct CalendarView: View {
         }
         .scaleEffect(Self.calloutScale, anchor: .topLeading)
         .accessibilityLabel(CalendarLocalization.text("calendar.month.goToThisMonth"))
+        .disabled(model.isLoading || isSlidingMonth)
     }
 
     private var monthCenterControls: some View {
@@ -787,6 +878,7 @@ struct CalendarView: View {
                 Task { await model.changeMonth(by: 1) }
             }
         }
+        .disabled(model.isLoading || isSlidingMonth)
     }
 
     // The navigation bar has no room for the inline query field; tapping opens the
@@ -1091,50 +1183,25 @@ struct CalendarView: View {
 
     private var visibleCalendarDays: [CalendarDayContent] {
         let cells = model.days.map(\.cell)
-        let visibleRange = CalendarDateSupport.visibleCellRange(
-            year: model.year,
-            month: model.month,
-            cells: cells
-        )
+        let visibleRange = CalendarDateSupport.displayedCellRange(in: cells)
         return Array(model.days[visibleRange])
+    }
+
+    private var displayedMonthKey: OfflineMonthKey {
+        guard let cell = model.days.first(where: { $0.cell.isCurrentMonth }) else {
+            return OfflineMonthKey(year: model.year, month: model.month)
+        }
+        return OfflineMonthKey(year: cell.cell.year, month: cell.cell.month)
+    }
+
+    private var calendarWeekdayHeader: some View {
+        CalendarWeekdayStrip()
     }
 
     private var calendarGrid: some View {
         VStack(spacing: 0) {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
-                ForEach(Array(["sun", "mon", "tue", "wed", "thu", "fri", "sat"].enumerated()), id: \.element) { index, weekday in
-                    DPCalendarWeekdayHeaderCell(
-                        label: CalendarLocalization.text("calendar.weekday.\(weekday)"),
-                        weekdayIndex: index
-                    )
-                }
-                ForEach(Array(visibleCalendarDays.enumerated()), id: \.element.id) { index, day in
-                    let opensDetail = CalendarDayOpenPolicy.opensDetail(day, canEdit: model.canEdit)
-                    let cell = CalendarDayCell(
-                        day: day,
-                        weekday: index % 7,
-                        highlighted: model.highlightedDate == day.cell.date,
-                        pinnedDDay: model.pinnedDDay,
-                        hidesDetails: model.isQuickDutyEditing,
-                        calendarMemberID: model.targetMemberID,
-                        opensDetail: opensDetail,
-                        openTodo: openTodo
-                    )
-                    if opensDetail {
-                        cell.onTapGesture {
-                            // A finger that pulled the grid sideways was swiping, not
-                            // tapping, even when it gave up short of the next month.
-                            guard !isSwipingMonth, !isSlidingMonth else { return }
-                            if model.isQuickDutyEditing { model.focusQuickDuty(on: day) }
-                            else {
-                                withoutPresentationAnimation { model.selectDay(day) }
-                            }
-                        }
-                    } else {
-                        cell
-                    }
-                }
-            }
+            calendarWeekdayHeader
+            monthBodyPager
         }
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
@@ -1142,65 +1209,290 @@ struct CalendarView: View {
         .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
     }
 
+    // Swipes move only the date rows. The static weekday strip remains above the
+    // clipped, three-month track, so an adjacent page is always touching the current one.
+    private var monthBodyPager: some View {
+        Group {
+            if let transition = monthTransition {
+                CalendarMonthPageTrack(
+                    pages: transition.pages,
+                    width: calendarGridWidth,
+                    height: transitionBodyHeight,
+                    offset: monthTrackOffset
+                ) { page, index in
+                    calendarMonthBody(page: page, isInteractive: index == 1 && !isSlidingMonth)
+                }
+            } else {
+                calendarMonthBody(
+                    page: CalendarMonthPage(key: displayedMonthKey, days: model.days),
+                    isInteractive: true
+                )
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .onPreferenceChange(CalendarMonthBodyHeightsPreferenceKey.self) { heights in
+            guard !heights.isEmpty else { return }
+            if monthTransition == nil,
+               let height = heights[displayedMonthKey],
+               height > 0 {
+                calendarBodyHeight = height
+            }
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { updateCalendarGridWidth(proxy.size.width) }
+                    .onChange(of: proxy.size.width) { _, width in updateCalendarGridWidth(width) }
+            }
+        }
+        .background(DPColor.backgroundCard)
+        .clipped()
+        // A plain DragGesture claimed every drag that passed its minimum distance,
+        // so a scroll that set off with the slightest sideways lean never reached
+        // the page underneath. This one takes sideways drags and nothing else.
+        .dpHorizontalPan(
+            onChanged: followMonthSwipe,
+            onEnded: finishMonthSwipe,
+            onCancelled: cancelMonthSwipe
+        )
+    }
+
+    private func calendarMonthBody(
+        page: CalendarMonthPage,
+        isInteractive: Bool
+    ) -> some View {
+        let cells = page.days.map(\.cell)
+        let range = CalendarDateSupport.displayedCellRange(in: cells)
+        let days = Array(page.days[range])
+
+        return CalendarMonthCellGrid(items: days) { index, day in
+                let opensDetail = isInteractive
+                    && CalendarDayOpenPolicy.opensDetail(day, canEdit: model.canEdit)
+                let cell = CalendarDayCell(
+                    day: day,
+                    weekday: index % 7,
+                    highlighted: model.highlightedDate == day.cell.date,
+                    pinnedDDay: model.pinnedDDay,
+                    hidesDetails: model.isQuickDutyEditing,
+                    calendarMemberID: model.targetMemberID,
+                    opensDetail: opensDetail,
+                    openTodo: openTodo
+                )
+                if opensDetail {
+                    cell.onTapGesture {
+                        // A finger that pulled the grid sideways was swiping, not
+                        // tapping, even when it gave up short of the next month.
+                        guard !isSwipingMonth, !isSlidingMonth else { return }
+                        if model.isQuickDutyEditing { model.focusQuickDuty(on: day) }
+                        else {
+                            withoutPresentationAnimation { model.selectDay(day) }
+                        }
+                    }
+                } else {
+                    cell
+                }
+        }
+        .background(DPColor.backgroundCard)
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: CalendarMonthBodyHeightsPreferenceKey.self,
+                    value: [page.key: proxy.size.height]
+                )
+            }
+        }
+        .allowsHitTesting(isInteractive && !isSlidingMonth)
+        .accessibilityHidden(!isInteractive)
+    }
+
+    private func placeholderMonthPage(for key: OfflineMonthKey) -> CalendarMonthPage {
+        CalendarMonthPage(
+            key: key,
+            days: CalendarDateSupport.placeholderCells(year: key.year, month: key.month).map {
+                CalendarDayContent(
+                    cell: $0,
+                    duty: nil,
+                    schedules: [],
+                    holidays: [],
+                    todos: [],
+                    dDays: [],
+                    comparedDuties: []
+                )
+            }
+        )
+    }
+
+    private var transitionBodyHeight: CGFloat {
+        monthTransition?.viewport.height
+            ?? max(calendarBodyHeight, minimumBodyHeight(for: CalendarMonthPage(key: displayedMonthKey, days: model.days)))
+    }
+
+    private func minimumBodyHeight(for page: CalendarMonthPage) -> CGFloat {
+        CGFloat(visibleRowCount(for: page)) * CalendarVisualLogic.compactCellMinimumHeight
+    }
+
+    private func visibleRowCount(for page: CalendarMonthPage) -> Int {
+        let cells = page.days.map(\.cell)
+        let range = CalendarDateSupport.displayedCellRange(in: cells)
+        return max(range.count / 7, 1)
+    }
+
+    private func updateCalendarGridWidth(_ width: CGFloat) {
+        guard width > 0 else { return }
+        calendarGridWidth = width
+    }
+
     // Swiping the grid sideways is the quick way through the months; the chevrons in
     // the navigation bar stay for taps and for VoiceOver, which never sees this drag.
     private var swipeableCalendarGrid: some View {
         calendarGrid
-            .background {
-                GeometryReader { proxy in
-                    Color.clear
-                        .onAppear { calendarGridWidth = proxy.size.width }
-                        .onChange(of: proxy.size.width) { _, width in calendarGridWidth = width }
-                }
+    }
+
+    private func beginMonthTransitionIfNeeded() {
+        guard monthTransition == nil,
+              !model.isLoading,
+              model.days.count == 42,
+              displayedMonthKey == OfflineMonthKey(year: model.year, month: model.month)
+        else { return }
+
+        let source = displayedMonthKey
+        let previous = source.offsetByMonths(-1)
+        let next = source.offsetByMonths(1)
+        let transition = CalendarMonthTransition(
+            id: UUID(),
+            pages: [
+                placeholderMonthPage(for: previous),
+                CalendarMonthPage(key: source, days: model.days),
+                placeholderMonthPage(for: next)
+            ],
+            viewport: CalendarMonthBodyViewport(sourceHeight: max(
+                calendarBodyHeight,
+                minimumBodyHeight(for: CalendarMonthPage(key: source, days: model.days))
+            ))
+        )
+        withTransaction(Transaction(animation: nil)) {
+            monthTransition = transition
+            monthTrackOffset = CalendarMonthSwipe.trackOffset(width: calendarGridWidth, drag: 0)
+        }
+
+        monthPreviewTask?.cancel()
+        monthPreviewTask = Task {
+            async let previousDays = model.cachedMonthPreview(year: previous.year, month: previous.month)
+            async let nextDays = model.cachedMonthPreview(year: next.year, month: next.month)
+            let (loadedPrevious, loadedNext) = await (previousDays, nextDays)
+            guard !Task.isCancelled,
+                  var activeTransition = monthTransition,
+                  activeTransition.id == transition.id
+            else { return }
+            if let loadedPrevious {
+                activeTransition.pages[0] = CalendarMonthPage(key: previous, days: loadedPrevious)
             }
-            .offset(x: monthSlideOffset)
-            // A plain DragGesture claimed every drag that passed its minimum distance,
-            // so a scroll that set off with the slightest sideways lean never reached
-            // the page underneath. This one takes sideways drags and nothing else.
-            .dpHorizontalPan(onChanged: followMonthSwipe, onEnded: finishMonthSwipe)
+            if let loadedNext {
+                activeTransition.pages[2] = CalendarMonthPage(key: next, days: loadedNext)
+            }
+            monthTransition = activeTransition
+        }
     }
 
     private func followMonthSwipe(translation: CGSize) {
-        guard !isSlidingMonth else { return }
-        monthSlideOffset = CalendarMonthSwipe.followOffset(translation: translation)
-        if monthSlideOffset != 0 { isSwipingMonth = true }
+        guard !isSlidingMonth, !model.isLoading else { return }
+        beginMonthTransitionIfNeeded()
+        guard monthTransition != nil else { return }
+        let drag = CalendarMonthSwipe.followOffset(
+            translation: translation,
+            viewportWidth: calendarGridWidth
+        )
+        monthTrackOffset = CalendarMonthSwipe.trackOffset(width: calendarGridWidth, drag: drag)
+        if drag != 0 { isSwipingMonth = true }
     }
 
-    private func finishMonthSwipe(translation: CGSize) {
+    private func finishMonthSwipe(translation: CGSize, velocity: CGSize) {
         guard !isSlidingMonth else { return }
-        // The cell's own tap lands around the same moment, so the swipe flag
-        // outlives the drag just long enough for that tap to be turned away.
-        Task {
-            try? await Task.sleep(nanoseconds: 100_000_000)
-            isSwipingMonth = false
-        }
-        let offset = CalendarMonthSwipe.monthOffset(translation: translation)
-        guard offset != 0 else {
-            withAnimation(.easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
-                monthSlideOffset = 0
-            }
+        let offset = CalendarMonthSwipe.monthOffset(
+            translation: translation,
+            velocity: velocity,
+            viewportWidth: calendarGridWidth
+        )
+        guard offset != 0, let transition = monthTransition else {
+            settleUncommittedMonthSwipe()
             return
         }
-        slideMonth(by: offset)
+
+        isSlidingMonth = true
+        let width = calendarGridWidth
+        let destinationOffset = CalendarMonthSwipe.settledTrackOffset(width: width, monthOffset: offset)
+        withAnimation(reduceMotion ? nil : .easeOut(duration: CalendarMonthSwipe.slideOutDuration)) {
+            monthTrackOffset = destinationOffset
+        }
+
+        monthSlideTask?.cancel()
+        monthSlideTask = Task {
+            if !reduceMotion {
+                try? await Task.sleep(for: .seconds(CalendarMonthSwipe.slideOutDuration))
+            }
+            guard !Task.isCancelled, monthTransition?.id == transition.id else { return }
+
+            let didLoadMonth = await model.changeMonth(by: offset)
+            guard !Task.isCancelled, monthTransition?.id == transition.id else { return }
+            if didLoadMonth {
+                monthPreviewTask?.cancel()
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: CalendarMonthSwipe.slideInDuration)) {
+                    monthTransition = nil
+                    monthTrackOffset = 0
+                    isSlidingMonth = false
+                }
+            } else {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
+                    monthTrackOffset = CalendarMonthSwipe.trackOffset(width: width, drag: 0)
+                }
+                if !reduceMotion {
+                    try? await Task.sleep(for: .seconds(CalendarMonthSwipe.slideInDuration))
+                }
+                guard !Task.isCancelled else { return }
+                monthPreviewTask?.cancel()
+                withTransaction(Transaction(animation: nil)) {
+                    monthTransition = nil
+                    monthTrackOffset = 0
+                    isSlidingMonth = false
+                }
+            }
+        }
+
+        Task {
+            try? await Task.sleep(for: .milliseconds(100))
+            isSwipingMonth = false
+        }
     }
 
-    private func slideMonth(by offset: Int) {
-        isSlidingMonth = true
-        // The month itself changes now and its days arrive later, so the grid slides
-        // out, reappears on the far side and slides back in without waiting for the
-        // response; a slow month lands its cells into a calendar that is already home.
-        let travel = calendarGridWidth > 0 ? calendarGridWidth : CalendarMonthSwipe.maximumFollowDistance
-        withAnimation(.easeIn(duration: CalendarMonthSwipe.slideOutDuration)) {
-            monthSlideOffset = offset > 0 ? -travel : travel
+    private func cancelMonthSwipe(translation _: CGSize) {
+        guard !isSlidingMonth else { return }
+        settleUncommittedMonthSwipe()
+    }
+
+    private func settleUncommittedMonthSwipe() {
+        guard monthTransition != nil else {
+            isSwipingMonth = false
+            return
         }
-        Task { await model.changeMonth(by: offset) }
-        Task {
-            try? await Task.sleep(nanoseconds: UInt64(CalendarMonthSwipe.slideOutDuration * 1_000_000_000))
-            monthSlideOffset = offset > 0 ? travel : -travel
-            withAnimation(.easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
-                monthSlideOffset = 0
+        isSlidingMonth = true
+        let width = calendarGridWidth
+        withAnimation(reduceMotion ? nil : .easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
+            monthTrackOffset = CalendarMonthSwipe.trackOffset(width: width, drag: 0)
+        }
+        monthSlideTask?.cancel()
+        monthSlideTask = Task {
+            if !reduceMotion {
+                try? await Task.sleep(for: .seconds(CalendarMonthSwipe.slideInDuration))
             }
-            isSlidingMonth = false
+            guard !Task.isCancelled else { return }
+            monthPreviewTask?.cancel()
+            withTransaction(Transaction(animation: nil)) {
+                monthTransition = nil
+                monthTrackOffset = 0
+                isSlidingMonth = false
+                isSwipingMonth = false
+            }
         }
     }
 
@@ -1746,7 +2038,7 @@ private struct CalendarDayCell: View {
                     Text(holiday.dateName)
                         .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
                         .lineLimit(1)
-                        .foregroundStyle(holiday.isHoliday ? DPColor.dangerHover : secondaryForeground)
+                        .foregroundStyle(holiday.isHoliday ? DPCalendarCellStyle.holidayForeground(dutyColor: day.duty?.dutyColor) : secondaryForeground)
                 }
                 ForEach(Array(day.comparedDuties.prefix(3).enumerated()), id: \.offset) { _, item in
                     comparedDutyChip(item)

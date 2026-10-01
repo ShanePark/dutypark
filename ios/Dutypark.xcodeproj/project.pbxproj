@@ -16,6 +16,9 @@
 				);
 			};
 		};
+		F10000000000000000000001 /* DPFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000001 /* DPFont.swift */; };
+		F10000000000000000000002 /* Maplestory OTF Light.otf in Resources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000002 /* Maplestory OTF Light.otf */; };
+		F10000000000000000000003 /* Maplestory OTF Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000003 /* Maplestory OTF Bold.otf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +52,9 @@
 		B40000000000000000000001 /* DutyparkWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DutyparkWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C30000000000000000000001 /* OAuth.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Config/OAuth.xcconfig"; sourceTree = "<group>"; };
 		C30000000000000000000002 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Config/Version.xcconfig"; sourceTree = "<group>"; };
+		F40000000000000000000001 /* DPFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dutypark/Components/DPFont.swift; sourceTree = SOURCE_ROOT; };
+		F40000000000000000000002 /* Maplestory OTF Light.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Dutypark/Resources/Fonts/Maplestory OTF Light.otf"; sourceTree = SOURCE_ROOT; };
+		F40000000000000000000003 /* Maplestory OTF Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Dutypark/Resources/Fonts/Maplestory OTF Bold.otf"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -156,6 +162,9 @@
 				A40000000000000000000003 /* DutyparkUITests */,
 				B50000000000000000000001 /* DutyparkWidgets */,
 				B50000000000000000000002 /* DutyparkWidgetShared */,
+				F40000000000000000000001 /* DPFont.swift */,
+				F40000000000000000000002 /* Maplestory OTF Light.otf */,
+				F40000000000000000000003 /* Maplestory OTF Bold.otf */,
 				C30000000000000000000001 /* OAuth.xcconfig */,
 				C30000000000000000000002 /* Version.xcconfig */,
 				A60000000000000000000002 /* Products */,
@@ -354,6 +363,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F10000000000000000000002 /* Maplestory OTF Light.otf in Resources */,
+				F10000000000000000000003 /* Maplestory OTF Bold.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -403,6 +414,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F10000000000000000000001 /* DPFont.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

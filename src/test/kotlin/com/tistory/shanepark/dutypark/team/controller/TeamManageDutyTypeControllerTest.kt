@@ -20,12 +20,69 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 class TeamManageDutyTypeControllerTest : RestDocsTest() {
 
     @Test
+    fun `manager can create a duty type with a custom hex color`() {
+        setTeamAdmin(TestData.member.id!!)
+        val payload = DutyTypeCreateDto(TestData.team.id!!, "ExtraDuty", "#000000")
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/teams/manage/{teamId}/duty-types", TestData.team.id!!)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload))
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+
+        assertThat(dutyTypeRepository.findAllByTeam(TestData.team).single { it.name == "ExtraDuty" }.color)
+            .isEqualTo("#000000")
+    }
+
+    @Test
+    fun `manager can retain a legacy color while editing other duty fields`() {
+        setTeamAdmin(TestData.member.id!!)
+        val target = TestData.dutyTypes.first()
+        target.color = "#abcdef"
+        dutyTypeRepository.saveAndFlush(target)
+        val payload = DutyTypeUpdateDto(target.id!!, "UpdatedDy", "#abcdef").apply { abbreviation = "U" }
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/duty-types", TestData.team.id!!)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload))
+                .withAuth(TestData.member)
+        ).andExpect(status().isOk)
+
+        val updated = dutyTypeRepository.findById(target.id!!).orElseThrow()
+        assertThat(updated.name).isEqualTo("UpdatedDy")
+        assertThat(updated.color).isEqualTo("#abcdef")
+        assertThat(updated.abbreviation).isEqualTo("U")
+    }
+
+    @Test
+    fun `manager can change a duty type to a custom hex color`() {
+        setTeamAdmin(TestData.member.id!!)
+        val target = TestData.dutyTypes.first()
+        val payload = DutyTypeUpdateDto(target.id!!, "UpdatedDy", "#000000")
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/duty-types", TestData.team.id!!)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload))
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+
+        val updated = dutyTypeRepository.findById(target.id!!).orElseThrow()
+        assertThat(updated.name).isEqualTo("UpdatedDy")
+        assertThat(updated.color).isEqualTo("#000000")
+    }
+
+    @Test
     fun `manager can add duty type`() {
         setTeamAdmin(TestData.member.id!!)
         val payload = DutyTypeCreateDto(
             teamId = TestData.team.id!!,
             name = "ExtraDuty",
-            color = "#123456"
+            color = "#F6D365"
         )
         val json = objectMapper.writeValueAsString(payload)
 
@@ -47,7 +104,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
         val payload = DutyTypeCreateDto(
             teamId = TestData.team.id!!,
             name = "시.발",
-            color = "#123456",
+            color = "#F6D365",
         )
 
         mockMvc.perform(
@@ -65,7 +122,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
         val payload = DutyTypeCreateDto(
             teamId = TestData.team.id!!,
             name = "ExtraDuty",
-            color = "#123456"
+            color = "#F6D365"
         )
         val json = objectMapper.writeValueAsString(payload)
 
@@ -86,7 +143,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
         val payload = DutyTypeUpdateDto(
             id = target.id!!,
             name = "UpdatedDy",
-            color = "#654321"
+            color = "#D3BCE2"
         )
         val json = objectMapper.writeValueAsString(payload)
 
@@ -100,7 +157,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
 
         val updated = dutyTypeRepository.findById(target.id!!).orElseThrow()
         assertThat(updated.name).isEqualTo("UpdatedDy")
-        assertThat(updated.color).isEqualTo("#654321")
+        assertThat(updated.color).isEqualTo("#D3BCE2")
     }
 
     @Test
@@ -110,7 +167,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
         val payload = DutyTypeUpdateDto(
             id = target.id!!,
             name = "시.발",
-            color = "#654321",
+            color = "#D3BCE2",
         )
 
         mockMvc.perform(
@@ -131,7 +188,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
         val payload = DutyTypeUpdateDto(
             id = dutyType1.id!!,
             name = dutyType2.name,
-            color = "#123456"
+            color = "#F6D365"
         )
         val json = objectMapper.writeValueAsString(payload)
 

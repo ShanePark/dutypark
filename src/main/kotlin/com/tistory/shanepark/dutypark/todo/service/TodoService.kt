@@ -5,6 +5,11 @@ import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -134,7 +139,9 @@ class TodoService(
             dueDate = dueDate
         )
         todoRepository.save(todo)
-        syncTodoTags(todo, tagFriendIds)
+        syncTodoTags(todo, tagFriendIds, loginMember.toAuditActor())
+        log.auditEventAfterCommit("todo.created", loginMember.toAuditActor(),
+            todoTarget(todo), mapOf("status" to todo.status, "dueDate" to dueDate))
 
         attachmentService.synchronizeContextAttachments(
             loginMember = loginMember,
@@ -167,16 +174,21 @@ class TodoService(
                 .orElseThrow { IllegalArgumentException("Todo not found") }
         }
 
-        verifyOwnership(todo, member)
+        verifyOwnership(todo, member, loginMember, "edit")
 
+        val before = mapOf("dueDate" to todo.dueDate, "titleChanged" to false, "contentChanged" to false)
+        val titleChanged = todo.title != title
+        val contentChanged = todo.content != content
         todo.update(title, content)
         todo.dueDate = dueDate
 
         val changedStatus = status?.takeIf { it != todo.status }
         if (changedStatus != null) {
-            bumpTodoToTopOfStatus(todo, changedStatus)
+            bumpTodoToTopOfStatus(todo, changedStatus, loginMember.toAuditActor())
         }
-        tagFriendIds?.let { syncTodoTags(todo, it) }
+        tagFriendIds?.let { syncTodoTags(todo, it, loginMember.toAuditActor()) }
+        log.auditChangeAfterCommit("todo.updated", loginMember.toAuditActor(), todoTarget(todo), before,
+            mapOf("dueDate" to todo.dueDate, "titleChanged" to titleChanged, "contentChanged" to contentChanged))
         if (changedStatus != null) {
             publishTodoStatusChangedEvents(todo, member, changedStatus)
         }
@@ -199,11 +211,14 @@ class TodoService(
         val todos = todoRepository.findAllById(ids).sortedBy { indexMap.getValue(it.id) }
 
         todos.forEachIndexed { index, todo ->
-            verifyOwnership(todo, member)
+            verifyOwnership(todo, member, loginMember, "reorder")
             if (todo.status != TodoStatus.TODO) {
                 throw IllegalArgumentException("Cannot reorder non-TODO status todo")
             }
+            val before = todo.position
             todo.position = index
+            log.auditChangeAfterCommit("todo.reordered", loginMember.toAuditActor(), todoTarget(todo),
+                mapOf("position" to before), mapOf("position" to todo.position))
         }
     }
 
@@ -213,15 +228,15 @@ class TodoService(
         orderedIds: List<UUID>
     ) {
         val member = findMember(loginMember)
-        applyViewerOrder(member, status, orderedIds)
+        applyViewerOrder(member, status, orderedIds, loginMember.toAuditActor())
     }
 
     fun deleteTodo(loginMember: LoginMember, id: UUID) {
         val member = findMember(loginMember)
         val todo = todoRepository.findById(id).orElseThrow { IllegalArgumentException("Todo not found") }
-        verifyOwnership(todo, member)
+        verifyOwnership(todo, member, loginMember, "delete")
 
-        deleteTodoInternal(todo)
+        deleteTodoInternal(todo, loginMember.toAuditActor())
     }
 
     /**
@@ -251,12 +266,19 @@ class TodoService(
             if (todo.status != TodoStatus.DONE) return@forEach
 
             if (todo.member.id == member.id) {
-                deleteTodoInternal(todo)
+                deleteTodoInternal(todo, loginMember.toAuditActor())
                 deletedCount++
             } else if (todo.tags.any { it.member.id == member.id }) {
                 todo.removeTag(member)
+                log.auditEventAfterCommit("todo.untagged", loginMember.toAuditActor(), todoTarget(todo),
+                    mapOf("taggedMemberId" to member.id, "reason" to "completed_board_clear"))
                 untaggedCount++
             }
+        }
+        if (deletedCount + untaggedCount > 0) {
+            log.auditEventAfterCommit("todo.completed_cleared", loginMember.toAuditActor(),
+                target = mapOf("memberId" to member.id),
+                details = mapOf("requestedCount" to distinctIds.size, "deletedCount" to deletedCount, "untaggedCount" to untaggedCount))
         }
         return TodoBulkDeleteResponse(deletedCount = deletedCount, untaggedCount = untaggedCount)
     }
@@ -266,12 +288,16 @@ class TodoService(
      * for authorization (admin moderation calls this directly). Unlike schedules, the todo context
      * directory is intentionally left untouched, preserving the existing behaviour.
      */
-    internal fun deleteTodoInternal(todo: Todo) {
+    internal fun deleteTodoInternal(todo: Todo, actor: AuditActor? = null) {
         val attachments =
             attachmentRepository.findAllByContextTypeAndContextId(AttachmentContextType.TODO, todo.id.toString())
-        attachments.forEach(attachmentService::deleteAttachment)
+        attachments.forEach { attachment ->
+            attachmentService.deleteAttachment(attachment, actor = actor, reason = "todo_deleted")
+        }
 
         todoRepository.delete(todo)
+        log.auditEventAfterCommit("todo.deleted", actor, todoTarget(todo),
+            mapOf("attachmentCount" to attachments.size))
     }
 
     fun completeTodo(loginMember: LoginMember, id: UUID): TodoResponse {
@@ -280,10 +306,10 @@ class TodoService(
         val todo = todoRepository.findByIdForUpdate(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
-        verifyStatusChangePermission(todo, member)
+        verifyStatusChangePermission(todo, member, loginMember, TodoStatus.DONE, "complete")
 
         if (todo.status == TodoStatus.TODO || todo.status == TodoStatus.IN_PROGRESS) {
-            bumpTodoToTopOfStatus(todo, TodoStatus.DONE)
+            bumpTodoToTopOfStatus(todo, TodoStatus.DONE, loginMember.toAuditActor())
             publishTodoStatusChangedEvents(todo, member, TodoStatus.DONE)
         }
 
@@ -296,10 +322,10 @@ class TodoService(
         val todo = todoRepository.findByIdForUpdate(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
-        verifyStatusChangePermission(todo, member)
+        verifyStatusChangePermission(todo, member, loginMember, TodoStatus.TODO, "reopen")
 
         if (todo.status == TodoStatus.DONE) {
-            bumpTodoToTopOfStatus(todo, TodoStatus.TODO)
+            bumpTodoToTopOfStatus(todo, TodoStatus.TODO, loginMember.toAuditActor())
             publishTodoStatusChangedEvents(todo, member, TodoStatus.TODO)
         }
 
@@ -316,19 +342,19 @@ class TodoService(
         val todo = todoRepository.findByIdForUpdate(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
-        verifyStatusChangePermission(todo, member)
+        verifyStatusChangePermission(todo, member, loginMember, newStatus, "change_status")
         val statusChanged = todo.status != newStatus
 
         // Change status first, bumping every stakeholder (owner + tagged members)
         // to the top of their own target column so the moved card surfaces on top.
         if (statusChanged) {
-            bumpTodoToTopOfStatus(todo, newStatus)
+            bumpTodoToTopOfStatus(todo, newStatus, loginMember.toAuditActor())
             publishTodoStatusChangedEvents(todo, member, newStatus)
         }
 
         // Persist the exact order of the actor's target column, if provided.
         if (orderedIds.isNotEmpty()) {
-            applyViewerOrder(member, newStatus, orderedIds)
+            applyViewerOrder(member, newStatus, orderedIds, loginMember.toAuditActor())
         } else if (!statusChanged) {
             throw IllegalArgumentException("todo.reorder.orderedIds.required")
         }
@@ -372,8 +398,8 @@ class TodoService(
         val member = findMember(loginMember)
         val friend = memberRepository.findById(friendId).orElseThrow { IllegalArgumentException("Member not found") }
 
-        verifyOwnership(todo, member)
-        addTagToTodo(todo, friend)
+        verifyOwnership(todo, member, loginMember, "tag_friend")
+        addTagToTodo(todo, friend, loginMember.toAuditActor())
     }
 
     fun untagFriend(loginMember: LoginMember, todoId: UUID, friendId: Long) {
@@ -381,32 +407,59 @@ class TodoService(
         val member = findMember(loginMember)
         val friend = memberRepository.findById(friendId).orElseThrow { IllegalArgumentException("Member not found") }
 
-        verifyOwnership(todo, member)
+        verifyOwnership(todo, member, loginMember, "untag_friend")
         todo.removeTag(friend)
+        log.auditEventAfterCommit("todo.untagged", loginMember.toAuditActor(), todoTarget(todo),
+            mapOf("taggedMemberId" to friend.id))
     }
 
     fun untagSelf(loginMember: LoginMember, todoId: UUID) {
         val todo = findTodoForTagUpdate(todoId)
         val member = findMember(loginMember)
         todo.removeTag(member)
+        log.auditEventAfterCommit("todo.untagged", loginMember.toAuditActor(), todoTarget(todo),
+            mapOf("taggedMemberId" to member.id, "reason" to "self_removed"))
     }
 
-    private fun verifyOwnership(todoEntity: Todo, member: Member) {
+    private fun verifyOwnership(todoEntity: Todo, member: Member, loginMember: LoginMember, operation: String) {
         if (todoEntity.member.id != member.id) {
-            log.warn("Unauthorized access attempt: memberId={} tried to access todo {} (owner={})", member.id, todoEntity.id, todoEntity.member.id)
+            log.warn(
+                "Todo ownership check denied {}",
+                auditContext(
+                    mapOf(
+                        "actor" to loginMember.toAuditActor(),
+                        "todoId" to todoEntity.id,
+                        "ownerId" to todoEntity.member.id,
+                        "operation" to operation,
+                    )
+                ),
+            )
             throw IllegalArgumentException("Todo is not yours")
         }
     }
 
-    private fun verifyStatusChangePermission(todoEntity: Todo, member: Member) {
+    private fun verifyStatusChangePermission(
+        todoEntity: Todo,
+        member: Member,
+        loginMember: LoginMember,
+        requestedStatus: TodoStatus,
+        operation: String,
+    ) {
         if (isOwner(todoEntity, member) || isTaggedMember(todoEntity, member)) {
             return
         }
         log.warn(
-            "Unauthorized status change attempt: memberId={} tried to change status of todo {} (owner={})",
-            member.id,
-            todoEntity.id,
-            todoEntity.member.id
+            "Todo status change denied {}",
+            auditContext(
+                mapOf(
+                    "actor" to loginMember.toAuditActor(),
+                    "todoId" to todoEntity.id,
+                    "ownerId" to todoEntity.member.id,
+                    "currentStatus" to todoEntity.status,
+                    "requestedStatus" to requestedStatus,
+                    "operation" to operation,
+                )
+            ),
         )
         throw IllegalArgumentException("Todo status change is not allowed")
     }
@@ -435,12 +488,15 @@ class TodoService(
      * the owner via Todo.position and each tagged member via their TodoTag.tagOrder.
      * Tops are captured before the status change so the todo itself is not counted.
      */
-    private fun bumpTodoToTopOfStatus(todo: Todo, newStatus: TodoStatus) {
+    private fun bumpTodoToTopOfStatus(todo: Todo, newStatus: TodoStatus, actor: AuditActor) {
+        val previousStatus = todo.status
         val ownerTop = topPositionForViewer(todo.member, newStatus)
         val tagTops = todo.tags.associate { tag ->
             tag.member.id to topPositionForViewer(tag.member, newStatus)
         }
         todo.changeStatus(newStatus, ownerTop)
+        log.auditChangeAfterCommit("todo.status_changed", actor, todoTarget(todo),
+            mapOf("status" to previousStatus), mapOf("status" to todo.status))
         todo.tags.forEach { tag ->
             tagTops[tag.member.id]?.let { tag.tagOrder = it }
         }
@@ -451,7 +507,7 @@ class TodoService(
      * must be in [status] and accessible to the viewer; owned todos update Todo.position,
      * tagged todos update the viewer's TodoTag.tagOrder.
      */
-    private fun applyViewerOrder(viewer: Member, status: TodoStatus, orderedIds: List<UUID>) {
+    private fun applyViewerOrder(viewer: Member, status: TodoStatus, orderedIds: List<UUID>, actor: AuditActor) {
         val indexMap = orderedIds.mapIndexed { index, id -> id to index }.toMap()
         val todos = todoRepository.findAllById(orderedIds)
 
@@ -459,18 +515,25 @@ class TodoService(
             if (todo.status != status) {
                 throw IllegalArgumentException("Todo ${todo.id} is not in $status status")
             }
-            setViewerOrder(todo, viewer, indexMap.getValue(todo.id))
+            setViewerOrder(todo, viewer, indexMap.getValue(todo.id), actor)
         }
     }
 
-    private fun setViewerOrder(todo: Todo, viewer: Member, order: Int) {
+    private fun setViewerOrder(todo: Todo, viewer: Member, order: Int, actor: AuditActor) {
         if (todo.member.id == viewer.id) {
+            val previousOrder = todo.position
             todo.position = order
+            log.auditChangeAfterCommit("todo.reordered", actor, todoTarget(todo),
+                mapOf("position" to previousOrder), mapOf("position" to order))
             return
         }
         val tag = todo.tags.find { it.member.id == viewer.id }
             ?: throw IllegalArgumentException("Todo is not yours")
+        val previousOrder = tag.tagOrder
         tag.tagOrder = order
+        log.auditChangeAfterCommit("todo.reordered", actor,
+            todoTarget(todo) + ("viewerId" to viewer.id),
+            mapOf("tagOrder" to previousOrder), mapOf("tagOrder" to order))
     }
 
     private fun ownerScopedSortKey(todo: Todo, viewer: Member): Long {
@@ -512,7 +575,7 @@ class TodoService(
         }
     }
 
-    private fun syncTodoTags(todo: Todo, tagFriendIds: List<Long>) {
+    private fun syncTodoTags(todo: Todo, tagFriendIds: List<Long>, actor: AuditActor) {
         val desiredTagIds = tagFriendIds.distinct()
         val desiredTagSet = desiredTagIds.toSet()
 
@@ -522,6 +585,7 @@ class TodoService(
             .forEach { memberId ->
                 val member = memberRepository.findById(memberId).orElseThrow { IllegalArgumentException("Member not found") }
                 todo.removeTag(member)
+                log.auditEventAfterCommit("todo.untagged", actor, todoTarget(todo), mapOf("taggedMemberId" to memberId))
             }
 
         val existingTagIds = todo.tags.mapNotNull { it.member.id }.toSet()
@@ -529,11 +593,11 @@ class TodoService(
             .filterNot(existingTagIds::contains)
             .forEach { friendId ->
                 val friend = memberRepository.findById(friendId).orElseThrow { IllegalArgumentException("Member not found") }
-                addTagToTodo(todo, friend)
+                addTagToTodo(todo, friend, actor)
             }
     }
 
-    private fun addTagToTodo(todo: Todo, friend: Member) {
+    private fun addTagToTodo(todo: Todo, friend: Member, actor: AuditActor) {
         if (todo.hasTag(friend)) {
             return
         }
@@ -546,6 +610,7 @@ class TodoService(
         todo.addTag(friend)
         todo.tags.find { it.member.id == friend.id }?.tagOrder = tagOrder
         publishTodoTaggedEvent(todo, friend)
+        log.auditEventAfterCommit("todo.tagged", actor, todoTarget(todo), mapOf("taggedMemberId" to friend.id))
     }
 
     private fun publishTodoTaggedEvent(todo: Todo, friend: Member) {
@@ -601,5 +666,8 @@ class TodoService(
             .thenBy { it.position ?: Int.MAX_VALUE }
             .thenBy { it.createdDate }
     }
+
+    private fun todoTarget(todo: Todo): Map<String, Any?> =
+        mapOf("type" to "Todo", "id" to todo.id, "ownerId" to todo.member.id)
 
 }

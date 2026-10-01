@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.security.oauth.naver
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -44,9 +45,14 @@ class NaverLoginService(
         val accessToken = tokenResponse.accessToken
             ?: run {
                 log.warn(
-                    "Failed to exchange Naver token. error={}, description={}",
-                    tokenResponse.error,
-                    tokenResponse.errorDescription
+                    "Naver OAuth token exchange failed: {}",
+                    auditContext(
+                        mapOf(
+                            "provider" to SsoType.NAVER,
+                            "flow" to "authorization_code",
+                            "errorCode" to tokenResponse.error,
+                        )
+                    ),
                 )
                 throw IllegalStateException(
                     "Failed to exchange Naver token: ${tokenResponse.errorDescription ?: tokenResponse.error ?: "unknown error"}"
@@ -61,7 +67,7 @@ class NaverLoginService(
     fun setNaverIdToMember(code: String, state: String, loginMember: LoginMember) {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         val naverId = getNaverId(code = code, state = state)
-        memberSocialAccountService.link(member, SsoType.NAVER, naverId)
+        memberSocialAccountService.link(member, SsoType.NAVER, naverId, actor = loginMember)
     }
 
     fun login(
@@ -76,6 +82,7 @@ class NaverLoginService(
 
         val member = memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.NAVER, naverId)
         if (member != null) {
+            req.setAttribute("dutypark.logging.authProvider", SsoType.NAVER)
             val tokenResponse = authService.getTokenResponseByMemberId(member.id!!, req)
             cookieService.setTokenCookies(resp, tokenResponse.accessToken, tokenResponse.refreshToken)
 

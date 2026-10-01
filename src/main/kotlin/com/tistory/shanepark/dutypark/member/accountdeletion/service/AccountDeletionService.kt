@@ -1,5 +1,9 @@
 package com.tistory.shanepark.dutypark.member.accountdeletion.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.accountdeletion.domain.AccountDeletionJob
 import com.tistory.shanepark.dutypark.member.accountdeletion.domain.AccountDeletionJobStatus
 import com.tistory.shanepark.dutypark.member.accountdeletion.dto.AccountDeletionAcceptedResponse
@@ -45,6 +49,8 @@ class AccountDeletionService(
     private val jdbc: NamedParameterJdbcTemplate,
     private val clock: Clock,
 ) {
+
+    private val log = logger()
 
     @Transactional(readOnly = true)
     fun preview(login: LoginMember): AccountDeletionPreviewResponse {
@@ -153,6 +159,16 @@ class AccountDeletionService(
             if (target.status == MemberStatus.ACTIVE) target.markDeletionPending(now)
         }
         invalidateAuthentication(targets.map { requireNotNull(it.id) }, targets)
+        log.auditEventAfterCommit(
+            event = "account_deletion.requested", actor = login.toAuditActor(),
+            target = mapOf("jobId" to saved.id, "memberId" to login.id),
+            details = mapOf(
+                "targetMemberIds" to targets.map { it.id }, "targetMemberCount" to targets.size,
+                "targetTeamIds" to deleteTeamIds.toList(), "replacementAdminId" to replacementMemberId,
+                "authenticationMethod" to if (request.password.isNullOrBlank()) "reauth" else "password",
+                "status" to saved.status,
+            ),
+        )
         return accepted(saved, receiptToken)
     }
 
@@ -217,11 +233,13 @@ class AccountDeletionService(
         val password = request.password?.takeIf { it.isNotBlank() }
         val proof = request.reauthProof?.takeIf { it.isNotBlank() }
         if ((password == null) == (proof == null)) {
+            logDeletionDenied(member.id, "invalid_reauthentication")
             throw unauthorized("account.delete.reauthenticationFailed")
         }
         if (password != null) {
             val encoded = member.password
             if (encoded.isNullOrBlank() || !passwordEncoder.matches(password, encoded)) {
+                logDeletionDenied(member.id, "invalid_reauthentication")
                 throw unauthorized("account.delete.reauthenticationFailed")
             }
             return
@@ -229,6 +247,7 @@ class AccountDeletionService(
         try {
             reauthService.consume(requireNotNull(member.id), ReauthPurpose.DELETE_ACCOUNT, requireNotNull(proof))
         } catch (_: AuthException) {
+            logDeletionDenied(member.id, "invalid_reauthentication")
             throw unauthorized("account.delete.reauthenticationFailed")
         }
     }
@@ -287,7 +306,16 @@ class AccountDeletionService(
     }
 
     private fun rejectImpersonation(login: LoginMember) {
-        if (login.isImpersonating) throw forbidden("account.delete.impersonationForbidden")
+        if (login.isImpersonating) {
+            logDeletionDenied(login.id, "impersonation_forbidden")
+            throw forbidden("account.delete.impersonationForbidden")
+        }
+    }
+
+    private fun logDeletionDenied(memberId: Long?, reason: String) {
+        log.warn("Account deletion denied {}", auditContext(mapOf(
+            "event" to "account_deletion.denied", "memberId" to memberId, "reason" to reason,
+        )))
     }
 
     private fun accepted(job: AccountDeletionJob, receiptToken: String? = null) = AccountDeletionAcceptedResponse(

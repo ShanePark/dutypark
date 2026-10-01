@@ -2,10 +2,14 @@ package com.tistory.shanepark.dutypark.attachment.service
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.slf4j.LoggerFactory
 import org.springframework.mock.web.MockMultipartFile
 import java.io.IOException
 import java.nio.file.Files
@@ -131,6 +135,40 @@ class FileSystemServiceTest {
                 java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
             ))
         }
+    }
+
+    @Test
+    fun `write failure logs escaped diagnostics without raw throwable`() {
+        val originalFilename = "bad\nname.txt"
+        val file = MockMultipartFile("file", originalFilename, "text/plain", "content".toByteArray())
+        val targetPath = tempDir.resolve(originalFilename)
+        Files.createDirectories(targetPath)
+        Files.writeString(targetPath.resolve("keep.txt"), "keep directory non-empty")
+
+        val logger = LoggerFactory.getLogger(FileSystemService::class.java) as LogbackLogger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            assertThatThrownBy {
+                fileSystemService.writeFile(file, targetPath)
+            }.isInstanceOf(IOException::class.java)
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(appender.list).hasSize(2)
+        val failureLogs = appender.list
+        assertThat(failureLogs).allSatisfy { event ->
+            assertThat(event.throwableProxy).isNull()
+            assertThat(event.formattedMessage).doesNotContain("\n")
+        }
+        val message = failureLogs.first().formattedMessage
+        assertThat(message)
+            .contains("bad\\nname.txt")
+            .contains("\"exceptionType\":\"java.nio.file.")
+            .contains("\"stackFrames\"")
+            .contains("FileSystemService.writeFile")
+            .doesNotContain("Is a directory")
     }
 
     @Test
