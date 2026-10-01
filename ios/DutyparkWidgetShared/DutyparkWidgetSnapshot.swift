@@ -129,6 +129,27 @@ nonisolated struct DutyparkWidgetColorComponents: Equatable, Sendable {
         let luminance = (Double(red) * 299 + Double(green) * 587 + Double(blue) * 114) / 1_000
         return luminance <= 127.5
     }
+
+    func readableForeground(preferred: Self) -> Self {
+        guard contrastRatio(with: preferred) < 4.5 else { return preferred }
+        let white = Self(red: 255, green: 255, blue: 255)
+        let black = Self(red: 0, green: 0, blue: 0)
+        return contrastRatio(with: white) >= contrastRatio(with: black) ? white : black
+    }
+
+    private func contrastRatio(with other: Self) -> Double {
+        let first = relativeLuminance
+        let second = other.relativeLuminance
+        return (max(first, second) + 0.05) / (min(first, second) + 0.05)
+    }
+
+    private var relativeLuminance: Double {
+        func linearized(_ component: UInt8) -> Double {
+            let value = Double(component) / 255
+            return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * linearized(red) + 0.7152 * linearized(green) + 0.0722 * linearized(blue)
+    }
 }
 
 nonisolated enum DutyparkWidgetTodoStatus: String, Codable, Equatable, Sendable {

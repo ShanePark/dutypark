@@ -519,13 +519,15 @@ private struct DutyparkWidgetDayCell: View {
     private var dayNumberColor: Color {
         switch dayNumberStyle {
         case .sundayOrHoliday:
-            return usesPaletteBackground
-                ? (WidgetHexColor.backgroundColor(DutyTypeColorPalette.sundayHex) ?? WidgetPalette.sunday(for: colorScheme))
-                : WidgetPalette.sunday(for: colorScheme)
+            return calendarForeground(
+                preferredHex: usesPaletteBackground ? DutyTypeColorPalette.sundayHex : "#DC2626",
+                fallback: WidgetPalette.sunday(for: colorScheme)
+            )
         case .saturday:
-            return usesPaletteBackground
-                ? (WidgetHexColor.backgroundColor(DutyTypeColorPalette.saturdayHex) ?? WidgetPalette.saturday(for: colorScheme))
-                : WidgetPalette.saturday(for: colorScheme)
+            return calendarForeground(
+                preferredHex: usesPaletteBackground ? DutyTypeColorPalette.saturdayHex : "#2563EB",
+                fallback: WidgetPalette.saturday(for: colorScheme)
+            )
         case .duty:
             return dutyForeground
         case .secondary:
@@ -549,9 +551,23 @@ private struct DutyparkWidgetDayCell: View {
     }
 
     private var holidayForeground: Color {
-        usesPaletteBackground
-            ? (WidgetHexColor.backgroundColor(DutyTypeColorPalette.sundayHex) ?? WidgetPalette.sunday(for: colorScheme))
-            : WidgetPalette.holiday(for: colorScheme)
+        calendarForeground(
+            preferredHex: usesPaletteBackground ? DutyTypeColorPalette.sundayHex : "#DC2626",
+            fallback: WidgetPalette.holiday(for: colorScheme)
+        )
+    }
+
+    private func calendarForeground(preferredHex: String, fallback: Color) -> Color {
+        guard hasConfiguredDutyColor,
+              let background = DutyparkWidgetColorComponents(hex: day.colorHex),
+              let preferred = DutyparkWidgetColorComponents(hex: preferredHex)
+        else { return fallback }
+        let foreground = background.readableForeground(preferred: preferred)
+        return Color(
+            red: Double(foreground.red) / 255,
+            green: Double(foreground.green) / 255,
+            blue: Double(foreground.blue) / 255
+        )
     }
 
     private var dutyForeground: Color {
