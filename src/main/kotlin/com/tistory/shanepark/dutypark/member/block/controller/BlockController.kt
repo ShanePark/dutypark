@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.block.controller
 
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.block.domain.dto.BlockedMemberDto
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
@@ -29,7 +30,7 @@ class BlockController(
         @Login loginMember: LoginMember,
         @PathVariable memberId: Long
     ) {
-        blockService.block(loginMember.id, memberId)
+        blockService.block(loginMember.id, memberId, loginMember.toAuditActor())
     }
 
     @DeleteMapping("/{memberId}")
@@ -37,7 +38,7 @@ class BlockController(
         @Login loginMember: LoginMember,
         @PathVariable memberId: Long
     ) {
-        blockService.unblock(loginMember.id, memberId)
+        blockService.unblock(loginMember.id, memberId, loginMember.toAuditActor())
     }
 
 }

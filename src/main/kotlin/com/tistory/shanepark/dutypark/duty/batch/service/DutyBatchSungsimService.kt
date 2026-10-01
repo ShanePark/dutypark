@@ -16,6 +16,8 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
@@ -32,6 +34,8 @@ class DutyBatchSungsimService(
     private val dutyRepository: DutyRepository,
     private val dutyTypeRepository: DutyTypeRepository
 ) : DutyBatchService {
+    private val log = logger()
+
     @Transactional(timeout = 25)
     override fun batchUploadMember(file: MultipartFile, memberId: Long, yearMonth: YearMonth): DutyBatchResult {
         DutyBatchTemplate.SUNGSIM_CAKE.checkSupportedFile(file)
@@ -164,6 +168,9 @@ class DutyBatchSungsimService(
             val member = Member(name = it)
             team.addMember(member)
             memberRepository.save(member)
+            log.auditEventAfterCommit("member.created", null,
+                mapOf("memberId" to member.id, "memberName" to member.name, "teamId" to team.id),
+                mapOf("source" to "duty_batch"))
         }
     }
 

@@ -53,7 +53,7 @@ class DutyController(
         @Login loginMember: LoginMember
     ): ResponseEntity<Boolean> {
         checkAuthentication(loginMember, dutyUpdateDto.memberId)
-        dutyService.update(dutyUpdateDto)
+        dutyService.update(dutyUpdateDto, actor = loginMember)
         return ResponseEntity.ok(true)
     }
 
@@ -64,7 +64,7 @@ class DutyController(
         @Login loginMember: LoginMember,
     ): ResponseEntity<Void> {
         checkAuthentication(loginMember, memberId)
-        dutyService.resetOverride(memberId, date)
+        dutyService.resetOverride(memberId, date, actor = loginMember)
         return ResponseEntity.noContent().build()
     }
 

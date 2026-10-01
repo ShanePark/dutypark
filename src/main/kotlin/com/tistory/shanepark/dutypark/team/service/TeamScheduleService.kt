@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.team.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -21,6 +24,8 @@ class TeamScheduleService(
     private val memberRepository: MemberRepository,
     private val teamService: TeamService,
 ) {
+    private val log = logger()
+
     fun create(login: LoginMember, saveDto: TeamScheduleSaveDto): TeamScheduleDto {
         val author = memberRepository.findById(login.id).orElseThrow()
         val team = teamRepository.findById(saveDto.teamId).orElseThrow()
@@ -41,6 +46,8 @@ class TeamScheduleService(
             position = sameDateStartSchedules.size
         )
         teamScheduleRepository.save(schedule)
+        log.auditEventAfterCommit("team_schedule.created", login.toAuditActor(), scheduleAuditTarget(schedule),
+            mapOf("startDateTime" to schedule.startDateTime, "endDateTime" to schedule.endDateTime))
         return TeamScheduleDto.ofSimple(schedule)
     }
 
@@ -80,14 +87,32 @@ class TeamScheduleService(
             throw BadRequestException("team.schedule.teamMismatch")
         }
 
+        val previousStart = schedule.startDateTime
+        val previousEnd = schedule.endDateTime
+        val changedFields = listOfNotNull(
+            "content".takeIf { schedule.content != saveDto.content },
+            "description".takeIf { schedule.description != saveDto.description },
+            "startDateTime".takeIf { schedule.startDateTime != saveDto.startDateTime },
+            "endDateTime".takeIf { schedule.endDateTime != saveDto.endDateTime },
+        )
         val author = memberRepository.findById(login.id).orElseThrow()
         schedule.update(saveDto = saveDto, updateMember = author)
+        if (changedFields.isNotEmpty()) {
+            log.auditEventAfterCommit("team_schedule.updated", login.toAuditActor(), scheduleAuditTarget(schedule),
+                mapOf("changedFields" to changedFields,
+                    "startDateTimeBefore" to previousStart, "startDateTimeAfter" to schedule.startDateTime,
+                    "endDateTimeBefore" to previousEnd, "endDateTimeAfter" to schedule.endDateTime))
+        }
         return TeamScheduleDto.ofSimple(schedule)
     }
 
-    fun delete(id: UUID) {
+    fun delete(id: UUID, actor: LoginMember? = null) {
         val teamSchedule = teamScheduleRepository.findById(id).orElseThrow()
         teamScheduleRepository.delete(teamSchedule)
+        log.auditEventAfterCommit("team_schedule.deleted", actor?.toAuditActor(), scheduleAuditTarget(teamSchedule))
     }
 
+    private fun scheduleAuditTarget(schedule: TeamSchedule) = mapOf(
+        "scheduleId" to schedule.id, "teamId" to schedule.team.id,
+    )
 }

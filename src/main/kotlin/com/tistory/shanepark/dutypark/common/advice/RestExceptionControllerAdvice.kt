@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
 
 @RestControllerAdvice(annotations = [RestController::class])
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -27,6 +29,7 @@ class RestExceptionControllerAdvice {
     @ResponseBody
     @ExceptionHandler
     fun dutyparkExceptionHandler(e: DutyparkException): ResponseEntity<DutyParkErrorResponse> {
+        request()?.setAttribute("dutypark.logging.exceptionType", e.javaClass.name)
         val defaultCode = when (e.errorCode) {
             401 -> "auth.unauthorized"
             404 -> "common.notFound"
@@ -42,6 +45,7 @@ class RestExceptionControllerAdvice {
     @ResponseBody
     @ExceptionHandler
     fun noSuchElementHandler(e: NoSuchElementException): ResponseEntity<DutyParkErrorResponse> {
+        request()?.setAttribute("dutypark.logging.exceptionType", e.javaClass.name)
         return errorResponse(
             status = 404,
             code = normalizeCode(e.message, "common.notFound"),
@@ -51,6 +55,7 @@ class RestExceptionControllerAdvice {
     @ResponseBody
     @ExceptionHandler
     fun illegalArgumentHandler(e: IllegalArgumentException): ResponseEntity<DutyParkErrorResponse> {
+        request()?.setAttribute("dutypark.logging.exceptionType", e.javaClass.name)
         return errorResponse(
             status = 400,
             code = normalizeCode(e.message, "common.badRequest"),
@@ -60,12 +65,14 @@ class RestExceptionControllerAdvice {
     @ResponseBody
     @ExceptionHandler
     fun methodArgumentTypeMismatchHandler(e: MethodArgumentTypeMismatchException): ResponseEntity<DutyParkErrorResponse> {
+        request()?.setAttribute("dutypark.logging.exceptionType", e.javaClass.name)
         return errorResponse(status = 400, code = "common.badRequest")
     }
 
     @ResponseBody
     @ExceptionHandler
     fun methodArgumentNotValidHandler(e: MethodArgumentNotValidException): ResponseEntity<DutyParkErrorResponse> {
+        request()?.setAttribute("dutypark.logging.exceptionType", e.javaClass.name)
         val fieldErrors = e.bindingResult.fieldErrors.map {
             DutyParkFieldError(
                 field = it.field,
@@ -87,6 +94,7 @@ class RestExceptionControllerAdvice {
     @ResponseBody
     @ExceptionHandler
     fun httpMessageNotReadableHandler(e: HttpMessageNotReadableException): ResponseEntity<DutyParkErrorResponse> {
+        request()?.setAttribute("dutypark.logging.exceptionType", e.javaClass.name)
         return errorResponse(status = 400, code = "common.badRequest")
     }
 
@@ -98,6 +106,7 @@ class RestExceptionControllerAdvice {
         TransactionTimedOutException::class,
     )
     fun concurrentUpdateHandler(e: Exception): ResponseEntity<DutyParkErrorResponse> {
+        request()?.setAttribute("dutypark.logging.exceptionType", e.javaClass.name)
         return errorResponse(status = 409, code = "common.concurrentUpdate")
     }
 
@@ -107,9 +116,12 @@ class RestExceptionControllerAdvice {
         details: Map<String, Any?> = emptyMap(),
         fieldErrors: List<DutyParkFieldError> = emptyList(),
     ): ResponseEntity<DutyParkErrorResponse> {
+        request()?.setAttribute("dutypark.logging.errorCode", code)
         return ResponseEntity.status(status)
             .body(DutyParkErrorResponse.of(status, code, details, fieldErrors))
     }
+
+    private fun request() = (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request
 
     private fun normalizeCode(candidate: String?, defaultCode: String): String {
         val value = candidate?.trim().orEmpty()

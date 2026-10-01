@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.push.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
@@ -28,11 +29,15 @@ class WebPushService(
 
     fun isEnabled(): Boolean = pushService != null
 
-    fun subscribe(refreshToken: RefreshToken, request: PushSubscriptionRequest): Boolean {
+    fun subscribe(refreshToken: RefreshToken, request: PushSubscriptionRequest, actor: AuditActor? = null): Boolean {
         if (!isEnabled()) return false
 
+        val subscriptionChanged = refreshToken.pushEndpoint != request.endpoint ||
+            refreshToken.pushP256dh != request.keys.p256dh || refreshToken.pushAuth != request.keys.auth
+        var reassignedFromRefreshTokenId: Long? = null
         refreshTokenRepository.findByPushEndpoint(request.endpoint)?.let { existingToken ->
             if (existingToken.id != refreshToken.id) {
+                reassignedFromRefreshTokenId = existingToken.id
                 existingToken.unsubscribePush()
                 refreshTokenRepository.saveAndFlush(existingToken)
             }
@@ -44,17 +49,25 @@ class WebPushService(
             auth = request.keys.auth,
         )
         refreshTokenRepository.save(refreshToken)
+        if (subscriptionChanged || reassignedFromRefreshTokenId != null) {
+            log.auditEventAfterCommit(
+                event = "web_push_subscription_registered",
+                actor = actor,
+                target = mapOf("memberId" to refreshToken.member.id, "refreshTokenId" to refreshToken.id),
+                details = mapOf("reassignedFromRefreshTokenId" to reassignedFromRefreshTokenId),
+            )
+        }
         return true
     }
 
-    fun unsubscribe(refreshToken: RefreshToken): Boolean {
+    fun unsubscribe(refreshToken: RefreshToken, actor: AuditActor? = null): Boolean {
         if (!refreshToken.hasPushSubscription()) return false
 
         refreshToken.unsubscribePush()
         refreshTokenRepository.save(refreshToken)
         log.auditEventAfterCommit(
             event = "web_push_subscription_removed",
-            actor = refreshToken.member.toAuditActor(),
+            actor = actor ?: refreshToken.member.toAuditActor(),
             target = mapOf("refreshTokenId" to refreshToken.id),
         )
         return true

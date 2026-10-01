@@ -2,6 +2,8 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
@@ -35,6 +37,9 @@ class DDayService(
             isPrivate = dDaySaveDto.isPrivate,
         )
         dDayRepository.save(dDayEvent)
+        log.auditEventAfterCommit("dday.created", loginMember.toAuditActor(),
+            target = mapOf("type" to "DDayEvent", "id" to dDayEvent.id, "ownerId" to loginMember.id),
+            details = mapOf("date" to dDayEvent.date, "isPrivate" to dDayEvent.isPrivate))
         return DDayDto.of(dDayEvent)
     }
 
@@ -63,9 +68,15 @@ class DDayService(
         val dDayEvent = dDayRepository.findById(id).orElseThrow()
         authenticationCheck(dDayEvent, loginMember, operation = "update")
         validatePublicTitle(dDaySaveDto)
+        val before = mapOf("date" to dDayEvent.date, "isPrivate" to dDayEvent.isPrivate, "titleChanged" to false)
+        val titleChanged = dDayEvent.title != dDaySaveDto.title
         dDayEvent.title = dDaySaveDto.title
         dDayEvent.date = dDaySaveDto.date
         dDayEvent.isPrivate = dDaySaveDto.isPrivate
+        log.auditChangeAfterCommit("dday.updated", loginMember.toAuditActor(),
+            target = mapOf("type" to "DDayEvent", "id" to dDayEvent.id, "ownerId" to loginMember.id),
+            before = before,
+            after = mapOf("date" to dDayEvent.date, "isPrivate" to dDayEvent.isPrivate, "titleChanged" to titleChanged))
         return DDayDto.of(dDayEvent)
     }
 
@@ -73,6 +84,8 @@ class DDayService(
         val dDayEvent = dDayRepository.findById(id).orElseThrow()
         authenticationCheck(dDayEvent, loginMember, operation = "delete")
         dDayRepository.delete(dDayEvent)
+        log.auditEventAfterCommit("dday.deleted", loginMember.toAuditActor(),
+            target = mapOf("type" to "DDayEvent", "id" to id, "ownerId" to loginMember.id))
     }
 
     private fun authenticationCheck(

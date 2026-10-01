@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.notification.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -22,7 +23,10 @@ class NotificationCleanupScheduler(
         val deletedCount = notificationRepository.deleteByCreatedDateBefore(cutoffDate)
 
         if (deletedCount > 0) {
-            log.info("Cleaned up {} notifications older than {}", deletedCount, cutoffDate)
+            log.auditEventAfterCommit(
+                "notification_cleanup_completed", null,
+                details = mapOf("deletedCount" to deletedCount, "cutoffDate" to cutoffDate),
+            )
         }
     }
 }

@@ -1,5 +1,9 @@
 package com.tistory.shanepark.dutypark.duty.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
@@ -32,19 +36,23 @@ class DutyService(
     private val dutyResolver: DutyResolver,
     private val teamRepository: TeamRepository,
 ) {
+    private val log = logger()
 
     @Transactional(timeout = 20)
-    fun update(dutyUpdateDto: DutyUpdateDto) {
+    fun update(dutyUpdateDto: DutyUpdateDto, actor: LoginMember? = null) {
         val member = memberRepository.findMemberWithTeamForUpdate(dutyUpdateDto.memberId).orElseThrow()
         val dutyType: DutyType? = dutyUpdateDto.dutyTypeId?.let {
             dutyTypeRepository.findById(it).orElseThrow()
         }
         validateDutyType(member, dutyType)
 
-        val duty: Duty = dutyRepository.findByMemberAndDutyDate(
+        val existing = dutyRepository.findByMemberAndDutyDate(
             member = member,
             dutyDate = of(dutyUpdateDto.year, dutyUpdateDto.month, dutyUpdateDto.day)
-        ) ?: dutyRepository.save(
+        )
+        val before = mapOf("dutyTypeId" to existing?.dutyType?.id, "manualOverride" to existing?.manualOverride,
+            "teamId" to existing?.teamId)
+        val duty = existing ?: dutyRepository.save(
             Duty(
                 member = member,
                 dutyDate = YearMonth.of(dutyUpdateDto.year, dutyUpdateDto.month).atDay(dutyUpdateDto.day),
@@ -54,6 +62,9 @@ class DutyService(
         duty.dutyType = dutyType
         duty.teamId = member.team?.id
         duty.manualOverride = true
+        log.auditChangeAfterCommit("duty.updated", actor?.toAuditActor(),
+            mapOf("memberId" to member.id, "dutyId" to duty.id, "date" to duty.dutyDate), before,
+            mapOf("dutyTypeId" to duty.dutyType?.id, "manualOverride" to duty.manualOverride, "teamId" to duty.teamId))
     }
 
     fun canEdit(loginMember: LoginMember, memberId: Long): Boolean {
@@ -99,9 +110,13 @@ class DutyService(
     }
 
     @Transactional(timeout = 20)
-    fun resetOverride(memberId: Long, date: LocalDate) {
+    fun resetOverride(memberId: Long, date: LocalDate, actor: LoginMember? = null) {
         val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
-        dutyRepository.deleteByMemberAndDutyDate(member, date)
+        val deletedCount = dutyRepository.deleteByMemberAndDutyDate(member, date)
+        if (deletedCount > 0) {
+            log.auditEventAfterCommit("duty.override_reset", actor?.toAuditActor(),
+                mapOf("memberId" to memberId, "date" to date), mapOf("deletedCount" to deletedCount))
+        }
     }
 
     private fun validateDutyType(member: Member, dutyType: DutyType?) {

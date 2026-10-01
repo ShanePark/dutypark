@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.common.slack.notifier
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import org.slf4j.MDC
 import com.tistory.shanepark.dutypark.common.slack.SlackEvent
 import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackMessage
@@ -40,14 +42,24 @@ class SlackEventNotifier(
         message.setText("")
         message.setUsername("DutyPark")
 
-        taskExecutor.execute {
-            runCatching { slackNotifier.call(message) }
-                .onFailure { failure ->
-                    log.error(
-                        "Failed to send Slack notification (exception={})",
-                        failure.javaClass.name,
-                    )
-                }
+        val requestId = MDC.get("requestId")
+        try {
+            taskExecutor.execute {
+                runCatching { slackNotifier.call(message) }
+                    .onFailure { failure ->
+                        log.error(
+                            "Slack notification delivery failed: {}",
+                            auditContext(mapOf("exceptionType" to failure.javaClass.name,
+                                "level" to event.level, "requestId" to requestId)),
+                        )
+                    }
+            }
+        } catch (failure: Exception) {
+            log.error(
+                "Slack notification submission failed: {}",
+                auditContext(mapOf("exceptionType" to failure.javaClass.name, "level" to event.level)),
+            )
+            throw failure
         }
     }
 

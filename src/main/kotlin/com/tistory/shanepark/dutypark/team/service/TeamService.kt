@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.team.service
 
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.duty.domain.DutyColorPalette
 import com.tistory.shanepark.dutypark.common.config.logger
@@ -69,10 +70,11 @@ class TeamService(
         )
     }
 
-    fun create(teamCreateDto: TeamCreateDto): TeamDto {
+    fun create(teamCreateDto: TeamCreateDto, actor: LoginMember? = null): TeamDto {
         Team(teamCreateDto.name).let {
             it.description = teamCreateDto.description
             teamRepository.save(it)
+            log.auditEventAfterCommit("team.created", actor?.toAuditActor(), teamAuditTarget(it))
             return TeamDto.ofSimple(it)
         }
     }
@@ -105,6 +107,8 @@ class TeamService(
                 dutyColor = INITIAL_WORK_DUTY_COLOR,
             )
             dutyTypeRepository.saveAndFlush(initialWorkDutyType)
+            log.auditEventAfterCommit("team.created", loginMember.toAuditActor(), teamAuditTarget(savedTeam),
+                mapOf("creatorId" to member.id, "initialDutyTypeId" to initialWorkDutyType.id))
             TeamDto.of(
                 team = savedTeam,
                 members = emptyList(),
@@ -115,7 +119,7 @@ class TeamService(
         }
     }
 
-    fun delete(id: Long) {
+    fun delete(id: Long, actor: LoginMember? = null) {
         val team = teamRepository.findById(id).orElseThrow()
         if (team.members.isNotEmpty()) {
             throw BadRequestException("team.delete.membersExist")
@@ -125,6 +129,7 @@ class TeamService(
         dutyRepository.deleteAllByTeamId(requireNotNull(team.id))
         dutyRepository.deleteAllByDutyTypeIn(team.dutyTypes)
         teamRepository.deleteById(id)
+        log.auditEventAfterCommit("team.deleted", actor?.toAuditActor(), teamAuditTarget(team))
     }
 
     fun isDuplicated(name: String): Boolean {
@@ -136,7 +141,7 @@ class TeamService(
         const val INITIAL_WORK_DUTY_COLOR = DutyColorPalette.DEFAULT_COLOR
     }
 
-    fun addMemberToTeam(teamId: Long, memberId: Long) {
+    fun addMemberToTeam(teamId: Long, memberId: Long, actor: LoginMember? = null) {
         val team = teamRepository.findById(teamId).orElseThrow()
         val member = memberRepository.findById(memberId).orElseThrow()
 
@@ -144,18 +149,22 @@ class TeamService(
             throw BadRequestException("team.member.alreadyAssigned")
         }
         team.addMember(member)
+        log.auditEventAfterCommit("team.member_added", actor?.toAuditActor(), teamAuditTarget(team),
+            mapOf("memberId" to member.id, "memberName" to member.name))
     }
 
     @Transactional(timeout = 20)
-    fun removeMemberFromTeam(teamId: Long, memberId: Long) {
+    fun removeMemberFromTeam(teamId: Long, memberId: Long, actor: LoginMember? = null) {
         val team = teamRepository.findById(teamId).orElseThrow()
         val member = memberRepository.findById(memberId).orElseThrow()
 
         if (member.team != team) {
             throw BadRequestException("team.member.notInTeam")
         }
-        dutyPatternService.terminateActivePattern(member)
+        dutyPatternService.terminateActivePattern(member, actor = actor)
         team.removeMember(member)
+        log.auditEventAfterCommit("team.member_removed", actor?.toAuditActor(), teamAuditTarget(team),
+            mapOf("memberId" to member.id, "memberName" to member.name))
     }
 
     fun changeTeamAdmin(teamId: Long, memberId: Long?, actor: LoginMember? = null) {
@@ -235,8 +244,10 @@ class TeamService(
         newDutyName: String?,
         newDutyColor: String?,
         newDutyAbbreviation: String? = null,
+        actor: LoginMember? = null,
     ) {
         val team = teamRepository.findById(teamId).orElseThrow()
+        val before = defaultDutyAuditState(team)
         newDutyName?.let(publicContentService::validateContent)
         val abbreviation = DutyAbbreviation.normalizeAndValidate(newDutyAbbreviation)
         abbreviation?.let(publicContentService::validateContent)
@@ -251,11 +262,22 @@ class TeamService(
         if (newDutyName != null) {
             team.defaultDutyName = newDutyName
         }
+        log.auditChangeAfterCommit("team.default_duty_updated", actor?.toAuditActor(), teamAuditTarget(team),
+            before, defaultDutyAuditState(team))
     }
 
-    fun updateBatchTemplate(teamId: Long, dutyBatchTemplate: DutyBatchTemplate?) {
+    private fun defaultDutyAuditState(team: Team) = mapOf(
+        "defaultDutyName" to team.defaultDutyName,
+        "defaultDutyColor" to team.defaultDutyColor,
+        "defaultDutyAbbreviation" to team.defaultDutyAbbreviation,
+    )
+
+    fun updateBatchTemplate(teamId: Long, dutyBatchTemplate: DutyBatchTemplate?, actor: LoginMember? = null) {
         val team = teamRepository.findById(teamId).orElseThrow()
+        val before = mapOf("template" to team.dutyBatchTemplate?.name)
         team.dutyBatchTemplate = dutyBatchTemplate
+        log.auditChangeAfterCommit("team.batch_template_updated", actor?.toAuditActor(), teamAuditTarget(team),
+            before, mapOf("template" to dutyBatchTemplate?.name))
     }
 
     fun loadShift(loginMember: LoginMember, localDate: LocalDate): List<DutyByShift> {

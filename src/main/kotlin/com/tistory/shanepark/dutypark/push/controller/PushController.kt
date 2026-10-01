@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.push.controller
 
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
@@ -41,7 +42,7 @@ class PushController(
     ): ResponseEntity<Map<String, Boolean>> {
         val refreshToken = requireValidRefreshToken(httpRequest, loginMember)
 
-        val success = webPushService.subscribe(refreshToken, request)
+        val success = webPushService.subscribe(refreshToken, request, loginMember.toAuditActor())
         return ResponseEntity.ok(mapOf("success" to success))
     }
 
@@ -52,7 +53,7 @@ class PushController(
     ): ResponseEntity<Map<String, Boolean>> {
         val refreshToken = requireValidRefreshToken(httpRequest, loginMember)
 
-        val success = webPushService.unsubscribe(refreshToken)
+        val success = webPushService.unsubscribe(refreshToken, loginMember.toAuditActor())
         return ResponseEntity.ok(mapOf("success" to success))
     }
 

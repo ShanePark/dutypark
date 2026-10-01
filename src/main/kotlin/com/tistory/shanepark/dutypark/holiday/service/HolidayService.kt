@@ -104,6 +104,11 @@ class HolidayService(
             val cached = holidays.map { HolidayDto.of(it) }
             holidayMap[year] = cached
             evictIfTransactionRollsBack(year, cached)
+            log.auditEventAfterCommit(
+                "holiday_information_loaded", null,
+                target = mapOf("year" to year),
+                details = mapOf("provider" to "DATA_GO_KR", "holidayCount" to holidays.size),
+            )
             return cached
         } finally {
             lock.unlock()

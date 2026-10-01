@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.common.slack.advice
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import jakarta.servlet.http.HttpServletRequest
 import net.gpedro.integrations.slack.SlackAttachment
@@ -95,9 +96,10 @@ class ErrorDetectAdvisor(
             )
         }
         log.error(
-            "Unhandled request exception (method={}, pathPattern={})\n{}",
+            "Unhandled request exception (method={}, pathPattern={}, context={})\n{}",
             _req.method,
             pathPattern(_req),
+            auditContext(emptyMap()),
             exceptionTrace(e),
         )
         throw e

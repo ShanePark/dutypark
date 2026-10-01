@@ -1,6 +1,10 @@
 package com.tistory.shanepark.dutypark.report.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.report.domain.dto.AdminReportDetailDto
 import com.tistory.shanepark.dutypark.report.domain.dto.AdminReportSummaryDto
@@ -12,19 +16,18 @@ import com.tistory.shanepark.dutypark.report.repository.ContentReportRepository
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
-import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import com.tistory.shanepark.dutypark.todo.service.TodoService
+import java.time.LocalDateTime
+import java.util.*
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDateTime
-import java.util.*
 
 /**
  * Moderation of submitted reports. Content is removed through the internal delete methods of the
@@ -40,6 +43,8 @@ class AdminReportService(
     private val scheduleService: ScheduleService,
     private val todoService: TodoService,
 ) {
+
+    private val log = logger()
 
     fun findReports(status: ReportStatus?, pageable: Pageable): Page<AdminReportSummaryDto> {
         val newestFirst = PageRequest.of(pageable.pageNumber, pageable.pageSize, NEWEST_FIRST)
@@ -61,18 +66,32 @@ class AdminReportService(
         reportId: UUID,
         adminMemberId: Long,
         request: UpdateReportStatusRequest,
+        loginMember: LoginMember? = null,
     ): AdminReportDetailDto {
         // 신고는 다시 열지 못하고, CANCELED 는 신고자 본인만 남길 수 있는 상태다.
         if (request.status == ReportStatus.OPEN || request.status == ReportStatus.CANCELED) {
             throw BadRequestException()
         }
         val report = findReportOrThrow(reportId)
+        val previousStatus = report.status
+        val previousMemo = report.adminMemo
         if (report.status != request.status) {
             report.status = request.status
             report.resolvedAt = LocalDateTime.now()
             report.resolvedBy = adminMemberId
         }
         request.memo?.let { report.adminMemo = it.ifBlank { null } }
+        if (previousStatus != report.status || previousMemo != report.adminMemo) {
+            log.auditEventAfterCommit(
+                "report.moderated", loginMember?.toAuditActor() ?: AuditActor(adminMemberId, "unknown"),
+                target = mapOf("reportId" to report.id, "targetType" to report.targetType, "targetId" to report.targetId),
+                details = mapOf(
+                    "statusBefore" to previousStatus,
+                    "statusAfter" to report.status,
+                    "memoChanged" to (previousMemo != report.adminMemo),
+                ),
+            )
+        }
 
         return toDetail(report, targetExists = targetExists(report))
     }
@@ -85,14 +104,24 @@ class AdminReportService(
     fun deleteTarget(reportId: UUID, loginMember: LoginMember? = null): AdminReportDetailDto {
         val report = findReportOrThrow(reportId)
         val actor = loginMember?.toAuditActor()
+        var deleted = false
         when (report.targetType) {
             ReportTargetType.MEMBER -> throw BadRequestException("report.target.notDeletable")
             ReportTargetType.SCHEDULE -> findSchedule(report.targetId)?.let {
                 scheduleService.deleteScheduleInternal(it, actor = actor)
+                deleted = true
             }
             ReportTargetType.TODO -> findTodo(report.targetId)?.let { todo ->
                 todoService.deleteTodoInternal(todo, actor = actor)
+                deleted = true
             }
+        }
+        if (deleted) {
+            log.auditEventAfterCommit(
+                "report.target_deleted", actor,
+                target = mapOf("reportId" to report.id, "targetType" to report.targetType, "targetId" to report.targetId),
+                details = mapOf("reason" to report.reason, "status" to report.status),
+            )
         }
         return toDetail(report, targetExists = false)
     }

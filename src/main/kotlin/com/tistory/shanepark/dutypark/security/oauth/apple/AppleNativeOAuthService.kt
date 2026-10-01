@@ -120,6 +120,7 @@ class AppleNativeOAuthService(
             val signup = signupRepository.save(MemberSsoRegister(SsoType.APPLE, subject))
             return MobileOAuthExchangeResult(MobileOAuthExchangeResponse(true, signupUuid = signup.uuid))
         }
+        request.setAttribute("dutypark.logging.authProvider", SsoType.APPLE)
         val tokens = authService.getTokenResponseByMemberId(requireNotNull(existingMember.id), request)
         return MobileOAuthExchangeResult(
             MobileOAuthExchangeResponse(false, expiresIn = tokens.expiresIn),

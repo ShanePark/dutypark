@@ -50,7 +50,7 @@ class TeamScheduleController(
     ) {
         val schedule = teamScheduleService.findById(scheduleId)
         checkCanManage(login = login, teamId = schedule.teamId)
-        teamScheduleService.delete(id = scheduleId)
+        teamScheduleService.delete(id = scheduleId, actor = login)
     }
 
     private fun checkCanRead(login: LoginMember, teamId: Long) {

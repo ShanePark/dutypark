@@ -1,7 +1,10 @@
 package com.tistory.shanepark.dutypark.admin.service
 
-import com.tistory.shanepark.dutypark.admin.domain.dto.AdminMemberDto
 import com.tistory.shanepark.dutypark.admin.domain.dto.AdminMemberDetailDto
+import com.tistory.shanepark.dutypark.admin.domain.dto.AdminMemberDto
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
@@ -21,13 +24,13 @@ import com.tistory.shanepark.dutypark.security.config.DutyparkProperties
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
+import java.time.LocalDate
+import java.time.LocalDateTime
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 @Service
 @Transactional(readOnly = true)
@@ -45,6 +48,8 @@ class AdminService(
     private val refreshTokenService: RefreshTokenService,
     private val dutyparkProperties: DutyparkProperties,
 ) {
+
+    private val log = logger()
 
     fun findAllMembersWithTokens(keyword: String?, pageable: Pageable): Page<AdminMemberDto> {
         val memberPage = if (keyword.isNullOrBlank()) {
@@ -140,17 +145,29 @@ class AdminService(
                     actor = actor,
                     reason = "account_suspension",
                 )
+                log.auditChangeAfterCommit(
+                    "member.suspended", actor?.toAuditActor(),
+                    target = mapOf("memberId" to memberId, "memberName" to member.name),
+                    before = mapOf("status" to MemberStatus.ACTIVE),
+                    after = mapOf("status" to member.status),
+                )
             }
         }
     }
 
     @Transactional
-    fun reinstateMember(memberId: Long) {
+    fun reinstateMember(memberId: Long, actor: LoginMember? = null) {
         val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
         if (member.status != MemberStatus.SUSPENDED) {
             return
         }
         member.reinstate()
+        log.auditChangeAfterCommit(
+            "member.reinstated", actor?.toAuditActor(),
+            target = mapOf("memberId" to memberId, "memberName" to member.name),
+            before = mapOf("status" to MemberStatus.SUSPENDED),
+            after = mapOf("status" to member.status),
+        )
     }
 
 }

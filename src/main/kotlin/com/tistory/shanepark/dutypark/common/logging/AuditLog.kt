@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.common.logging
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.slf4j.Logger
+import org.slf4j.MDC
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import tools.jackson.databind.json.JsonMapper
@@ -48,6 +49,26 @@ private val sensitiveFieldNames = setOf(
     "apikey",
     "webhookurl",
     "webhooktoken",
+    "proof",
+    "reauthproof",
+    "proofhash",
+    "reauthproofhash",
+    "receipthash",
+    "receipttokenhash",
+    "pkceverifier",
+    "pkcecodeverifier",
+    "receipt",
+    "receipttoken",
+    "socialid",
+    "oauthstate",
+    "state",
+    "authcode",
+    "authorizationcode",
+    "oauthcode",
+    "codeverifier",
+    "codechallenge",
+    "nonce",
+    "encryptedrefreshtoken",
 )
 
 fun LoginMember.toAuditActor(): AuditActor = AuditActor(
@@ -59,7 +80,12 @@ fun LoginMember.toAuditActor(): AuditActor = AuditActor(
 fun Member.toAuditActor(): AuditActor = AuditActor(id = id, name = name)
 
 /** Renders safe, scalar context as one JSON object suitable for a single log line. */
-fun auditContext(fields: Map<String, Any?>): String = auditJsonMapper.writeValueAsString(sanitizeFields(fields))
+fun auditContext(fields: Map<String, Any?>): String {
+    val context = linkedMapOf<String, Any?>()
+    MDC.get("requestId")?.let { context["requestId"] = it }
+    context.putAll(fields)
+    return auditJsonMapper.writeValueAsString(sanitizeFields(context))
+}
 
 fun Logger.auditEventAfterCommit(
     event: String,

@@ -57,13 +57,14 @@ class KakaoLoginServiceTest {
     @Test
     fun `setKakaoIdToMember delegates social account link`() {
         val member = memberWithId(1L)
+        val actor = LoginMember(id = 1L, name = "tester", isImpersonating = true, originalMemberId = 7L)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
         stubKakaoApis(kakaoId = 123L)
 
         service.setKakaoIdToMember(
             code = "code-1",
             redirectUrl = "https://auth/callback",
-            loginMember = LoginMember(id = 1L, name = "tester")
+            loginMember = actor
         )
 
         verify(kakaoTokenApi).getAccessToken(
@@ -72,7 +73,7 @@ class KakaoLoginServiceTest {
             redirectUri = "https://auth/callback",
             code = "code-1"
         )
-        verify(memberSocialAccountService).link(member, SsoType.KAKAO, "123")
+        verify(memberSocialAccountService).link(member, SsoType.KAKAO, "123", actor = actor)
     }
 
     @Test
@@ -93,7 +94,7 @@ class KakaoLoginServiceTest {
     fun `setKakaoIdToMember propagates social account link exception`() {
         val member = memberWithId(1L)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
-        whenever(memberSocialAccountService.link(member, SsoType.KAKAO, "123"))
+        whenever(memberSocialAccountService.link(member, SsoType.KAKAO, "123", actor = LoginMember(id = 1L, name = "tester")))
             .thenThrow(SocialAccountAlreadyLinkedException(SsoType.KAKAO))
         stubKakaoApis(kakaoId = 123L)
 

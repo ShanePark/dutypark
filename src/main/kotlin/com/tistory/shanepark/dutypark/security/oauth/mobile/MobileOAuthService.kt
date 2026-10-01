@@ -117,9 +117,14 @@ class MobileOAuthService(
         val provider = parseProvider(providerName)
         val claim = claim(provider, state)
         if (error != null) {
+            log.info("Mobile OAuth cancelled {}", auditContext(mapOf(
+                "event" to "auth.oauth.mobile.cancelled", "transactionId" to claim.transactionId,
+                "provider" to provider, "purpose" to claim.purpose,
+            )))
             return callbackUri(claim.callbackUri, "error", "oauth_cancelled")
         }
         if (code == null) {
+            logDenied("provider_code_missing", provider, claim.transactionId)
             return callbackUri(claim.callbackUri, "error", "provider_failed")
         }
 
@@ -162,15 +167,20 @@ class MobileOAuthService(
     fun exchange(request: MobileOAuthExchangeRequest, servletRequest: HttpServletRequest): MobileOAuthExchangeResult {
         val now = clock.instant()
         val transaction = transactionRepository.findByExchangeCodeHashForUpdate(sha256Hex(request.code))
-            .orElseThrow { AuthException("auth.oauth.mobile.code.invalid") }
+            .orElseThrow {
+                logDenied("exchange_code_not_found")
+                AuthException("auth.oauth.mobile.code.invalid")
+            }
         val expiresAt = transaction.exchangeExpiresAt
         if (
             transaction.exchangeConsumedAt != null || expiresAt == null || !now.isBefore(expiresAt) ||
             transaction.callbackUri != request.callbackUri
         ) {
+            logDenied("exchange_invalid", transaction.provider, transaction.id)
             throw AuthException("auth.oauth.mobile.code.invalid")
         }
         if (!verifyPkce(request.codeVerifier, transaction.codeChallenge)) {
+            logDenied("pkce_mismatch", transaction.provider, transaction.id)
             throw AuthException("auth.oauth.mobile.pkce.invalid")
         }
 
@@ -182,6 +192,13 @@ class MobileOAuthService(
         }
     }
 
+    private fun logDenied(reason: String, provider: SsoType? = null, transactionId: Long? = null) {
+        log.warn("Mobile OAuth denied {}", auditContext(mapOf(
+            "event" to "auth.oauth.mobile.denied", "reason" to reason,
+            "provider" to provider, "transactionId" to transactionId,
+        )))
+    }
+
     private fun callbackUri(base: String, name: String, value: String): URI =
         UriComponentsBuilder.fromUriString(base).queryParam(name, value).build().encode().toUri()
 
@@ -189,11 +206,15 @@ class MobileOAuthService(
         return requireNotNull(callbackTransaction.execute {
             val now = clock.instant()
             val transaction = transactionRepository.findByStateHashForUpdate(sha256Hex(state))
-                .orElseThrow { AuthException("auth.oauth.mobile.state.invalid") }
+                .orElseThrow {
+                    logDenied("state_not_found", provider)
+                    AuthException("auth.oauth.mobile.state.invalid")
+                }
             if (
                 transaction.provider != provider || transaction.stateConsumedAt != null ||
                 !now.isBefore(transaction.stateExpiresAt)
             ) {
+                logDenied("state_invalid", provider, transaction.id)
                 throw AuthException("auth.oauth.mobile.state.invalid")
             }
             transaction.claim(now)
@@ -260,6 +281,7 @@ class MobileOAuthService(
     ): MobileOAuthExchangeResult {
         val memberId = transaction.memberId
         if (memberId != null) {
+            servletRequest.setAttribute("dutypark.logging.authProvider", transaction.provider)
             val tokens = authService.getTokenResponseByMemberId(memberId, servletRequest)
             return MobileOAuthExchangeResult(
                 response = MobileOAuthExchangeResponse(false, expiresIn = tokens.expiresIn),

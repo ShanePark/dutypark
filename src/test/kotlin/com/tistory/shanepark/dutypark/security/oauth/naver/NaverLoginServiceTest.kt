@@ -63,13 +63,14 @@ class NaverLoginServiceTest {
     @Test
     fun `setNaverIdToMember delegates social account link`() {
         val member = memberWithId(1L)
+        val actor = LoginMember(id = 1L, name = "tester", isImpersonating = true, originalMemberId = 7L)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
         stubNaverApis(naverId = "naver-123")
 
         service.setNaverIdToMember(
             code = "code-1",
             state = "encoded-state",
-            loginMember = LoginMember(id = 1L, name = "tester")
+            loginMember = actor
         )
 
         verify(naverTokenApi).getAccessToken(
@@ -79,7 +80,7 @@ class NaverLoginServiceTest {
             code = "code-1",
             state = "encoded-state"
         )
-        verify(memberSocialAccountService).link(member, SsoType.NAVER, "naver-123")
+        verify(memberSocialAccountService).link(member, SsoType.NAVER, "naver-123", actor = actor)
     }
 
     @Test
@@ -100,7 +101,7 @@ class NaverLoginServiceTest {
     fun `setNaverIdToMember propagates social account link exception`() {
         val member = memberWithId(1L)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
-        whenever(memberSocialAccountService.link(member, SsoType.NAVER, "naver-123"))
+        whenever(memberSocialAccountService.link(member, SsoType.NAVER, "naver-123", actor = LoginMember(id = 1L, name = "tester")))
             .thenThrow(SocialAccountAlreadyLinkedException(SsoType.NAVER))
         stubNaverApis(naverId = "naver-123")
 

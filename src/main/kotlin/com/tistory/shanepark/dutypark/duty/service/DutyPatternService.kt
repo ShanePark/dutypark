@@ -1,5 +1,9 @@
 package com.tistory.shanepark.dutypark.duty.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternDetailsDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternDayDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyPatternDto
@@ -25,6 +29,8 @@ class DutyPatternService(
     private val dutyRepository: DutyRepository,
     private val clock: Clock,
 ) {
+    private val log = logger()
+
     fun getMine(memberId: Long): DutyPatternDto {
         val member = memberRepository.findMemberWithTeam(memberId).orElseThrow()
         val team = member.team
@@ -47,7 +53,7 @@ class DutyPatternService(
     }
 
     @Transactional(timeout = 20)
-    fun updateMine(memberId: Long, request: DutyPatternUpdateDto): DutyPatternDto {
+    fun updateMine(memberId: Long, request: DutyPatternUpdateDto, actor: LoginMember? = null): DutyPatternDto {
         if (request.days.isEmpty()) {
             throw IllegalArgumentException("duty.pattern.weekdays.required")
         }
@@ -90,11 +96,15 @@ class DutyPatternService(
                 effectiveFrom = today,
             )
         )
+        log.auditEventAfterCommit("duty_pattern.updated", actor?.toAuditActor(),
+            mapOf("memberId" to memberId, "teamId" to team.id),
+            mapOf("weekdayCount" to dayTypes.size, "holidayOffBefore" to active?.holidayOff,
+                "holidayOffAfter" to request.holidayOff, "effectiveFrom" to today))
         return getMine(memberId)
     }
 
     @Transactional(timeout = 20)
-    fun deleteMine(memberId: Long) {
+    fun deleteMine(memberId: Long, actor: LoginMember? = null) {
         val today = today()
         val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
         val active = patternRepository.findFirstByMemberAndEffectiveUntilExclusiveIsNullOrderByIdDesc(member)
@@ -102,15 +112,17 @@ class DutyPatternService(
             ?: return
         dutyRepository.deleteAllByMemberAndDutyDateGreaterThanEqual(member, today)
         terminatePattern(active, today)
+        log.auditEventAfterCommit("duty_pattern.deleted", actor?.toAuditActor(),
+            mapOf("memberId" to memberId, "patternId" to active.id), mapOf("effectiveUntil" to today))
     }
 
     /** Team transfer/removal flows call this before changing member.team. */
     @Transactional(timeout = 20)
-    fun terminateActivePattern(member: Member) {
+    fun terminateActivePattern(member: Member, actor: LoginMember? = null) {
         val today = today()
         val locked = memberRepository.findMemberWithTeamForUpdate(requireNotNull(member.id)).orElseThrow()
         dutyRepository.deleteAllByMemberAndDutyDateGreaterThanEqual(locked, today)
-        terminateCurrentPattern(locked, today)
+        terminateCurrentPattern(locked, today, actor)
     }
 
     fun deleteHistoryForTeam(team: Team) {
@@ -126,9 +138,11 @@ class DutyPatternService(
         }
     }
 
-    private fun terminateCurrentPattern(member: Member, today: LocalDate) {
+    private fun terminateCurrentPattern(member: Member, today: LocalDate, actor: LoginMember?) {
         val active = patternRepository.findFirstByMemberAndEffectiveUntilExclusiveIsNullOrderByIdDesc(member) ?: return
         terminatePattern(active, today)
+        log.auditEventAfterCommit("duty_pattern.terminated", actor?.toAuditActor(),
+            mapOf("memberId" to member.id, "patternId" to active.id), mapOf("effectiveUntil" to today))
     }
 
     private fun terminatePattern(active: MemberDutyPattern, today: LocalDate) {

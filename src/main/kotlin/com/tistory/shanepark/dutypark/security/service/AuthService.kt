@@ -87,6 +87,9 @@ class AuthService(
         }
         ensureActive(member, "auth.reauth.failed")
         if (member.password == null || !passwordEncoder.matches(password, member.password)) {
+            log.warn("Password reauthentication denied {}", auditContext(mapOf(
+                "event" to "auth.reauth.password_denied", "memberId" to memberId, "reason" to "invalid_credentials",
+            )))
             throw AuthException("auth.reauth.failed")
         }
     }
@@ -155,7 +158,7 @@ class AuthService(
                 auditContext(
                     linkedMapOf(
                         "event" to "auth.login.denied",
-                        "request" to mapOf("method" to req.method, "path" to req.requestURI),
+                        "request" to mapOf("method" to req.method, "path" to (req.getAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE) as? String ?: "<unmatched>")),
                         "ipAddress" to ipAddress,
                         "status" to 429,
                         "reason" to "rate_limited",
@@ -174,7 +177,7 @@ class AuthService(
                 auditContext(
                     linkedMapOf(
                         "event" to "auth.login.denied",
-                        "request" to mapOf("method" to req.method, "path" to req.requestURI),
+                        "request" to mapOf("method" to req.method, "path" to (req.getAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE) as? String ?: "<unmatched>")),
                         "ipAddress" to ipAddress,
                         "status" to 401,
                         "reason" to "invalid_credentials",
@@ -206,6 +209,7 @@ class AuthService(
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
         val jwt = jwtProvider.createToken(lockedMember, requireNotNull(refreshToken.id))
+        logLoginCompleted(lockedMember, refreshToken.id, "password", req)
 
         return TokenResponse(
             accessToken = jwt,
@@ -216,9 +220,13 @@ class AuthService(
 
     fun refreshAccessToken(refreshTokenValue: String, req: HttpServletRequest): TokenResponse {
         val refreshToken = refreshTokenService.findByToken(refreshTokenValue)
-            ?: throw AuthException("auth.refresh.invalid")
+            ?: run {
+                logRefreshDenied(null, "session_not_found")
+                throw AuthException("auth.refresh.invalid")
+            }
 
         if (!refreshToken.isValid()) {
+            logRefreshDenied(refreshToken.id, "session_expired")
             throw AuthException("auth.refresh.expired")
         }
 
@@ -261,6 +269,7 @@ class AuthService(
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
         val jwt = jwtProvider.createToken(member, requireNotNull(refreshToken.id))
+        logLoginCompleted(member, refreshToken.id, "social", req)
 
         return TokenResponse(
             accessToken = jwt,
@@ -395,7 +404,30 @@ class AuthService(
         )
     }
 
+    private fun logLoginCompleted(member: Member, sessionId: Long?, method: String, req: HttpServletRequest) {
+        val event = if (req.requestURI == "/api/auth/sso/signup/token") "auth.session.created" else "auth.login.completed"
+        log.auditEventAfterCommit(
+            event = event, actor = member.toAuditActor(), target = mapOf("memberId" to member.id),
+            details = mapOf(
+                "sessionId" to sessionId, "method" to method,
+                "provider" to (req.getAttribute("dutypark.logging.authProvider") as? com.tistory.shanepark.dutypark.member.domain.enums.SsoType),
+                "path" to (req.getAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE) as? String ?: "<unmatched>"),
+            ),
+        )
+    }
+
+    private fun logRefreshDenied(sessionId: Long?, reason: String) {
+        log.info("Session refresh denied {}", auditContext(mapOf(
+            "event" to "auth.refresh.denied", "sessionId" to sessionId, "reason" to reason,
+        )))
+    }
+
     private fun ensureActive(member: Member, code: String = "auth.account.inactive") {
+        if (member.status != MemberStatus.ACTIVE) {
+            log.warn("Inactive account authentication denied {}", auditContext(mapOf(
+                "event" to "auth.account.denied", "memberId" to member.id, "status" to member.status,
+            )))
+        }
         if (member.status == MemberStatus.SUSPENDED) {
             throw AuthException(SUSPENDED_MESSAGE)
         }

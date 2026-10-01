@@ -34,6 +34,8 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.slf4j.LoggerFactory
 import org.springframework.core.task.SyncTaskExecutor
+import org.springframework.core.task.TaskExecutor
+import org.springframework.core.task.TaskRejectedException
 import org.springframework.test.util.ReflectionTestUtils
 import java.util.UUID
 
@@ -55,6 +57,7 @@ class SlackSubmissionPrivacyTest {
             "createReport",
             Long::class.javaPrimitiveType!!,
             CreateReportRequest::class.java,
+            LoginMember::class.java,
         )
 
         // 전용 알림이 필요한 값만 골라 보낸다. @SlackNotification 을 다시 붙이면 알림이 중복되고
@@ -273,7 +276,7 @@ class SlackSubmissionPrivacyTest {
     }
 
     @Test
-    fun `generic aspect does not log exception message or stack trace`() {
+    fun `generic aspect leaves original business failure to global diagnostics`() {
         val joinPoint = mock<ProceedingJoinPoint>()
         val signature = mock<MethodSignature>()
         val secret = "submitted secret from request"
@@ -293,9 +296,7 @@ class SlackSubmissionPrivacyTest {
             logger.detachAppender(appender)
         }
 
-        assertThat(appender.list).hasSize(1)
-        assertThat(appender.list.single().formattedMessage).doesNotContain(secret)
-        assertThat(appender.list.single().throwableProxy).isNull()
+        assertThat(appender.list).isEmpty()
         verifyNoInteractions(notifier)
     }
 
@@ -348,6 +349,27 @@ class SlackSubmissionPrivacyTest {
             .contains("SlackException")
             .doesNotContain(secret)
         assertThat(appender.list.single().throwableProxy).isNull()
+    }
+
+    @Test
+    fun `event submission rejection is diagnosed without leaking event data and rethrown`() {
+        val failure = TaskRejectedException("secret-rejection")
+        val executor = TaskExecutor { throw failure }
+        val logger = LoggerFactory.getLogger(SlackEventNotifier::class.java) as ch.qos.logback.classic.Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            val caught = org.junit.jupiter.api.assertThrows<TaskRejectedException> {
+                SlackEventNotifier(notifier, executor).send(SlackEvent("🔔", "secret-title"))
+            }
+            assertThat(caught).isSameAs(failure)
+        } finally {
+            logger.detachAppender(appender)
+        }
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage).contains("submission", "TaskRejectedException")
+            .doesNotContain("secret-rejection", "secret-title")
+        verifyNoInteractions(notifier)
     }
 
     private class AnnotatedOperation {

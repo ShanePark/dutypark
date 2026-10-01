@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.common.slack.aspect
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackField
@@ -23,8 +24,10 @@ class SlackNotificationAspect(
 
     @Around("@annotation(com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification)")
     fun slackNotification(proceedingJoinPoint: ProceedingJoinPoint): Any? {
+        val result = proceedingJoinPoint.proceed()
+        val method = proceedingJoinPoint.signature.name
+        val correlationId = org.slf4j.MDC.get("requestId")
         return try {
-            val result = proceedingJoinPoint.proceed()
 
             val slackAttachment = SlackAttachment()
             slackAttachment.setFallback("Post")
@@ -47,19 +50,18 @@ class SlackNotificationAspect(
                 runCatching { slackNotifier.call(slackMessage) }
                     .onFailure { failure ->
                         log.error(
-                            "Failed to send Slack notification (exception={})",
-                            failure.javaClass.name,
+                            "Slack notification delivery failed: {}",
+                            auditContext(mapOf("method" to method, "exceptionType" to failure.javaClass.name,
+                                "requestId" to correlationId)),
                         )
                     }
             }
 
             result
         } catch (ex: Exception) {
-            // Exception messages and stack traces may echo request data. Keep this operational log
-            // classification-only as well; the original exception is still propagated unchanged.
             log.error(
-                "Failed to send Slack notification (exception={})",
-                ex.javaClass.name,
+                "Slack notification submission failed: {}",
+                auditContext(mapOf("method" to method, "exceptionType" to ex.javaClass.name)),
             )
             throw ex
         }

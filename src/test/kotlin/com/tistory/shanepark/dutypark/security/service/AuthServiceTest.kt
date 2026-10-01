@@ -617,10 +617,30 @@ class AuthServiceTest {
         assertThat(exception.message).isEqualTo("auth.account.suspended")
     }
 
+    @Test
+    fun `social token issuance logs successful session without credentials`() {
+        val member = memberWithId(1L)
+        val refresh = RefreshToken(member, futureDateTime, "127.0.0.1", "test-agent")
+        setRefreshTokenId(refresh, 10L)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(refreshTokenService.createRefreshToken(eq(1L), anyOrNull(), anyOrNull())).thenReturn(refresh)
+        whenever(jwtProvider.createToken(member, 10L)).thenReturn("private-access")
+        val logs = captureAuthLogs {
+            val request = requestWith("127.0.0.1").also {
+                it.requestURI = "/private-access"
+                it.setAttribute("dutypark.logging.authProvider", com.tistory.shanepark.dutypark.member.domain.enums.SsoType.APPLE)
+            }
+            authService.getTokenResponseByMemberId(1L, request)
+        }
+        assertThat(logs).contains("auth.login.completed", "social", "APPLE", "10", "/api/auth/token")
+            .doesNotContain(refresh.token, "private-access", member.email!!, member.password!!)
+    }
+
     private fun requestWith(ip: String, userAgent: String = "test-agent"): MockHttpServletRequest {
         val request = MockHttpServletRequest()
         request.remoteAddr = ip
         request.requestURI = "/api/auth/token"
+        request.setAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/auth/token")
         request.method = "POST"
         request.addHeader(HttpHeaders.USER_AGENT, userAgent)
         return request

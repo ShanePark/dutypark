@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.inquiry.domain.enums.InquiryStatus
 import com.tistory.shanepark.dutypark.inquiry.service.InquiryService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import java.util.UUID
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
 import org.springframework.validation.annotation.Validated
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
 @RestController
 @RequestMapping("/admin/api/inquiries")
@@ -46,7 +46,12 @@ class AdminInquiryController(
         @PathVariable id: UUID,
         @RequestBody @Validated request: UpdateInquiryStatusRequest,
     ): AdminInquiryDto {
-        return inquiryService.changeStatus(id = id, request = request, adminId = loginMember.id)
+        return inquiryService.changeStatus(
+            id = id,
+            request = request,
+            adminId = loginMember.id,
+            loginMember = loginMember,
+        )
     }
 
     private fun parseStatus(status: String?): InquiryStatus? {

@@ -1,5 +1,9 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
@@ -38,6 +42,7 @@ class FriendService(
     private val blockService: BlockService,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
+    private val log = logger()
 
     @Transactional(readOnly = true)
     fun findAllFriends(loginMember: LoginMember): List<FriendDto> {
@@ -77,6 +82,10 @@ class FriendService(
             throw BadRequestException("friend.request.alreadyRequested")
 
         val savedRequest = friendRequestRepository.save(FriendRequest(fromMember, toMember))
+        log.auditEventAfterCommit("friend_request.sent", loginMember.toAuditActor(),
+            target = mapOf("type" to "FriendRequest", "id" to savedRequest.id,
+                "fromMemberId" to fromMember.id, "toMemberId" to toMember.id),
+            details = mapOf("requestType" to savedRequest.requestType))
         eventPublisher.publishEvent(
             FriendRequestSentEvent(
                 requestId = savedRequest.id!!,
@@ -112,6 +121,10 @@ class FriendService(
                 requestType = FriendRequestType.FAMILY_REQUEST
             )
         )
+        log.auditEventAfterCommit("family_request.sent", loginMember.toAuditActor(),
+            target = mapOf("type" to "FriendRequest", "id" to savedRequest.id,
+                "fromMemberId" to fromMember.id, "toMemberId" to toMember.id),
+            details = mapOf("requestType" to savedRequest.requestType))
         eventPublisher.publishEvent(
             FamilyRequestSentEvent(
                 requestId = savedRequest.id!!,
@@ -127,6 +140,7 @@ class FriendService(
 
         val friendRequest = findPendingFriendRequestOrThrow(fromMember, targetMember)
         friendRequestRepository.delete(friendRequest)
+        logRequest("friend_request.cancelled", loginMember, friendRequest, fromMember.id, targetMember.id)
     }
 
     fun rejectFriendRequest(loginMember: LoginMember, toMemberId: Long) {
@@ -135,6 +149,7 @@ class FriendService(
 
         val friendRequest = findPendingFriendRequestOrThrow(fromMember, member)
         friendRequest.status = REJECTED
+        logRequest("friend_request.rejected", loginMember, friendRequest, fromMember.id, member.id)
     }
 
     fun acceptFriendRequest(loginMember: LoginMember, friendId: Long) {
@@ -144,6 +159,7 @@ class FriendService(
         val friendRequest = findPendingFriendRequestOrThrow(friend, member)
         deleteViceVersaRequestIfPresent(member, friend)
         friendRequest.accepted()
+        logRequest("friend_request.accepted", loginMember, friendRequest, friend.id, member.id)
 
         when (friendRequest.requestType) {
             FriendRequestType.FRIEND_REQUEST -> {
@@ -193,6 +209,9 @@ class FriendService(
 
         removeFamilyStatus(member, friend)
         removeFamilyStatus(friend, member)
+        log.auditChangeAfterCommit("friend.family_changed", loginMember.toAuditActor(),
+            mapOf("memberId" to member.id, "friendId" to friend.id),
+            mapOf("isFamily" to true), mapOf("isFamily" to false))
     }
 
     private fun removeFamilyStatus(member: Member, friend: Member) {
@@ -219,6 +238,8 @@ class FriendService(
 
         friendRelationRepository.deleteByMemberAndFriend(loginMember, targetMember)
         friendRelationRepository.deleteByMemberAndFriend(targetMember, loginMember)
+        log.auditEventAfterCommit("friend.removed", login.toAuditActor(),
+            target = mapOf("memberId" to login.id, "friendId" to target))
     }
 
     @Transactional(readOnly = true)
@@ -352,7 +373,11 @@ class FriendService(
             .associateBy { it.friend.id }
         friendIds.forEachIndexed { index, friendId ->
             friendMap[friendId]?.let {
+                val before = it.displayOrder
                 it.displayOrder = index.toLong() + 1
+                log.auditChangeAfterCommit("friend.reordered", loginMember.toAuditActor(),
+                    mapOf("memberId" to loginMember.id, "friendId" to friendId),
+                    mapOf("displayOrder" to before), mapOf("displayOrder" to it.displayOrder))
             }
         }
     }
@@ -364,6 +389,12 @@ class FriendService(
         return familyRelations
             .map { it.friend.toMemberPreviewDto() }
             .sortedBy { it.name }
+    }
+
+    private fun logRequest(event: String, actor: LoginMember, request: FriendRequest, fromId: Long?, toId: Long?) {
+        log.auditEventAfterCommit(event, actor.toAuditActor(),
+            target = mapOf("type" to "FriendRequest", "id" to request.id, "fromMemberId" to fromId, "toMemberId" to toId),
+            details = mapOf("requestType" to request.requestType, "status" to request.status))
     }
 
 }

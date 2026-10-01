@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.security.oauth.mobile
 
+import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
@@ -30,6 +32,7 @@ class MobileNativeOAuthService(
     private val entityManager: EntityManager,
     transactionManager: PlatformTransactionManager,
 ) {
+    private val log = logger()
     private val databaseTransaction = TransactionTemplate(transactionManager)
 
     fun exchange(
@@ -76,6 +79,7 @@ class MobileNativeOAuthService(
     private fun requireAuthenticatedMember(loginMember: LoginMember?): LoginMember {
         val authenticated = loginMember ?: throw AuthException()
         if (authenticated.isImpersonating) {
+            logDenied("impersonation_forbidden", authenticated.id)
             throw AuthException("auth.reauth.impersonationForbidden")
         }
         return authenticated
@@ -97,6 +101,7 @@ class MobileNativeOAuthService(
         val existingMember = memberSocialAccountService.findMemberByProviderAndSocialId(provider, socialId)
         if (existingMember != null) {
             val lockedMember = lockActiveMember(existingMember.id)
+            servletRequest.setAttribute("dutypark.logging.authProvider", provider)
             val tokens = authService.getTokenResponseByMemberId(requireNotNull(lockedMember.id), servletRequest)
             return MobileOAuthExchangeResult(
                 response = MobileOAuthExchangeResponse(false, expiresIn = tokens.expiresIn),
@@ -118,8 +123,15 @@ class MobileNativeOAuthService(
             false
         }
         if (!acquired) {
+            logDenied("rate_limited")
             throw com.tistory.shanepark.dutypark.common.exceptions.RateLimitException()
         }
+    }
+
+    private fun logDenied(reason: String, memberId: Long? = null) {
+        log.warn("Native OAuth denied {}", auditContext(mapOf(
+            "event" to "auth.oauth.native.denied", "reason" to reason, "memberId" to memberId,
+        )))
     }
 
     private fun lockActiveMember(memberId: Long?): Member {

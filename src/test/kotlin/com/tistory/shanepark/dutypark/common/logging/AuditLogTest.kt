@@ -10,6 +10,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.LocalDate
@@ -258,6 +259,36 @@ class AuditLogTest {
         assertThat(context).contains("\"actor\":{\"id\":5,\"name\":\"Shane\",\"originalMemberId\":2}")
         assertThat(context).doesNotContain("email", "Unsafe secret", "private@example.com")
         assertThat(context).contains("UnsafeToString")
+    }
+
+    @Test
+    fun `credential aliases are excluded without hiding diagnostic codes`() {
+        val context = auditContext(mapOf(
+            "proof" to "secret-proof", "receiptToken" to "secret-receipt",
+            "socialId" to "secret-social", "oauthState" to "secret-state",
+            "authorizationCode" to "secret-authcode", "code" to "auth.required",
+            "reauthProof" to "secret-reauth", "proofHash" to "secret-proof-hash",
+            "receiptHash" to "secret-receipt-hash", "receiptTokenHash" to "secret-receipt-token-hash",
+            "pkceVerifier" to "secret-pkce", "code_verifier" to "secret-verifier",
+            "nested" to mapOf("id_token" to "secret-id-token"),
+        ))
+        assertThat(context).doesNotContain("secret-")
+        assertThat(context).contains("auth.required")
+    }
+
+    @Test
+    fun `audit event freezes request correlation before commit`() {
+        TransactionSynchronizationManager.initSynchronization()
+        MDC.put("requestId", "original-request")
+        try {
+            logger.auditEventAfterCommit("member.created", null)
+            MDC.put("requestId", "different-request")
+            TransactionSynchronizationManager.getSynchronizations().forEach { it.afterCommit() }
+            assertThat(appender.list.single().formattedMessage).contains("original-request")
+                .doesNotContain("different-request")
+        } finally {
+            MDC.remove("requestId")
+        }
     }
 
     private class UnsafeToString {

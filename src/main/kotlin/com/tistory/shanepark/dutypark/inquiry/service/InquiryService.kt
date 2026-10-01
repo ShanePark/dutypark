@@ -3,7 +3,9 @@ package com.tistory.shanepark.dutypark.inquiry.service
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
 import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.inquiry.config.InquiryRateLimitConfig
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.AdminInquiryDto
@@ -20,15 +22,15 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.event.InquiryAnsweredEvent
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import java.time.Clock
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.util.UUID
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.Clock
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -88,6 +90,11 @@ class InquiryService(
             )
         )
         slackNotifier.inquiryCreated(inquiry)
+        log.auditEventAfterCommit(
+            "inquiry.created", loginMember?.toAuditActor() ?: member?.toAuditActor(),
+            target = mapOf("inquiryId" to inquiry.id, "memberId" to memberId),
+            details = mapOf("status" to inquiry.status, "guest" to (member == null)),
+        )
         return CreateInquiryResponse(id = inquiry.id)
     }
 
@@ -129,11 +136,34 @@ class InquiryService(
     }
 
     @Transactional
-    fun changeStatus(id: UUID, request: UpdateInquiryStatusRequest, adminId: Long): AdminInquiryDto {
+    fun changeStatus(
+        id: UUID,
+        request: UpdateInquiryStatusRequest,
+        adminId: Long,
+        loginMember: LoginMember? = null,
+    ): AdminInquiryDto {
         val inquiry = findInquiryForUpdateOrThrow(id)
+        val previousStatus = inquiry.status
+        val previousMemo = inquiry.adminMemo
+        val previousAnswer = inquiry.answer
         val now = now()
         inquiry.changeStatus(status = request.status, memo = request.memo, adminId = adminId, now = now)
         writeAnswerIfPresent(inquiry = inquiry, answer = request.answer, adminId = adminId, now = now)
+        val memoChanged = previousMemo != inquiry.adminMemo
+        val answerChanged = previousAnswer != inquiry.answer
+        if (previousStatus != inquiry.status || memoChanged || answerChanged) {
+            log.auditEventAfterCommit(
+                "inquiry.updated", loginMember?.toAuditActor() ?: AuditActor(adminId, "unknown"),
+                target = mapOf("inquiryId" to inquiry.id),
+                details = mapOf(
+                    "statusBefore" to previousStatus,
+                    "statusAfter" to inquiry.status,
+                    "memoChanged" to memoChanged,
+                    "answerChanged" to answerChanged,
+                    "firstAnswer" to (previousAnswer == null && answerChanged),
+                ),
+            )
+        }
         return AdminInquiryDto.of(inquiry)
     }
 

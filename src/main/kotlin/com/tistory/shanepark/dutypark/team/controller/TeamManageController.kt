@@ -60,7 +60,7 @@ class TeamManageController(
         @RequestParam(name = "templateName", required = false) dutyBatchTemplate: DutyBatchTemplate?
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        teamService.updateBatchTemplate(teamId, dutyBatchTemplate)
+        teamService.updateBatchTemplate(teamId, dutyBatchTemplate, actor = loginMember)
     }
 
     @PostMapping("/{teamId}/duty")
@@ -155,7 +155,7 @@ class TeamManageController(
         @RequestParam(required = false) abbreviation: String? = null,
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        teamService.updateDefaultDuty(teamId, name, color, abbreviation)
+        teamService.updateDefaultDuty(teamId, name, color, abbreviation, actor = loginMember)
     }
 
     @PostMapping("/{teamId}/members")
@@ -165,7 +165,7 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        teamService.addMemberToTeam(teamId = teamId, memberId = memberId)
+        teamService.addMemberToTeam(teamId = teamId, memberId = memberId, actor = loginMember)
     }
 
     @DeleteMapping("/{teamId}/members")
@@ -175,7 +175,7 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        teamService.removeMemberFromTeam(teamId, memberId)
+        teamService.removeMemberFromTeam(teamId, memberId, actor = loginMember)
     }
 
     @GetMapping("/members")
