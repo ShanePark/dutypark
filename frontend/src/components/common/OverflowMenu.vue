@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch, type CSSProperties } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch, type CSSProperties } from 'vue'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 
 const props = withDefaults(defineProps<{
@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<{
 })
 
 const isOpen = ref(false)
+let openedWithKeyboard = false
 const triggerRef = ref<HTMLButtonElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 const panelPosition = ref<{ top: number; left: number } | null>(null)
@@ -90,12 +91,19 @@ function startTrackingPosition() {
   window.addEventListener('resize', updatePanelPosition)
 }
 
-useEscapeKey(isOpen, () => close())
+useEscapeKey(isOpen, () => {
+  close()
+  triggerRef.value?.focus()
+})
 watch(() => props.disabled, (disabled) => disabled && close())
-watch(isOpen, (open) => {
+watch(isOpen, async (open) => {
   if (open) {
     updatePanelPosition()
-    if (isOpen.value) startTrackingPosition()
+    if (isOpen.value) {
+      startTrackingPosition()
+      await nextTick()
+      if (isOpen.value && openedWithKeyboard) panelRef.value?.querySelector<HTMLElement>('[role="menuitem"]:not(:disabled)')?.focus()
+    }
     return
   }
 
@@ -105,8 +113,9 @@ watch(isOpen, (open) => {
 
 onBeforeUnmount(stopTrackingPosition)
 
-function toggle() {
+function toggle(event?: MouseEvent) {
   if (props.disabled) return
+  openedWithKeyboard = event?.detail === 0
   isOpen.value = !isOpen.value
 }
 

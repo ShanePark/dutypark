@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRenderer, defineComponent, h, nextTick, type RendererOptions } from 'vue'
 
+const escape = vi.hoisted(() => ({ close: (() => {}) as () => void }))
 vi.mock('@/composables/useEscapeKey', () => ({
-  useEscapeKey: () => {},
+  useEscapeKey: (_active: unknown, close: () => void) => { escape.close = close },
 }))
 
 const { default: OverflowMenu } = await import('./OverflowMenu.vue')
@@ -16,6 +17,8 @@ type TestNode = {
   listeners: Map<string, Set<(payload: unknown) => void>>
   addEventListener: (event: string, handler: (payload: unknown) => void) => void
   removeEventListener: (event: string, handler: (payload: unknown) => void) => void
+  focus: () => void
+  querySelector: (selector: string) => TestNode | null
   offsetWidth: number
   offsetHeight: number
   getBoundingClientRect: () => DOMRect
@@ -54,6 +57,15 @@ function createNode(type: string): TestNode {
     removeEventListener(event: string, handler: (payload: unknown) => void) {
       listeners.get(event)?.delete(handler)
     },
+    focus: vi.fn(() => {
+      let ancestor: TestNode | null = node
+      while (ancestor) {
+        if ((ancestor.props.style as { visibility?: string } | undefined)?.visibility === 'hidden') return
+        ancestor = ancestor.parent
+      }
+      Object.defineProperty(document, 'activeElement', { value: node, configurable: true })
+    }),
+    querySelector: (_selector: string): TestNode | null => findNode(node, child => child.props.role === 'menuitem' && !child.props.disabled),
     offsetWidth: 0,
     offsetHeight: 0,
     getBoundingClientRect() {
@@ -91,6 +103,7 @@ function mountMenu() {
   }
   vi.stubGlobal('document', {
     body,
+    activeElement: null,
     documentElement: { clientWidth: 800, clientHeight: 600 },
     querySelector: (selector: string) => selector === 'body' ? body : null,
     addEventListener: vi.fn(),
@@ -157,6 +170,7 @@ function mountMenu() {
         }, {
           trigger: () => h('span', '…'),
           default: () => [
+            h('button', { role: 'menuitem', disabled: true }, 'Unavailable'),
             h('button', { role: 'menuitem' }, 'Remove tag'),
             h('button', { role: 'menuitem' }, 'Report'),
           ],
@@ -228,6 +242,33 @@ describe('OverflowMenu in a scrollable modal', () => {
     await nextTick()
 
     expect(Number.parseFloat((menu!.props.style as Record<string, string>).top)).toBe(236)
+    app.unmount()
+  })
+})
+
+describe('OverflowMenu keyboard focus', () => {
+  it('focuses the first enabled menu item on keyboard activation and restores its trigger on Escape', async () => {
+    const { app, body, root } = mountMenu()
+    const trigger = findNode(root, node => node.props['aria-label'] === 'Schedule actions')!
+    trigger.focus()
+    ;(trigger.props.onClick as (event: { detail: number }) => void)({ detail: 0 })
+    await nextTick()
+    await nextTick()
+    const firstItem = findNode(body, node => node.props.role === 'menuitem' && !node.props.disabled)!
+    expect(document.activeElement === (firstItem as unknown)).toBe(true)
+    escape.close()
+    await nextTick()
+    expect(document.activeElement === (trigger as unknown)).toBe(true)
+    app.unmount()
+  })
+
+  it('keeps pointer activation on the trigger', async () => {
+    const { app, root } = mountMenu()
+    const trigger = findNode(root, node => node.props['aria-label'] === 'Schedule actions')!
+    trigger.focus()
+    ;(trigger.props.onClick as (event: { detail: number }) => void)({ detail: 1 })
+    await nextTick()
+    expect(document.activeElement === (trigger as unknown)).toBe(true)
     app.unmount()
   })
 })
