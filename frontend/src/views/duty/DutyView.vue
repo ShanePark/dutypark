@@ -40,7 +40,7 @@ import { useContentFilterStore } from '@/stores/contentFilter'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const { showError, confirm, confirmDelete, toastSuccess } = useSwal()
+const { showError, confirm, confirmDelete, toastSuccess, toastInfo } = useSwal()
 const contentFilterStore = useContentFilterStore()
 const { goBack } = useNavigateBack()
 const { t } = useI18n()
@@ -1261,7 +1261,7 @@ async function handleCreateSchedule(data: ScheduleSaveData) {
   if (!memberId.value) return
 
   try {
-    await scheduleApi.saveSchedule({
+    const result = await scheduleApi.saveSchedule({
       memberId: memberId.value,
       content: data.content,
       description: data.description || undefined,
@@ -1274,7 +1274,11 @@ async function handleCreateSchedule(data: ScheduleSaveData) {
       aiTimeParsingRequested: data.aiTimeParsingRequested,
     })
     await loadSchedules()
-    toastSuccess(t('duty.schedule.messages.created'))
+    if (result.created === false) {
+      toastInfo(t('duty.schedule.messages.duplicate'))
+    } else {
+      toastSuccess(t('duty.schedule.messages.created'))
+    }
   } catch (error) {
     console.error('Failed to create schedule:', error)
     showError(t('duty.schedule.messages.createFailed'))

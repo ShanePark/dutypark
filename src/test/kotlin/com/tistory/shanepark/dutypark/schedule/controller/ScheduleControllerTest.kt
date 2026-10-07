@@ -59,10 +59,15 @@ class ScheduleControllerTest : RestDocsTest() {
                 .content(json)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.created").value(true))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
                     "schedules/create",
+                    responseFields(
+                        fieldWithPath("id").description("Saved Schedule Id"),
+                        fieldWithPath("created").description("Whether a new schedule was created; false for an existing duplicate or an update")
+                    ),
                     requestFields(
                         fieldWithPath("memberId").description("Member Id"),
                         fieldWithPath("content").description("Schedule Content"),
@@ -116,25 +121,38 @@ class ScheduleControllerTest : RestDocsTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isOk).andReturn()
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.created").value(true)).andReturn()
+        val identicalRetry = mockMvc.perform(
+            post("/api/schedules")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.created").value(false)).andReturn()
         val second = mockMvc.perform(
             post("/api/schedules")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(sameKeyWithDifferentVisibility)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isOk).andReturn()
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.created").value(false)).andReturn()
         val third = mockMvc.perform(
             post("/api/schedules")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(differentEndTime)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isOk).andReturn()
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.created").value(true)).andReturn()
 
         assertThat(objectMapper.readTree(first.response.contentAsString).get("id").stringValue())
+            .isEqualTo(objectMapper.readTree(identicalRetry.response.contentAsString).get("id").stringValue())
             .isEqualTo(objectMapper.readTree(second.response.contentAsString).get("id").stringValue())
         assertThat(objectMapper.readTree(third.response.contentAsString).get("id").stringValue())
             .isNotEqualTo(objectMapper.readTree(first.response.contentAsString).get("id").stringValue())
         assertThat(scheduleRepository.countByMemberId(member.id!!)).isEqualTo(2)
+        assertThat(scheduleRepository.findAll().filter { it.member.id == member.id }.map { it.visibility })
+            .containsOnly(Visibility.PRIVATE)
     }
 
     @Test
@@ -199,10 +217,16 @@ class ScheduleControllerTest : RestDocsTest() {
                 .content(json)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.created").value(false))
+            .andExpect(jsonPath("$.id").value(oldSchedule.id.toString()))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
                     "schedules/update",
+                    responseFields(
+                        fieldWithPath("id").description("Saved Schedule Id"),
+                        fieldWithPath("created").description("False because an existing schedule was updated")
+                    ),
                     requestFields(
                         fieldWithPath("id").description("Schedule id"),
                         fieldWithPath("memberId").description("Member Id"),

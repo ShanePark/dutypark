@@ -1426,6 +1426,7 @@ export default {
       },
       messages: {
         created: 'The schedule has been saved.',
+        duplicate: 'An identical schedule already exists, so no new schedule was added.',
         createFailed: 'Failed to save the schedule.',
         updateFailed: 'Failed to update the schedule.',
         deleteConfirm: 'Delete the schedule “{title}”?',

@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveResponse
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSearchResult
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleSearchService
@@ -62,13 +63,14 @@ class ScheduleController(
     fun saveSchedule(
         @RequestBody @Validated scheduleSaveDto: ScheduleSaveDto,
         @Login loginMember: LoginMember,
-    ): Map<String, Any> {
-        val schedule = if (scheduleSaveDto.id == null) {
-            scheduleService.createSchedule(loginMember, scheduleSaveDto)
+    ): ScheduleSaveResponse {
+        return if (scheduleSaveDto.id == null) {
+            val result = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+            ScheduleSaveResponse(result.schedule.id, result.created)
         } else {
-            scheduleService.updateSchedule(loginMember, scheduleSaveDto)
+            val schedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
+            ScheduleSaveResponse(schedule.id, created = false)
         }
-        return mapOf("id" to schedule.id)
     }
 
     @PatchMapping("/positions")

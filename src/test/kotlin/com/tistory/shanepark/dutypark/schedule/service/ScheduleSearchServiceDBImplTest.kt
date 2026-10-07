@@ -210,7 +210,7 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
                 startDateTime = date,
                 endDateTime = date
             )
-        )
+        ).schedule
     }
 
 }

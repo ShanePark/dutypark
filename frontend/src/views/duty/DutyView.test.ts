@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   confirm: vi.fn(),
   confirmDelete: vi.fn(),
   toastSuccess: vi.fn(),
+  toastInfo: vi.fn(),
   ddayApi: {
     getMyDDays: vi.fn(),
     getDDaysByMemberId: vi.fn(),
@@ -94,6 +95,7 @@ vi.mock('@/composables/useSwal', () => ({
     confirm: mocks.confirm,
     confirmDelete: mocks.confirmDelete,
     toastSuccess: mocks.toastSuccess,
+    toastInfo: mocks.toastInfo,
   }),
 }))
 
@@ -196,7 +198,22 @@ vi.mock('@/components/duty/DDayDetailModal.vue', async () => {
 })
 
 const emptyStub = { default: { setup: () => () => null } }
-vi.mock('@/components/duty/DayDetailModal.vue', () => emptyStub)
+const scheduleData = {
+  content: 'Existing appointment', description: '',
+  startDateTime: '2026-10-07T00:00', endDateTime: '2026-10-07T00:00',
+  visibility: 'PUBLIC', tagFriendIds: [], aiTimeParsingRequested: false,
+}
+vi.mock('@/components/duty/DayDetailModal.vue', () => ({
+  default: defineComponent({
+    emits: ['create-schedule', 'edit-schedule'],
+    setup(_props, { emit }) {
+      return () => h('div', [
+        h('button', { 'data-test': 'create-schedule', onClick: () => emit('create-schedule', scheduleData) }),
+        h('button', { 'data-test': 'edit-schedule', onClick: () => emit('edit-schedule', { ...scheduleData, id: 'existing-id' }) }),
+      ])
+    },
+  }),
+}))
 vi.mock('@/components/duty/TodoDetailModal.vue', () => emptyStub)
 vi.mock('@/components/duty/SearchResultModal.vue', () => emptyStub)
 vi.mock('@/components/duty/OtherDutiesModal.vue', () => emptyStub)
@@ -659,6 +676,57 @@ describe('DutyView quick duty month changes', () => {
     await flush()
 
     expect(nodeByDataTest(mounted.root, 'focused-day-state').children[0]?.text).toMatch(/-2-28$/)
+    closeMounted(mounted)
+  })
+})
+
+
+describe('DutyView schedule save outcomes', () => {
+  it('informs the user when an identical schedule exists without claiming creation', async () => {
+    mocks.scheduleApi.saveSchedule.mockResolvedValue({ id: 'existing-id', created: false })
+    const mounted = await mountDutyView()
+    const initialLoads = mocks.scheduleApi.getSchedules.mock.calls.length
+    triggerHost(nodeByDataTest(mounted.root, 'create-schedule'), 'onClick')
+    await flush()
+    expect(mocks.scheduleApi.saveSchedule).toHaveBeenCalledWith(expect.objectContaining({ content: scheduleData.content }))
+    expect(mocks.scheduleApi.getSchedules).toHaveBeenCalledTimes(initialLoads + 1)
+    expect(mocks.toastInfo).toHaveBeenCalledWith('duty.schedule.messages.duplicate')
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+    expect(mocks.showError).not.toHaveBeenCalled()
+    closeMounted(mounted)
+  })
+
+  it.each([{ id: 'new-id', created: true }, { id: 'legacy-id' }])(
+    'keeps success feedback for a new schedule or a legacy response %j', async result => {
+      mocks.scheduleApi.saveSchedule.mockResolvedValue(result)
+      const mounted = await mountDutyView()
+      triggerHost(nodeByDataTest(mounted.root, 'create-schedule'), 'onClick')
+      await flush()
+      expect(mocks.toastSuccess).toHaveBeenCalledWith('duty.schedule.messages.created')
+      expect(mocks.toastInfo).not.toHaveBeenCalled()
+      closeMounted(mounted)
+    },
+  )
+
+  it('does not interpret an update response as a duplicate creation', async () => {
+    mocks.scheduleApi.saveSchedule.mockResolvedValue({ id: 'existing-id', created: false })
+    const mounted = await mountDutyView()
+    triggerHost(nodeByDataTest(mounted.root, 'edit-schedule'), 'onClick')
+    await flush()
+    expect(mocks.scheduleApi.saveSchedule).toHaveBeenCalledWith(expect.objectContaining({ id: 'existing-id' }))
+    expect(mocks.toastInfo).not.toHaveBeenCalled()
+    expect(mocks.showError).not.toHaveBeenCalled()
+    closeMounted(mounted)
+  })
+
+  it('still reports an API failure instead of a duplicate message', async () => {
+    mocks.scheduleApi.saveSchedule.mockRejectedValue(new Error('network unavailable'))
+    const mounted = await mountDutyView()
+    triggerHost(nodeByDataTest(mounted.root, 'create-schedule'), 'onClick')
+    await flush()
+    expect(mocks.showError).toHaveBeenCalledWith('duty.schedule.messages.createFailed')
+    expect(mocks.toastInfo).not.toHaveBeenCalled()
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
     closeMounted(mounted)
   })
 })

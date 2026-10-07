@@ -479,13 +479,16 @@ struct CalendarView: View {
         } message: {
             Text(blockModel.errorMessage ?? "")
         }
-        .alert(CalendarLocalization.text("calendar.error.title"), isPresented: Binding(
-            get: { model.errorMessage != nil && !model.days.isEmpty },
-            set: { if !$0 { model.errorMessage = nil } }
+        .alert(CalendarLocalization.text(model.errorMessage == nil ? "calendar.schedule.title" : "calendar.error.title"), isPresented: Binding(
+            get: { (model.errorMessage != nil || (model.scheduleSaveNotice != nil && model.selectedDay == nil)) && !model.days.isEmpty },
+            set: { if !$0 { model.errorMessage = nil; model.scheduleSaveNotice = nil } }
         )) {
-            Button(CalendarLocalization.text("calendar.ok"), role: .cancel) { model.errorMessage = nil }
+            Button(CalendarLocalization.text("calendar.ok"), role: .cancel) {
+                model.errorMessage = nil
+                model.scheduleSaveNotice = nil
+            }
         } message: {
-            Text(model.errorMessage ?? "")
+            Text(model.errorMessage ?? model.scheduleSaveNotice ?? "")
         }
         .fileImporter(isPresented: $importsDutyBatch, allowedContentTypes: dutyBatchContentTypes) { result in
             if case .success(let url) = result { Task { await model.uploadDutyBatch(url: url) } }
@@ -2475,17 +2478,18 @@ private struct DayDetailView: View {
             }
         }
         .alert(
-            CalendarLocalization.text("calendar.error.title"),
+            CalendarLocalization.text(model.errorMessage == nil ? "calendar.schedule.title" : "calendar.error.title"),
             isPresented: Binding(
-                get: { model.errorMessage != nil },
-                set: { if !$0 { model.errorMessage = nil } }
+                get: { model.errorMessage != nil || model.scheduleSaveNotice != nil },
+                set: { if !$0 { model.errorMessage = nil; model.scheduleSaveNotice = nil } }
             )
         ) {
             Button(CalendarLocalization.text("calendar.ok"), role: .cancel) {
                 model.errorMessage = nil
+                model.scheduleSaveNotice = nil
             }
         } message: {
-            Text(model.errorMessage ?? "")
+            Text(model.errorMessage ?? model.scheduleSaveNotice ?? "")
         }
     }
 

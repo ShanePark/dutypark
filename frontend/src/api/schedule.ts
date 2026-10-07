@@ -63,6 +63,12 @@ export interface ScheduleSaveDto {
   aiTimeParsingRequested?: boolean
 }
 
+export interface ScheduleSaveResult {
+  id: string
+  // Older servers return only the ID during a rolling deployment.
+  created?: boolean
+}
+
 export interface ScheduleSearchResult {
   id: string
   content: string
@@ -113,8 +119,8 @@ export const scheduleApi = {
     return response.data
   },
 
-  saveSchedule: async (schedule: ScheduleSaveDto): Promise<{ id: string }> => {
-    const response = await apiClient.post<{ id: string }>('/schedules', schedule)
+  saveSchedule: async (schedule: ScheduleSaveDto): Promise<ScheduleSaveResult> => {
+    const response = await apiClient.post<ScheduleSaveResult>('/schedules', schedule)
     return response.data
   },
 

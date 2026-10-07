@@ -300,7 +300,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(member)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
         makeThemFriend(member, friend)
 
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
@@ -324,7 +324,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
             tagFriendIds = listOf(friend.id!!)
         )
 
-        val created = scheduleService.createSchedule(loginMember(member), scheduleSaveDto)
+        val created = scheduleService.createSchedule(loginMember(member), scheduleSaveDto).schedule
 
         val schedule = scheduleRepository.findById(created.id).orElseThrow()
         assertThat(schedule.tags).hasSize(1)
@@ -346,7 +346,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
                 endDateTime = LocalDateTime.of(2023, 4, 10, 1, 0),
                 tagFriendIds = listOf(friend.id!!)
             )
-        )
+        ).schedule
 
         scheduleService.updateSchedule(
             loginMember(member),
@@ -376,7 +376,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
 
         val loginMember = loginMember(member)
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
 
 
         val exception = assertThrows<AuthException> {
@@ -397,7 +397,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(member)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
         makeThemFriend(member, friend)
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
 
@@ -419,7 +419,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(member)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
         makeThemFriend(member, friend)
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
 
@@ -441,7 +441,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(member)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
         makeThemFriend(member, friend)
 
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
@@ -467,7 +467,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(member)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
         makeThemFriend(member, friend)
 
         val friendLoginMember = loginMember(friend)
@@ -489,7 +489,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         val loginMember = loginMember(owner)
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
         makeThemFriend(owner, taggedPerson)
 
         scheduleService.tagFriend(loginMember, schedule.id, taggedPerson.id!!)
@@ -530,8 +530,8 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         val loginMember = loginMember(member1)
         val loginMember2 = loginMember(member2)
 
-        val member1Schedule = scheduleService.createSchedule(loginMember, updateDto1)
-        val member2Schedule = scheduleService.createSchedule(loginMember2, updateDto2)
+        val member1Schedule = scheduleService.createSchedule(loginMember, updateDto1).schedule
+        val member2Schedule = scheduleService.createSchedule(loginMember2, updateDto2).schedule
         makeThemFriend(member1, member2)
 
         scheduleService.tagFriend(loginMember, member1Schedule.id, member2.id!!)
@@ -570,7 +570,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
                 startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 0, 0),
                 endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 0, 0),
             )
-        )
+        ).schedule
         val tagged = scheduleService.createSchedule(
             loginMember2, ScheduleSaveDto(
                 memberId = member2.id!!,
@@ -578,7 +578,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
                 startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
                 endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
             )
-        )
+        ).schedule
         val own2 = scheduleService.createSchedule(
             loginMember, ScheduleSaveDto(
                 memberId = member1.id!!,
@@ -586,7 +586,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
                 startDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 2, 0),
                 endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 2, 0),
             )
-        )
+        ).schedule
         makeThemFriend(member1, member2)
 
         scheduleService.tagFriend(loginMember2, tagged.id, member1.id!!)
@@ -628,7 +628,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
                 endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
                 visibility = Visibility.FAMILY
             )
-        )
+        ).schedule
         makeThemFriend(member1, member2)
 
         scheduleService.tagFriend(loginMember2, tagged.id, member1.id!!)
@@ -654,7 +654,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
                 endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
                 visibility = Visibility.FAMILY
             )
-        )
+        ).schedule
         scheduleService.createSchedule(
             loginMember2, ScheduleSaveDto(
                 memberId = member2.id!!,
@@ -663,7 +663,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
                 endDateTime = LocalDateTime.of(2023, 4, dayOfMonth, 1, 0),
                 visibility = Visibility.FRIENDS
             )
-        )
+        ).schedule
         makeThemFriend(member1, member2)
 
         val schedules =
@@ -845,7 +845,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
                 startDateTime = dateTime,
                 endDateTime = dateTime,
             )
-        )
+        ).schedule
 
         scheduleService.createSchedule(
             loginMember(member), ScheduleSaveDto(
@@ -854,7 +854,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
                 startDateTime = dateTime,
                 endDateTime = dateTime,
             )
-        )
+        ).schedule
 
         val result = scheduleService.findSchedulesByYearAndMonth(loginMember(member), member.id!!, 2024, 3)
 
@@ -882,7 +882,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
                 endDateTime = dateTime,
                 visibility = visibility,
             )
-        )
+        ).schedule
     }
 
 }
