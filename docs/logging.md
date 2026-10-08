@@ -6,7 +6,7 @@ The earlier audit improved 120 existing Kotlin logger call sites. The follow-up 
 
 | Domain | Coverage |
 | --- | --- |
-| HTTP requests and handled errors | Generated request ID, HTTP method, matched route, response status, duration, available actor, normalized error code, and exception type. Mutation outcomes use INFO; errors use WARN except ordinary 404s at DEBUG. Successful reads stay quiet. |
+| HTTP requests and handled errors | Generated request ID, HTTP method, matched route, response status, duration, available actor, normalized error code, and exception type. Successful mutation request outcomes use DEBUG; server errors (5xx) use ERROR, while client errors (4xx) use WARN except ordinary 404s at DEBUG. Successful reads stay quiet. Completed business actions retain their INFO audit events. |
 | Signup, authentication, OAuth, and sessions | Signup records the saved member and provider; successful login, token issuance, provider linking/unlinking, reauthentication, and OAuth flow transitions carry safe actor, session, flow, or provider identifiers. Credentials and raw OAuth state/codes are excluded. |
 | Member settings, consent, D-Day, friends, managers, and blocks | Creation, changes, and removals include actors, target identifiers, and changed scalar fields; repeated no-op actions do not produce completed-change records. |
 | Account deletion and administration | Submission, completion/retry workflows, suspension, reinstatement, and administrative decisions identify the actor, affected account/job, and outcome. |
