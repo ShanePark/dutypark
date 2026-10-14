@@ -49,9 +49,10 @@ class RequestLoggingFilter : OncePerRequestFilter() {
                         )
                     )
                     when {
+                        status >= 500 -> log.error("{}", context)
                         status == 404 -> log.debug("{}", context)
                         status >= 400 -> log.warn("{}", context)
-                        request.method in MUTATION_METHODS -> log.info("{}", context)
+                        request.method in MUTATION_METHODS -> log.debug("{}", context)
                     }
                 }
             } finally {
