@@ -45,6 +45,31 @@ final class OfflineSyncCoordinatorTests: XCTestCase {
         XCTAssertNotNil(coordinator.state(for: 42).lastSyncAt)
     }
 
+    func testDuplicateScheduleResponseReconcilesWithoutFeedbackOrRetry() async throws {
+        let outbox = SyncOutboxFake()
+        let transport = SyncTransportFake(scheduleCreated: false)
+        let coordinator = OfflineSyncCoordinator(
+            outbox: outbox, transport: transport,
+            now: { Date(timeIntervalSince1970: 100) },
+            networkStatusProvider: { .satisfied }
+        )
+        defer { coordinator.cancelAll() }
+        let haptics = DPHapticCenter.shared
+        let priorEvent = haptics.event
+        _ = try await outbox.enqueueScheduleCreate(
+            accountID: 42, request: makeScheduleRequest(), operationID: UUID(),
+            now: Date(timeIntervalSince1970: 1)
+        )
+        await coordinator.synchronize(accountID: 42)
+        let entries = await outbox.entries(accountID: 42)
+        let requests = await transport.scheduleRequests
+        XCTAssertTrue(entries.isEmpty)
+        XCTAssertEqual(requests.count, 1)
+        XCTAssertEqual(coordinator.state(for: 42).pendingCount, 0)
+        XCTAssertEqual(coordinator.state(for: 42).permanentFailureCount, 0)
+        XCTAssertEqual(haptics.event, priorEvent)
+    }
+
     func testDoesNotSendScheduleWhoseMemberDiffersFromAccount() async throws {
         let outbox = SyncOutboxFake()
         let transport = SyncTransportFake()
@@ -583,8 +608,11 @@ private actor SyncTransportFake: OfflineSyncTransport {
     private(set) var scheduleRequests: [ScheduleSaveDTO] = []
     private(set) var todoRequests: [TodoRequest] = []
 
-    init(error: APIError? = nil) {
+    private let scheduleCreated: Bool
+
+    init(error: APIError? = nil, scheduleCreated: Bool = true) {
         self.error = error
+        self.scheduleCreated = scheduleCreated
     }
 
     func setError(_ error: APIError?) {
@@ -594,7 +622,7 @@ private actor SyncTransportFake: OfflineSyncTransport {
     func createSchedule(_ request: ScheduleSaveDTO) throws -> ScheduleSaveResponse {
         scheduleRequests.append(request)
         if let error { throw error }
-        return ScheduleSaveResponse(id: UUID())
+        return ScheduleSaveResponse(id: UUID(), created: scheduleCreated)
     }
 
     func createTodo(_ request: TodoRequest) throws -> TodoDTO {

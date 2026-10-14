@@ -665,6 +665,36 @@ final class CalendarOfflineTests: XCTestCase {
         )
     }
 
+    func testDuplicateCreateDuringRefreshOutageDoesNotAppendANewSchedule() async throws {
+        let repository = CalendarOfflineRepository(
+            scheduleFailures: [.transport], scheduleFailureAfter: 2, scheduleCreated: false
+        )
+        let haptics = DPHapticCenter()
+        let outbox = CalendarOfflineOutboxStub()
+        let model = CalendarViewModel(
+            repository: repository, now: Self.date(2026, 8, 12), memberID: 42,
+            hapticCenter: haptics,
+            cache: CalendarOfflineCacheStub(account: Self.accountSnapshot()), outbox: outbox,
+            serverRecoverySleeper: { _ in try await Task.sleep(for: .seconds(60)) },
+            requestOfflineSync: { _ in }
+        )
+        await model.load()
+        let schedulesBefore = model.days.flatMap(\.schedules)
+        let saved = await model.saveSchedule(
+            existing: nil, content: "Existing dinner", description: "", visibility: .privateAccess,
+            start: Self.date(2026, 8, 12, hour: 18), end: Self.date(2026, 8, 12, hour: 19),
+            tagFriendIDs: [], attachmentSessionID: nil, orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+        XCTAssertTrue(saved)
+        XCTAssertEqual(model.days.flatMap(\.schedules), schedulesBefore)
+        XCTAssertEqual(model.scheduleSaveNotice, CalendarLocalization.text("calendar.schedule.duplicate"))
+        XCTAssertEqual(haptics.event?.kind, .warning)
+        XCTAssertEqual(haptics.event?.id, 1)
+        let queued = await outbox.entries(accountID: 42)
+        XCTAssertTrue(queued.isEmpty)
+    }
+
     func testSearchFallbackSchedulesServerRecoveryWithoutPathChange() async throws {
         let cache = CalendarOfflineCacheStub(
             account: Self.accountSnapshot(),
@@ -1093,6 +1123,7 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
     let saveFailure: APIError?
     let searchFailure: APIError?
     let scheduleFailureAfter: Int?
+    let scheduleCreated: Bool
     private(set) var prefetchedMonths: [OfflineMonthKey] = []
     private(set) var savedRequests: [ScheduleSaveDTO] = []
     private(set) var monthRequestCount = 0
@@ -1106,6 +1137,7 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
         searchFailure: APIError? = nil,
         scheduleFailures: [APIError] = [],
         scheduleFailureAfter: Int? = nil,
+        scheduleCreated: Bool = true,
         prefetchGate: CalendarPrefetchGate? = nil,
         member: MemberDTO? = nil
     ) {
@@ -1116,6 +1148,7 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
         self.searchFailure = searchFailure
         self.scheduleFailures = scheduleFailures
         self.scheduleFailureAfter = scheduleFailureAfter
+        self.scheduleCreated = scheduleCreated
         self.prefetchGate = prefetchGate
         self.memberValue = member ?? Self.memberDTO()
     }
@@ -1151,7 +1184,7 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
     func saveSchedule(_ request: ScheduleSaveDTO) async throws -> ScheduleSaveResponse {
         savedRequests.append(request)
         if let saveFailure { throw saveFailure }
-        return ScheduleSaveResponse(id: request.id ?? UUID())
+        return ScheduleSaveResponse(id: request.id ?? UUID(), created: scheduleCreated)
     }
     func deleteSchedule(id: ScheduleID) async throws {}
     func untagSelf(scheduleID: ScheduleID) async throws {}

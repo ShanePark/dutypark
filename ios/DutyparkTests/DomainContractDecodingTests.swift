@@ -25,6 +25,26 @@ struct DomainContractDecodingTests {
     }
 
     @Test
+    func preservesScheduleCreationOutcomeAndAcceptsLegacyResponses() throws {
+        let id = "00000000-0000-0000-0000-000000000001"
+        for created in [true, false] {
+            let response = try JSONDecoder().decode(
+                ScheduleSaveResponse.self,
+                from: Data("{\"id\":\"\(id)\",\"created\":\(created)}".utf8)
+            )
+            let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(response)) as! [String: Any]
+            #expect(encoded["created"] as? Bool == created)
+            #expect(response.id.uuidString == id)
+        }
+        let legacy = try JSONDecoder().decode(
+            ScheduleSaveResponse.self,
+            from: Data("{\"id\":\"\(id)\"}".utf8)
+        )
+        let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(legacy)) as! [String: Any]
+        #expect(encoded["created"] as? Bool == true)
+    }
+
+    @Test
     func decodesTodoBoardCountsAndNullableDates() throws {
         let board: TodoBoardDTO = try decodeFixture("todo-board")
 

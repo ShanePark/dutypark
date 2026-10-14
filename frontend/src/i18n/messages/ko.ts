@@ -1331,6 +1331,7 @@ export default {
       },
       messages: {
         created: '일정이 저장되었습니다.',
+        duplicate: '이미 동일한 일정이 있어 새로 등록하지 않았습니다.',
         createFailed: '일정 저장에 실패했습니다.',
         updateFailed: '일정 수정에 실패했습니다.',
         deleteConfirm: '“{title}” 일정을 삭제하시겠습니까?',

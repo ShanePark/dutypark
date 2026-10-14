@@ -111,8 +111,10 @@ class ScheduleServiceTest {
             schedule
         }
 
-        val createdSchedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val result = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val createdSchedule = result.schedule
 
+        assertThat(result.created).isTrue
         assertThat(createdSchedule).isNotNull
         assertThat(createdSchedule.id).isNotNull
         assertThat(createdSchedule.content).isEqualTo(scheduleSaveDto.content)
@@ -158,8 +160,11 @@ class ScheduleServiceTest {
 
         val result = scheduleService.createSchedule(loginMember, saveDto)
 
-        assertThat(result).isSameAs(existing)
+        assertThat(result.created).isFalse
+        assertThat(result.schedule).isSameAs(existing)
         verify(scheduleRepository, never()).save(any<Schedule>())
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
+        verifyNoInteractions(attachmentService)
     }
 
     @Test
@@ -179,7 +184,7 @@ class ScheduleServiceTest {
             endDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
         )
 
-        val schedule = scheduleService.createSchedule(loginMember, dto)
+        val schedule = scheduleService.createSchedule(loginMember, dto).schedule
 
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
         verify(scheduleRepository).save(schedule)
@@ -203,7 +208,7 @@ class ScheduleServiceTest {
             aiTimeParsingRequested = false,
         )
 
-        val schedule = scheduleService.createSchedule(loginMember, dto)
+        val schedule = scheduleService.createSchedule(loginMember, dto).schedule
 
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
         verify(aiScheduleParsingConsentService, never()).hasCurrentConsent(any())
@@ -229,7 +234,7 @@ class ScheduleServiceTest {
             endDateTime = end,
         )
 
-        val schedule = scheduleService.createSchedule(loginMember, dto)
+        val schedule = scheduleService.createSchedule(loginMember, dto).schedule
 
         assertThat(schedule.startDateTime).isEqualTo(start)
         assertThat(schedule.endDateTime).isEqualTo(end)
@@ -250,7 +255,7 @@ class ScheduleServiceTest {
             .thenThrow(AuthException("login member doesn't have permission"))
 
         assertThrows<AuthException> {
-            scheduleService.createSchedule(loginMember, scheduleSaveDto)
+            scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
         }
     }
 
@@ -856,7 +861,7 @@ class ScheduleServiceTest {
             schedule
         }
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
 
         assertThat(schedule.visibility).isEqualTo(Visibility.PRIVATE)
     }
@@ -879,7 +884,7 @@ class ScheduleServiceTest {
             schedule
         }
 
-        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
+        val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
 
         assertThat(schedule.visibility).isEqualTo(Visibility.PUBLIC)
     }

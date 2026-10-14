@@ -129,6 +129,7 @@ final class CalendarViewModel: ObservableObject {
     @Published private(set) var canManage = false
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
+    @Published var scheduleSaveNotice: String?
     @Published private(set) var searchResults: [ScheduleSearchResultDTO] = []
 
     @Published var year: Int
@@ -1727,14 +1728,20 @@ final class CalendarViewModel: ObservableObject {
         do {
             let savedResponse: ScheduleSaveResponse
             savedResponse = try await repository.saveSchedule(request)
-            emit(.success)
+            if existing == nil && !savedResponse.created {
+                scheduleSaveNotice = CalendarLocalization.text("calendar.schedule.duplicate")
+                emit(.warning)
+            } else {
+                scheduleSaveNotice = nil
+                emit(.success)
+            }
             do {
                 try await refreshSchedules()
             } catch {
                 // The POST has already completed. Keep that durable success even
                 // if the follow-up read is unavailable, preserve the visible
                 // mutation locally, and let the bounded recovery refresh it.
-                if existing == nil {
+                if existing == nil && savedResponse.created {
                     appendProvisionalSchedule(
                         request,
                         provisionalID: savedResponse.id

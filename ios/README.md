@@ -84,6 +84,11 @@ server, duplicate creates are suppressed by content: schedule owner + content +
 description + start/end time, and Todo owner + effective status + title +
 content. Schedule visibility and Todo due date are intentionally excluded from
 that identity.
+The schedule save response includes `created`: `true` for a new schedule and
+`false` when an existing schedule is returned or an existing ID is updated.
+A direct duplicate create shows a notice rather than creation-success feedback.
+Automatic outbox reconciliation still treats an existing schedule as synchronized.
+Older responses containing only `id` remain compatible with the app.
 
 The outbox stores `pending` and `permanentFailure` entries with attempt count,
 last failure, and the next retry time. Recovery drains entries in creation

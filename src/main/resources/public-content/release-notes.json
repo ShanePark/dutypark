@@ -40,6 +40,16 @@
         }
       },
       "entries": {
+        "pr-429": {
+          "title": "캘린더·중복 일정·시간 인식 개선",
+          "summary": "모달을 열 때 캘린더가 움직이지 않게 하고, 중복 일정 저장 안내를 명확히 하며, 일정 시간 자동 인식을 안정화했습니다.",
+          "changes": [
+            "모달을 열 때 캘린더가 옆으로 밀리지 않도록 수정했습니다.",
+            "이미 있는 일정과 똑같은 일정을 저장하면 새로 등록하지 않았다고 웹과 iPhone에서 안내합니다.",
+            "\"10시 부터 10시반 까지\"처럼 일정 내용의 시간을 자동으로 인식하는 기능이 더 안정적으로 동작합니다.",
+            "일상적인 서버 기록을 줄이고, 서버 오류와 시간 인식 실패의 진단 정보를 보강했습니다."
+          ]
+        },
         "pr-428": {
           "title": "캘린더 안정성과 근무 색상·iPhone 위젯 개선",
           "summary": "월 전환과 새로고침을 안정화하고, 근무 색상 선택과 미리보기, 작은 할 일 위젯 및 알림 표시를 개선했습니다.",
@@ -2366,6 +2376,16 @@
         }
       },
       "entries": {
+        "pr-429": {
+          "title": "Calendar, duplicate schedule, and time recognition fixes",
+          "summary": "Kept the calendar in place when opening windows, clarified duplicate schedule saves, and made automatic time recognition more reliable.",
+          "changes": [
+            "The calendar no longer shifts sideways when a modal opens.",
+            "Saving a schedule identical to an existing one now explains that no new schedule was added, on the web and iPhone.",
+            "Automatic time recognition in schedule text, including time ranges, now succeeds more reliably.",
+            "Reduced routine server logs and improved diagnostics for server errors and time recognition failures."
+          ]
+        },
         "pr-428": {
           "title": "Calendar stability, duty colors, and iPhone widget improvements",
           "summary": "Improved month navigation and refresh behavior, duty color selection and previews, small Todo widgets, and notification display.",
@@ -4655,6 +4675,19 @@
     }
   },
   "items": [
+    {
+      "id": "pr-429",
+      "version": "2026.10.14",
+      "date": "2026-10-14",
+      "pr": 429,
+      "url": "https://github.com/ShanePark/dutypark/pull/429",
+      "category": "fix",
+      "areas": [
+        "calendar",
+        "schedule",
+        "infra"
+      ]
+    },
     {
       "id": "pr-428",
       "version": "2026.10.02",

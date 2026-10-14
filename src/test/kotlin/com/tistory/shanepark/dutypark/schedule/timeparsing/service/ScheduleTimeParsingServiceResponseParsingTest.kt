@@ -8,6 +8,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -32,6 +34,12 @@ class ScheduleTimeParsingServiceResponseParsingTest {
         chatModel = mock()
         whenever(chatModel.options).thenReturn(OpenAiChatOptions.builder().build())
         service = ScheduleTimeParsingService(chatModel, jsr310JsonMapper(), AiProperties(), 9)
+    }
+
+    private fun givenChatAnswer(chatAnswer: String) {
+        whenever(chatModel.call(any<Prompt>())).thenReturn(
+            ChatResponse(listOf(Generation(AssistantMessage(chatAnswer))))
+        )
     }
 
     @Test
@@ -89,6 +97,228 @@ class ScheduleTimeParsingServiceResponseParsingTest {
         assertThat(response.startDateTime).isEqualTo("2025-02-28T14:50:00")
         assertThat(response.endDateTime).isEqualTo("2025-02-28T14:50:00")
         assertThat(response.content).isEqualTo("산본제일 진료")
+    }
+
+    @Test
+    fun `parseScheduleTime extracts final JSON after an unclosed duplicated input JSON`() {
+        val chatAnswer = """
+            <thought>* Input: `{"date":"2026-10-23","content":"소방서 견학 10시 부터 10* Input: `{"date":"2026-10-23","content":"소방서 견학 10시 부터 10시반 까지"}`
+            {"result":true,"hasTime":true,"startDateTime":"2026-10-23T10:00:00","endDateTime":"2026-10-23T10:30:00","content":"소방서 견학"}
+        """.trimIndent()
+        whenever(chatModel.call(any<Prompt>())).thenReturn(
+            ChatResponse(listOf(Generation(AssistantMessage(chatAnswer))))
+        )
+
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "소방서 견학 10시 부터 10시반 까지")
+        )
+
+        assertThat(response.result).isTrue()
+        assertThat(response.hasTime).isTrue()
+        assertThat(response.startDateTime).isEqualTo("2026-10-23T10:00:00")
+        assertThat(response.endDateTime).isEqualTo("2026-10-23T10:30:00")
+        assertThat(response.content).isEqualTo("소방서 견학")
+    }
+
+    @Test
+    fun `parseScheduleTime selects last response JSON and preserves escaped quotes and braces in content`() {
+        val content = "소방서 {견학} \"안내\" \\ 자료"
+        val finalResponse = ScheduleTimeParsingResponse(result = true, hasTime = false, content = content)
+        val chatAnswer = """{"result":false,"hasTime":false}
+            ${jsr310JsonMapper().writeValueAsString(finalResponse)}
+            trailing malformed JSON {"content":"unfinished
+        """.trimIndent()
+        whenever(chatModel.call(any<Prompt>())).thenReturn(
+            ChatResponse(listOf(Generation(AssistantMessage(chatAnswer))))
+        )
+
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "소방서 견학 10시")
+        )
+
+        assertThat(response.result).isTrue()
+        assertThat(response.hasTime).isFalse()
+        assertThat(response.content).isEqualTo(content)
+    }
+
+    @Test
+    fun `parsing failure logs entire original response when no JSON candidate is valid`() {
+        val request = ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "견학 10시")
+        val chatAnswer = "<thought>\n" + "추론 내용 ".repeat(100) + "\n{\"result\":true"
+        whenever(chatModel.call(any<Prompt>())).thenReturn(
+            ChatResponse(listOf(Generation(AssistantMessage(chatAnswer))))
+        )
+
+        val response = service.parseScheduleTime(request)
+        val logMessage = response.toLogMessage(request)
+
+        assertThat(response.result).isFalse()
+        assertThat(chatAnswer.length).isGreaterThan(500)
+        assertThat(response.rawResponse).isEqualTo(chatAnswer)
+        assertThat(jsr310JsonMapper().readTree(logMessage)["rawResponse"].asText()).isEqualTo(chatAnswer)
+        assertThat(logMessage).doesNotContain("\n", "\r")
+    }
+
+    @Test
+    fun `deserialization failure logs original thinking and fences instead of extracted JSON`() {
+        val request = ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "견학 10시")
+        val chatAnswer = "<thought>" + "추론 내용 ".repeat(100) +
+            "</thought>\n```json\n{\"result\":[],\"hasTime\":true}\n```"
+        whenever(chatModel.call(any<Prompt>())).thenReturn(
+            ChatResponse(listOf(Generation(AssistantMessage(chatAnswer))))
+        )
+
+        val response = service.parseScheduleTime(request)
+
+        assertThat(response.result).isFalse()
+        assertThat(response.errorType).isNotBlank()
+        assertThat(response.rawResponse).isEqualTo(chatAnswer)
+        assertThat(jsr310JsonMapper().readTree(response.toLogMessage(request))["rawResponse"].asText())
+            .isEqualTo(chatAnswer)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["thought", "think", "THOUGHT"])
+    fun `parseScheduleTime finds final answer after thinking with an unclosed object and odd quotes`(tag: String) {
+        val loggedThinking = listOf(
+            "<$tag>*   Input: `{\"date\":\"202*   Input: `{\"date\":\"2026-10-23\",\"content\":\"소방서 견학 10시~10시반\"}`",
+            "    *   Task: Extract time from Korean schedule text.",
+            "    *   Output: JSON only.",
+            "",
+            "    *   Text: \"소방서 견학 10시~10시반\"",
+            "    *   Date: \"2026-10-23\"",
+            "    *   Time markers found: \"10시\", \"10시반\" (range indicated by \"~\").",
+            "    *   Time values:",
+            "        *   Start: 10시.",
+            "        *   End: 10시반 (10:30).",
+            "    *   AM/PM Determination:",
+            "        *   10시 is generally AM (Rule: 7-11 = AM).",
+            "        *   Activity \"소방서 견학\" (Fire station visit).",
+        ).joinToString("\n")
+        val chatAnswer = loggedThinking + "\n</$tag>\n```json\n" +
+            """{"result":true,"hasTime":true,"startDateTime":"2026-10-23T10:00:00","endDateTime":"2026-10-23T10:30:00","content":"소방서 견학"}""" +
+            "\n```"
+        givenChatAnswer(chatAnswer)
+
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "소방서 견학 10시~10시반")
+        )
+
+        assertThat(response.result).isTrue()
+        assertThat(response.hasTime).isTrue()
+        assertThat(response.startDateTime).isEqualTo("2026-10-23T10:00:00")
+        assertThat(response.endDateTime).isEqualTo("2026-10-23T10:30:00")
+        assertThat(response.content).isEqualTo("소방서 견학")
+    }
+
+    @Test
+    fun `parseScheduleTime uses only the answer after the closing thinking tag`() {
+        val chatAnswer = """
+            <thought>Similar example: "카페에서 4시 커피" → {"result":true,"hasTime":true,"startDateTime":"2026-10-23T16:00:00","endDateTime":"2026-10-23T16:00:00","content":"카페에서 커피"}
+            Unbalanced echo: `{"content":"소방서 견학 10
+            </thought>
+            {"result":true,"hasTime":true,"startDateTime":"2026-10-23T10:00:00","endDateTime":"2026-10-23T10:00:00","content":"소방서 견학"}
+        """.trimIndent()
+        givenChatAnswer(chatAnswer)
+
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "소방서 견학 10시")
+        )
+
+        assertThat(response.result).isTrue()
+        assertThat(response.startDateTime).isEqualTo("2026-10-23T10:00:00")
+        assertThat(response.content).isEqualTo("소방서 견학")
+    }
+
+    @Test
+    fun `parseScheduleTime fails instead of using example JSON from thinking when final answer is truncated`() {
+        val chatAnswer = """
+            <thought>Similar example: "카페에서 4시 커피" → {"result":true,"hasTime":true,"startDateTime":"2026-10-23T16:00:00","endDateTime":"2026-10-23T16:00:00","content":"카페에서 커피"}</thought>
+            {"result":true,"hasTime":true,"startDateTime":"2026-10-23T10:00:00"
+        """.trimIndent()
+        givenChatAnswer(chatAnswer)
+
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "소방서 견학 10시")
+        )
+
+        assertThat(response.result).isFalse()
+        assertThat(response.hasTime).isFalse()
+        assertThat(response.startDateTime).isNull()
+        assertThat(response.content).isNull()
+        assertThat(response.errorType).isNotBlank()
+        assertThat(response.rawResponse).isEqualTo(chatAnswer)
+    }
+
+    @Test
+    fun `parseScheduleTime picks the last answer when thinking is never closed`() {
+        val chatAnswer = """
+            <thought>Similar example: "카페에서 4시 커피" → {"result":true,"hasTime":true,"startDateTime":"2026-10-23T16:00:00","endDateTime":"2026-10-23T16:00:00","content":"카페에서 커피"}
+            {"result":true,"hasTime":true,"startDateTime":"2026-10-23T10:00:00","endDateTime":"2026-10-23T10:00:00","content":"소방서 견학"}
+        """.trimIndent()
+        givenChatAnswer(chatAnswer)
+
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "소방서 견학 10시")
+        )
+
+        assertThat(response.result).isTrue()
+        assertThat(response.startDateTime).isEqualTo("2026-10-23T10:00:00")
+        assertThat(response.content).isEqualTo("소방서 견학")
+    }
+
+    @Test
+    fun `parseScheduleTime searches only after the last closing tag even without an opening tag`() {
+        val chatAnswer = "reasoning without an opening tag {\"result\":false,\"hasTime\":false}</thought>\n" +
+            """{"result":true,"hasTime":false,"startDateTime":null,"endDateTime":null,"content":"주말 데이트"}"""
+        givenChatAnswer(chatAnswer)
+
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "주말 데이트 2시")
+        )
+
+        assertThat(response.result).isTrue()
+        assertThat(response.content).isEqualTo("주말 데이트")
+    }
+
+    @Test
+    fun `parsing failure log keeps head and a longer tail where the final answer is`() {
+        val request = ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "견학 10시")
+        val chatAnswer = "<thought>" + "추론 내용 ".repeat(5_000) + "</thought>\n{\"result\":[],\"hasTime\":true}"
+        givenChatAnswer(chatAnswer)
+
+        val response = service.parseScheduleTime(request)
+        val rawResponse = requireNotNull(response.rawResponse)
+        val headLimit = ScheduleTimeParsingService.RAW_RESPONSE_HEAD_LIMIT
+        val tailLimit = ScheduleTimeParsingService.RAW_RESPONSE_TAIL_LIMIT
+        val omitted = chatAnswer.length - headLimit - tailLimit
+
+        assertThat(response.result).isFalse()
+        assertThat(tailLimit).isGreaterThan(headLimit)
+        assertThat(chatAnswer.length).isGreaterThan(headLimit + tailLimit)
+        assertThat(rawResponse)
+            .startsWith(chatAnswer.take(headLimit))
+            .endsWith(chatAnswer.takeLast(tailLimit))
+            .endsWith("{\"result\":[],\"hasTime\":true}")
+            .contains(" ...[$omitted chars omitted]... ")
+        assertThat(rawResponse.length).isLessThan(headLimit + tailLimit + 100)
+        assertThat(jsr310JsonMapper().readTree(response.toLogMessage(request))["rawResponse"].asText())
+            .isEqualTo(rawResponse)
+    }
+
+    @Test
+    fun `parsing failure keeps raw response intact at exactly the log limit`() {
+        val limit = ScheduleTimeParsingService.RAW_RESPONSE_HEAD_LIMIT + ScheduleTimeParsingService.RAW_RESPONSE_TAIL_LIMIT
+        val chatAnswer = "<thought>" + "x".repeat(limit - "<thought>".length)
+        givenChatAnswer(chatAnswer)
+
+        val response = service.parseScheduleTime(
+            ScheduleTimeParsingRequest(LocalDate.of(2026, 10, 23), "견학 10시")
+        )
+
+        assertThat(chatAnswer.length).isEqualTo(limit)
+        assertThat(response.result).isFalse()
+        assertThat(response.rawResponse).isEqualTo(chatAnswer)
     }
 
     @Test

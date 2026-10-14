@@ -66,6 +66,23 @@ nonisolated struct ScheduleSaveDTO: Codable, Equatable, Sendable {
 
 nonisolated struct ScheduleSaveResponse: Codable, Equatable, Sendable {
     let id: ScheduleID
+    let created: Bool
+
+    init(id: ScheduleID, created: Bool = true) {
+        self.id = id
+        self.created = created
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, created
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(ScheduleID.self, forKey: .id)
+        // Older servers returned only the saved ID.
+        created = try container.decodeIfPresent(Bool.self, forKey: .created) ?? true
+    }
 }
 
 nonisolated struct ScheduleBasicInfoDTO: Codable, Equatable, Sendable {

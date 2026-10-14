@@ -338,6 +338,8 @@ a:hover {
 
 /* Dark mode transition for smoother theme switching */
 html {
+    /* Keep centered content in place when a modal locks body scrolling. */
+    scrollbar-gutter: stable;
     transition: background-color 0.2s ease;
 }
 

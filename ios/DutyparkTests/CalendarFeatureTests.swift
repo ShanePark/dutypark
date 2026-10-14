@@ -2329,6 +2329,44 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(haptics.event?.kind, .success)
     }
 
+    func testDuplicateScheduleCreateUsesWarningFeedbackAndRefreshes() async {
+        let repository = CalendarRepositoryMock(scheduleCreated: false)
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), hapticCenter: haptics)
+        await model.load()
+        let saved = await model.saveSchedule(
+            existing: nil, content: "Dinner", description: "", visibility: .friends,
+            start: date(2026, 8, 12), end: date(2026, 8, 12, hour: 1),
+            tagFriendIDs: [], attachmentSessionID: nil, orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+        XCTAssertTrue(saved, "A reconciled response keeps the normal editor close flow")
+        XCTAssertEqual(haptics.event?.kind, .warning)
+        XCTAssertEqual(haptics.event?.id, 1, "A duplicate emits exactly one outcome event")
+        XCTAssertEqual(model.scheduleSaveNotice, CalendarLocalization.text("calendar.schedule.duplicate"))
+        XCTAssertNil(model.errorMessage)
+        let requestedMember = await repository.requestedScheduleMemberID
+        XCTAssertEqual(requestedMember, 1)
+    }
+
+    func testScheduleUpdateWithCreatedFalseStillUsesSuccessFeedback() async throws {
+        let repository = CalendarRepositoryMock(scheduleCreated: false)
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), hapticCenter: haptics)
+        await model.load()
+        let existing = try XCTUnwrap(model.days.flatMap(\.schedules).first)
+        let saved = await model.saveSchedule(
+            existing: existing, content: "Updated dinner", description: "", visibility: .friends,
+            start: date(2026, 8, 12), end: date(2026, 8, 12, hour: 1),
+            tagFriendIDs: [], attachmentSessionID: nil, orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+        XCTAssertTrue(saved)
+        XCTAssertEqual(haptics.event?.kind, .success)
+        XCTAssertEqual(haptics.event?.id, 1)
+        XCTAssertNil(model.scheduleSaveNotice)
+    }
+
     func testNewScheduleUsesThePlainRepositoryCreate() async {
         let repository = CalendarRepositoryMock()
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
@@ -3243,6 +3281,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     let memberValues: [MemberDTO]
     let memberGate: CalendarIdentityRaceGate?
     let saveDDayError: APIError?
+    let scheduleCreated: Bool
     private var dutyValues: [DutyDTO]
     private var dutyTypeValues: [DutyTypeDTO]
 
@@ -3260,6 +3299,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         memberValues: [MemberDTO] = [],
         memberGate: CalendarIdentityRaceGate? = nil,
         saveDDayError: APIError? = nil,
+        scheduleCreated: Bool = true,
         duties: [DutyDTO] = [],
         dutyTypes: [DutyTypeDTO] = []
     ) {
@@ -3276,6 +3316,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         self.memberValues = memberValues
         self.memberGate = memberGate
         self.saveDDayError = saveDDayError
+        self.scheduleCreated = scheduleCreated
         dutyValues = duties
         dutyTypeValues = dutyTypes
     }
@@ -3359,7 +3400,10 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     }
     func saveSchedule(_ request: ScheduleSaveDTO) async throws -> ScheduleSaveResponse {
         savedSchedule = request
-        return ScheduleSaveResponse(id: UUID())
+        return try JSONDecoder().decode(
+            ScheduleSaveResponse.self,
+            from: Data("{\"id\":\"\(UUID())\",\"created\":\(scheduleCreated)}".utf8)
+        )
     }
     func deleteSchedule(id: ScheduleID) async throws {
         deleteScheduleCount += 1

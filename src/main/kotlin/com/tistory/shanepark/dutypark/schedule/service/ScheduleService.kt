@@ -30,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.*
 
+data class ScheduleCreationResult(val schedule: Schedule, val created: Boolean)
+
 @Service
 @Transactional
 class ScheduleService(
@@ -122,7 +124,7 @@ class ScheduleService(
     fun createSchedule(
         loginMember: LoginMember,
         scheduleSaveDto: ScheduleSaveDto,
-    ): Schedule {
+    ): ScheduleCreationResult {
         val scheduleMember = memberRepository.findById(scheduleSaveDto.memberId).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(loginMember, scheduleMember)
 
@@ -141,7 +143,7 @@ class ScheduleService(
                 endDateTime = scheduleSaveDto.endDateTime,
             )
             .orElse(null)
-            ?.let { return it }
+            ?.let { return ScheduleCreationResult(it, created = false) }
 
         val startDateTime = scheduleSaveDto.startDateTime
         val position = findNextPosition(lockedScheduleMember, startDateTime)
@@ -174,7 +176,7 @@ class ScheduleService(
             mapOf("visibility" to schedule.visibility.name, "parsingStatus" to schedule.parsingTimeStatus.name,
                 "attachmentCount" to scheduleSaveDto.orderedAttachmentIds.size,
                 "startDateTime" to schedule.startDateTime, "endDateTime" to schedule.endDateTime))
-        return schedule
+        return ScheduleCreationResult(schedule, created = true)
     }
 
     private fun scheduleAuditTarget(schedule: Schedule) = mapOf(
