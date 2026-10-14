@@ -70,16 +70,41 @@ class ScheduleTimeParsingService(
             ScheduleTimeParsingResponse(
                 result = false,
                 errorMessage = e.message,
-                rawResponse = json.take(500),
+                rawResponse = rawResponseForLog(chatAnswer),
                 errorType = e.javaClass.simpleName,
             )
         }
     }
 
     private fun extractResponseJson(chatAnswer: String): String {
-        return extractJsonObjectCandidates(chatAnswer)
-            .lastOrNull(::isResponseJsonCandidate)
-            ?: chatAnswer
+        return findLastResponseJson(answerAfterThinking(chatAnswer)) ?: chatAnswer
+    }
+
+    private fun answerAfterThinking(chatAnswer: String): String {
+        val lastCloseTag = THINKING_CLOSE_TAG.findAll(chatAnswer).lastOrNull() ?: return chatAnswer
+        return chatAnswer.substring(lastCloseTag.range.last + 1)
+    }
+
+    private fun findLastResponseJson(text: String): String? {
+        var startIndex = text.lastIndexOf('{')
+        while (startIndex >= 0) {
+            val candidate = extractJsonObject(text, startIndex)
+            if (candidate != null && isResponseJsonCandidate(candidate)) {
+                return candidate
+            }
+            startIndex = if (startIndex == 0) -1 else text.lastIndexOf('{', startIndex - 1)
+        }
+        return null
+    }
+
+    private fun rawResponseForLog(chatAnswer: String): String {
+        if (chatAnswer.length <= RAW_RESPONSE_HEAD_LIMIT + RAW_RESPONSE_TAIL_LIMIT) {
+            return chatAnswer
+        }
+        val omitted = chatAnswer.length - RAW_RESPONSE_HEAD_LIMIT - RAW_RESPONSE_TAIL_LIMIT
+        return chatAnswer.take(RAW_RESPONSE_HEAD_LIMIT) +
+            " ...[$omitted chars omitted]... " +
+            chatAnswer.takeLast(RAW_RESPONSE_TAIL_LIMIT)
     }
 
     private fun isResponseJsonCandidate(candidate: String): Boolean {
@@ -91,27 +116,16 @@ class ScheduleTimeParsingService(
         }
     }
 
-    private fun extractJsonObjectCandidates(text: String): List<String> {
-        val candidates = mutableListOf<String>()
-        var startIndex = -1
-        var depth = 0
+    private fun extractJsonObject(text: String, startIndex: Int): String? {
+        var depth = 1
         var inString = false
         var escaping = false
 
-        text.forEachIndexed { index, ch ->
-            if (startIndex == -1) {
-                if (ch == '{') {
-                    startIndex = index
-                    depth = 1
-                    inString = false
-                    escaping = false
-                }
-                return@forEachIndexed
-            }
-
+        for (index in startIndex + 1 until text.length) {
+            val ch = text[index]
             if (escaping) {
                 escaping = false
-                return@forEachIndexed
+                continue
             }
 
             when (ch) {
@@ -127,14 +141,13 @@ class ScheduleTimeParsingService(
                 '}' -> if (!inString) {
                     depth--
                     if (depth == 0) {
-                        candidates += text.substring(startIndex, index + 1)
-                        startIndex = -1
+                        return text.substring(startIndex, index + 1)
                     }
                 }
             }
         }
 
-        return candidates
+        return null
     }
 
     private fun generatePrompt(request: ScheduleTimeParsingRequest): String {
@@ -198,4 +211,10 @@ class ScheduleTimeParsingService(
         """.trimIndent()
     }
 
+    companion object {
+        private val THINKING_CLOSE_TAG = Regex("""</(?:thought|think|thinking)>""", RegexOption.IGNORE_CASE)
+
+        internal const val RAW_RESPONSE_HEAD_LIMIT = 2_000
+        internal const val RAW_RESPONSE_TAIL_LIMIT = 6_000
+    }
 }
