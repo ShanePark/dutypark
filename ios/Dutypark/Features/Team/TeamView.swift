@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TeamView: View {
     @EnvironmentObject private var session: SessionStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var viewModel = TeamViewModel()
     @StateObject private var teamCreationViewModel = TeamCreationViewModel()
     @State private var monthPickerPresented = false
@@ -217,42 +218,67 @@ struct TeamView: View {
     }
 
     private func teamContent(_ team: TeamDTO) -> some View {
-        ScrollView {
-            VStack(spacing: DPSpacing.compact) {
-                calendar
-                selectedSchedules
-                shiftList
+        ZStack(alignment: .top) {
+            ScrollView {
+                VStack(spacing: DPSpacing.compact) {
+                    calendar
+                    selectedSchedules
+                    shiftList
+                }
+                .padding(.horizontal, DPSpacing.small)
+                .padding(.top, DPSpacing.medium + Self.thisMonthCalloutClearance)
+                .padding(.bottom, DPSpacing.medium)
             }
-            .padding(.horizontal, DPSpacing.small)
-            .padding(.vertical, DPSpacing.medium)
+
+            thisMonthCalloutLayer
+                .offset(y: DPThisMonthCallout.verticalOffset)
+                .alignmentGuide(HorizontalAlignment.center) { _ in DPThisMonthCallout.tailCenter }
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isCurrentMonth)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(DPColor.backgroundPrimary)
         .toolbar { teamToolbar(team) }
     }
 
-    // The leading and trailing bar items claim the same width so the month
-    // navigation in the principal slot stays centred on the screen.
+    // The calendar starts right below the bar, where Calendar has its legend row, so the
+    // callout would cover the weekday row. The room stays open in every month so the
+    // calendar does not jump when the callout appears.
+    private static let thisMonthCalloutClearance: CGFloat = 10
+
+    // Hosted by the body rather than the navigation-bar item, as on Calendar, so the bar
+    // keeps its native height.
+    @ViewBuilder
+    private var thisMonthCalloutLayer: some View {
+        if !isCurrentMonth {
+            DPThisMonthCallout(label: teamLocalized("team.view.calendar.thisMonth")) {
+                Task { await viewModel.goToToday() }
+            }
+            .disabled(viewModel.isLoading)
+            .transition(.offset(y: -4).combined(with: .opacity))
+        }
+    }
+
+    // Caps the leading team chip. The side items otherwise keep their natural widths so the
+    // principal month capsule gets every point the bar can spare; it ignores touches past the
+    // room the bar gives it. The bar centres the capsule when it fits.
     private static let barSideWidth: CGFloat = 88
 
     @ToolbarContentBuilder
     private func teamToolbar(_ team: TeamDTO) -> some ToolbarContent {
         DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
+            // Reports its ideal width up to the cap; the bar otherwise squeezes the chip to
+            // centre the capsule and hides the team name.
             teamNameChip(team)
-                .frame(width: Self.barSideWidth, alignment: .leading)
+                .frame(maxWidth: Self.barSideWidth, alignment: .leading)
+                .fixedSize(horizontal: true, vertical: false)
         }
         DPDashboardHeaderToolbarItem(placement: .principal) {
             monthHeader
         }
         DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
-            HStack(spacing: 0) {
-                if !isCurrentMonth {
-                    thisMonthControl
-                }
-                if viewModel.isTeamManager {
-                    manageControl(team)
-                }
+            if viewModel.isTeamManager {
+                manageControl(team)
             }
-            .frame(width: Self.barSideWidth, alignment: .trailing)
         }
     }
 
@@ -302,54 +328,28 @@ struct TeamView: View {
         )
     }
 
-    // Mirrors the calendar tab: the navigation bar cannot host the stacked
-    // "this month" shortcut, so it becomes a trailing bar button.
-    private var thisMonthControl: some View {
-        Button {
-            Task { await viewModel.goToToday() }
-        } label: {
-            Text("team.view.calendar.thisMonth", tableName: "Team")
-                .font(DPTypography.caption)
-                .lineLimit(1)
-                .padding(.horizontal, DPSpacing.extraSmall)
-                .frame(height: DPSize.minimumTouchTarget)
-                .contentShape(Rectangle())
-        }
-        .disabled(viewModel.isLoading)
-    }
-
     private var monthHeader: some View {
-        HStack(spacing: 0) {
-            DPMonthArrowButton(direction: .previous, label: teamLocalized("team.view.calendar.previousMonth"), identifier: "team.calendar.month.previous") {
+        DPMonthCapsule(
+            yearMonth: "\(viewModel.year)-\(String(format: "%02d", locale: AppLocalization.locale, viewModel.month))",
+            monthFontSize: DPMonthCapsuleMetrics.compactMonthFontSize,
+            monthAccessibilityLabel: teamLocalized("team.view.calendar.chooseMonth"),
+            monthIdentifier: "team.calendar.month.display",
+            previous: DPMonthCapsuleArrow(
+                label: teamLocalized("team.view.calendar.previousMonth"),
+                identifier: "team.calendar.month.previous"
+            ) {
                 Task { await viewModel.previousMonth() }
-            }
-            .disabled(viewModel.isLoading)
-
-            Button {
-                monthPickerPresented = true
-            } label: {
-                HStack(spacing: DPSpacing.extraSmall) {
-                    Text(
-                        verbatim: "\(viewModel.year)-\(String(format: "%02d", locale: AppLocalization.locale, viewModel.month))"
-                    )
-                        .font(DPTypography.label)
-                    Image(systemName: "chevron.down")
-                        .font(.caption2.weight(.bold))
-                }
-                .frame(minHeight: DPSize.minimumTouchTarget)
-            }
-            .accessibilityLabel(Text("team.view.calendar.chooseMonth", tableName: "Team"))
-            .accessibilityValue(
-                Text(verbatim: "\(viewModel.year)-\(String(format: "%02d", viewModel.month))")
-            )
-            .accessibilityIdentifier("team.calendar.month.display")
-            .disabled(viewModel.isLoading)
-
-            DPMonthArrowButton(direction: .next, label: teamLocalized("team.view.calendar.nextMonth"), identifier: "team.calendar.month.next") {
+            },
+            next: DPMonthCapsuleArrow(
+                label: teamLocalized("team.view.calendar.nextMonth"),
+                identifier: "team.calendar.month.next"
+            ) {
                 Task { await viewModel.nextMonth() }
             }
-            .disabled(viewModel.isLoading)
+        ) {
+            monthPickerPresented = true
         }
+        .disabled(viewModel.isLoading)
     }
 
     private var isCurrentMonth: Bool {

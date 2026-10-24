@@ -474,6 +474,19 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   overflow-wrap: anywhere;
 }
 
+.calendar-schedule-time {
+  margin-left: 0.3em;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mobile cells are already 10px, so only the wider layout shrinks the time. */
+@media (min-width: 640px) {
+  .calendar-schedule-time {
+    font-size: 0.82em;
+  }
+}
+
 .calendar-action-bubble {
   display: block;
   width: 100%;

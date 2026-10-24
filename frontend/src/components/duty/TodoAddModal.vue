@@ -7,7 +7,9 @@ import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import DatePickerField from '@/components/common/DatePickerField.vue'
 import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
+import SaveShortcutHint from '@/components/common/SaveShortcutHint.vue'
 import { useEscapeKey } from '@/composables/useEscapeKey'
+import { useSaveShortcut } from '@/composables/useSaveShortcut'
 import type { NormalizedAttachment, TaggableFriend, TodoStatus } from '@/types'
 import { useSwal } from '@/composables/useSwal'
 import { hasUnsavedTodoChanges, type TodoDismissalDraft } from '@/utils/formDismissal'
@@ -45,6 +47,7 @@ const attachments = ref<NormalizedAttachment[]>([])
 const sessionId = ref<string | null>(null)
 const isUploading = ref(false)
 const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
+const saveButtonRef = ref<HTMLButtonElement | null>(null)
 const isDesktop = ref(
   typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches,
 )
@@ -229,6 +232,7 @@ function handleDesktopMediaChange(event: MediaQueryListEvent) {
 }
 
 useEscapeKey(isStatusMenuOpen, () => closeStatusMenu({ restoreFocus: true }))
+useSaveShortcut(saveButtonRef)
 
 onMounted(() => {
   desktopMediaQuery = window.matchMedia('(min-width: 640px)')
@@ -544,11 +548,14 @@ function onUploadError(message: string) {
         {{ t('common.actions.close') }}
       </button>
       <button
+        ref="saveButtonRef"
         @click="handleSave"
         :disabled="isTitleMissing || isUploading"
-        class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        aria-keyshortcuts="Control+Enter Meta+Enter"
+        class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 whitespace-nowrap px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         {{ isUploading ? t('duty.common.uploading') : t('duty.todo.actions.save') }}
+        <SaveShortcutHint />
       </button>
     </div>
   </BaseModal>

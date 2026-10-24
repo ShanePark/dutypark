@@ -404,9 +404,9 @@ final class CalendarFeatureTests: XCTestCase {
             .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
         let source = try String(contentsOf: sourceURL, encoding: .utf8)
 
-        XCTAssertTrue(source.contains("private var thisMonthCallout: some View"))
+        XCTAssertTrue(source.contains("DPThisMonthCallout(label: CalendarLocalization.text(\"calendar.month.goToThisMonth\"))"))
         XCTAssertTrue(
-            source.contains("Text(CalendarLocalization.text(\"calendar.month.goToThisMonth\"))"),
+            try Self.thisMonthCalloutSource().contains("Text(label)"),
             "The callout carries its label, not just the return arrow"
         )
         XCTAssertFalse(
@@ -442,26 +442,25 @@ final class CalendarFeatureTests: XCTestCase {
     }
 
     func testTheThisMonthCalloutAddsATallerVerticalTouchArea() throws {
-        let sourceURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let source = try Self.thisMonthCalloutSource()
 
-        XCTAssertTrue(source.contains("private static let calloutHitInsetY: CGFloat = 6"))
-        XCTAssertTrue(source.contains(".padding(.vertical, Self.calloutHitInsetY)"))
+        XCTAssertTrue(source.contains("private static let hitInsetY: CGFloat = 6"))
+        XCTAssertTrue(source.contains(".padding(.vertical, Self.hitInsetY)"))
     }
 
-    func testTheThisMonthCalloutIsLiftedTwentyPointsWithinTheCalendarBody() throws {
+    /// The month capsule paints an opaque surface down to the navigation bar's lower edge, so
+    /// the callout is lifted only ten points: its tail tip then sits just below the capsule
+    /// instead of being hidden underneath it.
+    func testTheThisMonthCalloutIsLiftedTenPointsWithinTheCalendarBody() throws {
         let source = try Self.calendarViewSource()
         let content = try Self.declaration(named: "private var calendarContent: some View", in: source)
 
         XCTAssertTrue(
-            source.contains("private static let calloutVerticalOffset: CGFloat = -20"),
-            "The body-hosted callout needs an explicit 20pt upward offset"
+            try Self.thisMonthCalloutSource().contains("static let verticalOffset: CGFloat = -10"),
+            "The body-hosted callout needs an explicit 10pt upward offset"
         )
         XCTAssertTrue(
-            content.contains("thisMonthCalloutLayer\n                .offset(y: Self.calloutVerticalOffset)"),
+            content.contains("thisMonthCalloutLayer\n                .offset(y: DPThisMonthCallout.verticalOffset)"),
             "The upward offset must apply to the fixed body callout layer"
         )
     }
@@ -491,13 +490,15 @@ final class CalendarFeatureTests: XCTestCase {
     /// header's centre do not move. Scaling the Button itself keeps the existing action and
     /// accessibility label attached to the enlarged hit target.
     func testTheThisMonthCalloutScalesTheWholeButtonByTenPercentFromTopLeading() throws {
-        let source = try Self.calendarViewSource()
-        let callout = try Self.declaration(named: "private var thisMonthCallout: some View", in: source)
+        let callout = try Self.thisMonthCalloutSource()
+        let layer = try Self.declaration(named: "private var thisMonthCalloutLayer: some View", in: Self.calendarViewSource())
 
-        XCTAssertTrue(source.contains("private static let calloutScale: CGFloat = 1.1"))
-        XCTAssertTrue(callout.contains(".scaleEffect(Self.calloutScale, anchor: .topLeading)"))
-        XCTAssertTrue(callout.contains("Button { Task { await model.goToToday() } } label:"))
-        XCTAssertTrue(callout.contains(".accessibilityLabel(CalendarLocalization.text(\"calendar.month.goToThisMonth\"))"))
+        XCTAssertTrue(callout.contains("private static let scale: CGFloat = 1.1"))
+        XCTAssertTrue(callout.contains(".scaleEffect(Self.scale, anchor: .topLeading)"))
+        XCTAssertTrue(callout.contains("Button(action: action) {"))
+        XCTAssertTrue(callout.contains(".accessibilityLabel(label)"))
+        XCTAssertTrue(layer.contains("DPThisMonthCallout(label: CalendarLocalization.text(\"calendar.month.goToThisMonth\"))"))
+        XCTAssertTrue(layer.contains("Task { await model.goToToday() }"))
     }
 
     /// The strip above the calendar is gone: due-date bubbles inside the day cells are the
@@ -1849,6 +1850,14 @@ final class CalendarFeatureTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        return try String(contentsOf: sourceURL, encoding: .utf8)
+    }
+
+    private static func thisMonthCalloutSource() throws -> String {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Components/DPThisMonthCallout.swift")
         return try String(contentsOf: sourceURL, encoding: .utf8)
     }
 

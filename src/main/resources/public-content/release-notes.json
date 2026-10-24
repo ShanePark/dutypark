@@ -40,6 +40,17 @@
         }
       },
       "entries": {
+        "pr-433": {
+          "title": "월 이동 디자인 개선·빠른 저장",
+          "summary": "웹과 iPhone에서 월 이동 화살표와 년-월을 누르기 쉬운 하나의 버튼으로 합치고, 저장 단축키를 추가했습니다.",
+          "changes": [
+            "이전 달·년-월·다음 달 버튼을 웹과 iPhone에서 하나의 캡슐로 합치고, 터치 화면에서도 화살표 버튼이 잘 보이도록 했습니다.",
+            "iPhone 팀 달력의 \"이번 달\" 바로가기를 월 아래 말풍선으로 옮겨 월 이동 버튼과 겹치지 않게 했습니다.",
+            "모바일 웹 화면에서는 검색을 돋보기 버튼 하나로 바꿔, 누르면 검색 창이 열립니다.",
+            "PC에서 Ctrl+Enter(Mac은 ⌘+Enter)로 일정과 할일을 바로 저장할 수 있고, 저장 버튼에 단축키가 표시됩니다.",
+            "달력 칸의 일정 시간을 제목과 띄우고 더 작게 표시합니다."
+          ]
+        },
         "pr-429": {
           "title": "캘린더·중복 일정·시간 인식 개선",
           "summary": "모달을 열 때 캘린더가 움직이지 않게 하고, 중복 일정 저장 안내를 명확히 하며, 일정 시간 자동 인식을 안정화했습니다.",
@@ -2376,6 +2387,17 @@
         }
       },
       "entries": {
+        "pr-433": {
+          "title": "Month navigation redesign and quick saving",
+          "summary": "Joined the month arrows and year-month into one easy-to-tap control on the web and iPhone, and added a keyboard shortcut for saving.",
+          "changes": [
+            "The previous, year-month and next buttons now form a single capsule on the web and iPhone, with clearly visible arrow buttons on touch screens.",
+            "On the iPhone team calendar, the \"This month\" shortcut now appears as a bubble under the month, so it no longer overlaps the month buttons.",
+            "On phone-width web screens, search is now a single magnifier button that opens the search window.",
+            "On a computer, press Ctrl+Enter (⌘+Enter on Mac) to save a schedule or todo; the save button shows the shortcut.",
+            "Schedule times in calendar cells are now spaced from the title and shown smaller."
+          ]
+        },
         "pr-429": {
           "title": "Calendar, duplicate schedule, and time recognition fixes",
           "summary": "Kept the calendar in place when opening windows, clarified duplicate schedule saves, and made automatic time recognition more reliable.",
@@ -4675,6 +4697,21 @@
     }
   },
   "items": [
+    {
+      "id": "pr-433",
+      "version": "2026.10.25",
+      "date": "2026-10-25",
+      "pr": 433,
+      "url": "https://github.com/ShanePark/dutypark/pull/433",
+      "category": "improvement",
+      "areas": [
+        "calendar",
+        "schedule",
+        "todo",
+        "team",
+        "ui"
+      ]
+    },
     {
       "id": "pr-429",
       "version": "2026.10.14",

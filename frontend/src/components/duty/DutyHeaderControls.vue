@@ -129,9 +129,18 @@ function handleSearchClick() {
 
     <!-- Right: Search -->
     <div class="flex min-w-0 items-center justify-end gap-0.5 sm:gap-1">
+      <button
+        v-if="canSearch"
+        type="button"
+        @click="emit('open-search-modal')"
+        :aria-label="t('common.actions.search')"
+        class="duty-header-search-icon sm:hidden"
+      >
+        <Search class="h-5 w-5" />
+      </button>
       <div
         v-if="canSearch"
-        class="flex min-h-[42px] min-w-0 w-full max-w-[8.5rem] items-stretch overflow-hidden rounded-lg border border-dp-border-secondary bg-dp-bg-card transition-colors focus-within:border-dp-accent sm:min-h-[44px] sm:max-w-[10rem] sm:rounded-xl sm:shadow-sm"
+        class="hidden min-h-[42px] min-w-0 w-full max-w-[8.5rem] items-stretch overflow-hidden rounded-lg border border-dp-border-secondary bg-dp-bg-card transition-colors focus-within:border-dp-accent sm:flex sm:min-h-[44px] sm:max-w-[10rem] sm:rounded-xl sm:shadow-sm"
       >
         <input
           :value="searchQuery"
