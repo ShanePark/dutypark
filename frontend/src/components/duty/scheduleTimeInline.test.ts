@@ -18,4 +18,15 @@ describe('schedule time inline display', () => {
     )
     expect(dutyCalendarContent).toContain('> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template>')
   })
+
+  it('styles the monthly cell time as a spaced, quieter secondary label', () => {
+    const rule = dutyCalendarContent.match(/\.calendar-schedule-time \{([^}]*)\}/)?.[1] ?? ''
+    expect(rule).toMatch(/margin-left:/)
+    expect(rule).toMatch(/opacity:/)
+    // Narrow mobile cells must still wrap ranges like (09:00~10:00) instead of clipping them.
+    expect(rule).not.toMatch(/white-space: nowrap/)
+    expect(dutyCalendarContent).toMatch(
+      /@media \(min-width: 640px\) \{\s*\.calendar-schedule-time \{\s*font-size: 0\.8\d*em;/
+    )
+  })
 })
