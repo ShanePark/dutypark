@@ -19,11 +19,13 @@ import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import DatePickerField from '@/components/common/DatePickerField.vue'
 import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
+import SaveShortcutHint from '@/components/common/SaveShortcutHint.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import CopyTextButton from '@/components/common/CopyTextButton.vue'
 import TodoStatusPicker from '@/components/todo/TodoStatusPicker.vue'
 import { attachmentApi } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
+import { useSaveShortcut } from '@/composables/useSaveShortcut'
 import { hasUnsavedTodoChanges } from '@/utils/formDismissal'
 import { formatDateKorean } from '@/utils/date'
 import { toDisplayTagMember } from '@/utils/tagMembers'
@@ -95,9 +97,12 @@ const editAttachments = ref<NormalizedAttachment[]>([])
 const sessionId = ref<string | null>(null)
 const isUploading = ref(false)
 const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
+const saveButtonRef = ref<HTMLButtonElement | null>(null)
 const viewAttachments = ref<NormalizedAttachment[]>([])
 const isLoadingAttachments = ref(false)
 let isHandlingClose = false
+
+useSaveShortcut(saveButtonRef)
 
 function hasUnsavedEditChanges() {
   if (!props.todo || !isEditMode.value) return false
@@ -596,11 +601,14 @@ function onUploadError(message: string) {
             {{ t('common.actions.close') }}
           </button>
           <button
+            ref="saveButtonRef"
             @click="saveEdit"
             :disabled="isEditSaveDisabled"
-            class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            aria-keyshortcuts="Control+Enter Meta+Enter"
+            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 whitespace-nowrap px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {{ isUploading ? t('duty.common.uploading') : t('duty.todo.actions.save') }}
+            <SaveShortcutHint />
           </button>
         </template>
       </div>

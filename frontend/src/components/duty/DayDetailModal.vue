@@ -6,9 +6,11 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import ScheduleList from '@/components/duty/ScheduleList.vue'
 import ScheduleForm from '@/components/duty/ScheduleForm.vue'
 import UntagConfirmModal from '@/components/duty/UntagConfirmModal.vue'
+import SaveShortcutHint from '@/components/common/SaveShortcutHint.vue'
 import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
+import { useSaveShortcut } from '@/composables/useSaveShortcut'
 import { useAiScheduleConsentStore } from '@/stores/aiScheduleConsent'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import {
@@ -111,9 +113,12 @@ const isCreateMode = ref(false)
 const isEditMode = ref(false)
 const editingScheduleId = ref<string | null>(null)
 const scheduleFormRef = ref<InstanceType<typeof ScheduleForm> | null>(null)
+const saveButtonRef = ref<HTMLButtonElement | null>(null)
 const isUploading = ref(false)
 const isResolvingAiConsent = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
+
+useSaveShortcut(saveButtonRef)
 
 const selectedDutyType = ref<string | null>(null)
 const unavailableCurrentDuty = computed(() => {
@@ -683,12 +688,15 @@ function handleUploadError(message: string) {
               {{ t('common.actions.close') }}
             </button>
             <button
+              ref="saveButtonRef"
               @click="saveSchedule"
               :disabled="isScheduleSaveDisabled"
               :aria-label="t('duty.schedule.actions.save')"
-              class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              aria-keyshortcuts="Control+Enter Meta+Enter"
+              class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 whitespace-nowrap px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {{ isUploading ? t('duty.common.uploading') : t('duty.schedule.actions.save') }}
+              <SaveShortcutHint />
             </button>
           </div>
         </div>
