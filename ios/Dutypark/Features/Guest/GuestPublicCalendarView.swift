@@ -225,42 +225,35 @@ struct GuestPublicCalendarView: View {
     }
 
     private var monthControls: some View {
-        HStack(spacing: DPSpacing.extraSmall) {
-            DPMonthArrowButton(direction: .previous, label: GuestLocalization.text("guest.calendar.month.previous"), identifier: "guest.calendar.month.previous") {
+        DPMonthCapsule(
+            yearMonth: GuestCalendarLocalization.yearMonth(year: model.year, month: model.month),
+            monthAccessibilityLabel: GuestLocalization.text("guest.calendar.month.choose"),
+            monthIdentifier: "guest.calendar.monthPicker.open",
+            previous: DPMonthCapsuleArrow(
+                label: GuestLocalization.text("guest.calendar.month.previous"),
+                identifier: "guest.calendar.month.previous"
+            ) {
                 Task { await model.changeMonth(by: -1) }
-            }
-            Spacer()
-            Button {
-                DPHapticCenter.shared.emit(.selection)
-                showsMonthPicker = true
-            } label: {
-                HStack(spacing: DPSpacing.extraSmall) {
-                    Text(GuestCalendarLocalization.yearMonth(year: model.year, month: model.month))
-                        .font(DPFont.bold(size: 20, relativeTo: .title3))
-                    Image(systemName: "chevron.down")
-                        .font(.caption.bold())
-                }
-                .foregroundStyle(DPColor.textPrimary)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(GuestLocalization.text("guest.calendar.month.choose"))
-            .accessibilityValue(GuestCalendarLocalization.yearMonth(
-                year: model.year,
-                month: model.month
-            ))
-            .accessibilityIdentifier("guest.calendar.monthPicker.open")
-            Spacer()
-            DPMonthArrowButton(direction: .next, label: GuestLocalization.text("guest.calendar.month.next"), identifier: "guest.calendar.month.next") {
+            },
+            next: DPMonthCapsuleArrow(
+                label: GuestLocalization.text("guest.calendar.month.next"),
+                identifier: "guest.calendar.month.next"
+            ) {
                 Task { await model.changeMonth(by: 1) }
             }
+        ) {
+            DPHapticCenter.shared.emit(.selection)
+            showsMonthPicker = true
+        }
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .trailing) {
             Button(GuestLocalization.text("guest.calendar.today")) {
                 Task { await model.goToToday() }
             }
             .font(DPFont.bold(size: 15, relativeTo: .subheadline))
+            .foregroundStyle(DPColor.accent)
             .frame(minHeight: DPSize.minimumTouchTarget)
         }
-        .foregroundStyle(DPColor.accent)
         .disabled(model.isLoading)
     }
 

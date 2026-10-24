@@ -161,19 +161,6 @@ nonisolated enum ScheduleTagDisplayPolicy {
     }
 }
 
-/// The tail of the "this month" callout: a slender pointer that climbs from the capsule to
-/// the month label sitting in the navigation bar above it.
-private struct CalloutTail: Shape {
-    nonisolated func path(in rect: CGRect) -> Path {
-        Path { path in
-            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-            path.closeSubpath()
-        }
-    }
-}
-
 private struct CalendarTopScrollEdgeEffectModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -526,8 +513,8 @@ struct CalendarView: View {
             }
 
             thisMonthCalloutLayer
-                .offset(y: Self.calloutVerticalOffset)
-                .alignmentGuide(HorizontalAlignment.center) { _ in Self.calloutTailCenter }
+                .offset(y: DPThisMonthCallout.verticalOffset)
+                .alignmentGuide(HorizontalAlignment.center) { _ in DPThisMonthCallout.tailCenter }
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsThisMonthCallout)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -640,8 +627,11 @@ struct CalendarView: View {
     @ToolbarContentBuilder
     private var calendarToolbar: some ToolbarContent {
         DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
+            // Reports its ideal width up to the cap; the bar otherwise squeezes the identity
+            // to centre the capsule and cuts the name down to a single letter.
             memberIdentityBar
-                .frame(width: Self.barSideWidth, alignment: .leading)
+                .frame(maxWidth: Self.barSideWidth, alignment: .leading)
+                .fixedSize(horizontal: true, vertical: false)
         }
         DPDashboardHeaderToolbarItem(placement: .principal) {
             monthControls
@@ -654,7 +644,6 @@ struct CalendarView: View {
                     searchControl
                 }
             }
-            .frame(width: Self.barSideWidth, alignment: .trailing)
         }
     }
 
@@ -695,7 +684,6 @@ struct CalendarView: View {
             .accessibilityIdentifier("calendar.member.block")
         } label: {
             memberIdentity
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
         }
         .accessibilityLabel(CalendarLocalization.text("calendar.more"))
@@ -739,7 +727,7 @@ struct CalendarView: View {
                 memberIdentity
             }
         }
-        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
+        .frame(minHeight: DPSize.minimumTouchTarget)
     }
 
     private var memberIdentity: some View {
@@ -764,24 +752,6 @@ struct CalendarView: View {
         CalendarVisualLogic.showsThisMonthCallout(year: model.year, month: model.month, today: Date())
     }
 
-    private var monthLabel: some View {
-        Button {
-            DPHapticCenter.shared.emit(.routine)
-            withoutPresentationAnimation { showsMonthPicker = true }
-        } label: {
-            Text(String(format: "%04d-%02d", model.year, model.month))
-                .font(DPFont.bold(size: 16, relativeTo: .headline))
-                .foregroundStyle(DPColor.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-        }
-        .accessibilityLabel(CalendarLocalization.text("calendar.month.choose"))
-        .accessibilityValue(String(format: "%04d-%02d", model.year, model.month))
-        .accessibilityIdentifier("calendar.month.display")
-        .disabled(model.isLoading || isSlidingMonth)
-    }
-
     // The trailing search control is narrower than `DPSize.minimumTouchTarget`; the 44pt-tall
     // navigation bar cannot fit the leading identity, the month navigation and the trailing
     // action otherwise. Height stays at the full touch target.
@@ -792,34 +762,11 @@ struct CalendarView: View {
     // the full touch target.
     private static let barBackWidth: CGFloat = 16
 
-    // The leading and trailing bar items claim the same width so the month
-    // navigation in the principal slot stays centred on the screen.
+    // Caps the leading identity. The side items otherwise keep their natural widths: the bar
+    // gives the principal month capsule only the room between them, and anything drawn past
+    // that room ignores touches. The bar centres the capsule when it fits and slides it
+    // toward the trailing side otherwise.
     private static let barSideWidth: CGFloat = 88
-
-    // The web calendar draws the tail near the leading edge of the bubble; these place that
-    // tail on the horizontal centre, so it points at the month label whatever the label reads.
-    private static let calloutCapsuleHeight: CGFloat = 20
-    private nonisolated static let calloutTailInset: CGFloat = 8
-    private nonisolated static let calloutTailWidth: CGFloat = 12
-    private static let calloutTailHeight: CGFloat = 6
-    // Overlap that keeps the tail and the capsule reading as one shape.
-    private static let calloutTailOverlap: CGFloat = 2
-    // The capsule is shorter than a touch target, so it takes what room the bar leaves
-    // around itself; a taller hit area would only reach past the bar, which passes on
-    // nothing it does not draw.
-    private nonisolated static let calloutHitInsetX: CGFloat = 6
-    private static let calloutHitInsetY: CGFloat = 6
-    private nonisolated static let calloutTailCenter: CGFloat =
-        calloutHitInsetX + calloutTailInset + calloutTailWidth / 2
-
-    // Keep the callout's existing upper-left corner fixed while giving its label and hit area
-    // ten percent more room toward the lower-right. A transform leaves the month controls'
-    // layout footprint unchanged, so the month header remains centred.
-    private static let calloutScale: CGFloat = 1.1
-
-    // The callout is hosted below the 44pt navigation bar; lift its body anchor so the bubble
-    // sits close to the month controls without changing the scroll content's position.
-    private static let calloutVerticalOffset: CGFloat = -20
 
     // The callout is hosted by the full calendar body rather than the navigation-bar item.
     // That keeps the item at its native 44pt height while the body still owns the callout's
@@ -827,59 +774,35 @@ struct CalendarView: View {
     @ViewBuilder
     private var thisMonthCalloutLayer: some View {
         if showsThisMonthCallout {
-            thisMonthCallout
-                .transition(.offset(y: -4).combined(with: .opacity))
-        }
-    }
-
-    private var thisMonthCallout: some View {
-        Button { Task { await model.goToToday() } } label: {
-            HStack(spacing: 3) {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 10, weight: .bold))
-                Text(CalendarLocalization.text("calendar.month.goToThisMonth"))
-                    .font(DPFont.bold(size: 11, relativeTo: .caption2))
-                    .lineLimit(1)
+            DPThisMonthCallout(label: CalendarLocalization.text("calendar.month.goToThisMonth")) {
+                Task { await model.goToToday() }
             }
-            .foregroundStyle(DPColor.textOnDark)
-            .padding(.horizontal, 8)
-            .frame(height: Self.calloutCapsuleHeight)
-            .background(DPColor.accent, in: Capsule())
-            .background(alignment: .topLeading) {
-                CalloutTail()
-                    .fill(DPColor.accent)
-                    .frame(width: Self.calloutTailWidth, height: Self.calloutTailHeight)
-                    .offset(
-                        x: Self.calloutTailInset,
-                        y: Self.calloutTailOverlap - Self.calloutTailHeight
-                    )
-            }
-            .compositingGroup()
-            .shadow(color: DPColor.accent.opacity(0.35), radius: 4, x: 0, y: 2)
-            .padding(.horizontal, Self.calloutHitInsetX)
-            .padding(.vertical, Self.calloutHitInsetY)
-            .contentShape(Rectangle())
+            .disabled(model.isLoading || isSlidingMonth)
+            .transition(.offset(y: -4).combined(with: .opacity))
         }
-        .scaleEffect(Self.calloutScale, anchor: .topLeading)
-        .accessibilityLabel(CalendarLocalization.text("calendar.month.goToThisMonth"))
-        .disabled(model.isLoading || isSlidingMonth)
-    }
-
-    private var monthCenterControls: some View {
-        monthLabel
-            .frame(width: 78)
-            .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
     }
 
     private var monthControls: some View {
-        HStack(spacing: 0) {
-            DPMonthArrowButton(direction: .previous, label: CalendarLocalization.text("calendar.month.previous"), identifier: "calendar.month.previous") {
+        DPMonthCapsule(
+            yearMonth: String(format: "%04d-%02d", model.year, model.month),
+            monthFontSize: DPMonthCapsuleMetrics.compactMonthFontSize,
+            monthAccessibilityLabel: CalendarLocalization.text("calendar.month.choose"),
+            monthIdentifier: "calendar.month.display",
+            previous: DPMonthCapsuleArrow(
+                label: CalendarLocalization.text("calendar.month.previous"),
+                identifier: "calendar.month.previous"
+            ) {
                 Task { await model.changeMonth(by: -1) }
-            }
-            monthCenterControls
-            DPMonthArrowButton(direction: .next, label: CalendarLocalization.text("calendar.month.next"), identifier: "calendar.month.next") {
+            },
+            next: DPMonthCapsuleArrow(
+                label: CalendarLocalization.text("calendar.month.next"),
+                identifier: "calendar.month.next"
+            ) {
                 Task { await model.changeMonth(by: 1) }
             }
+        ) {
+            DPHapticCenter.shared.emit(.routine)
+            withoutPresentationAnimation { showsMonthPicker = true }
         }
         .disabled(model.isLoading || isSlidingMonth)
     }
