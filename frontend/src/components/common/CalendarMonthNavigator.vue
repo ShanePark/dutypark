@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight, Undo2 } from '@lucide/vue'
+import { ChevronDown, ChevronLeft, ChevronRight, Undo2 } from '@lucide/vue'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
 
 const props = withDefaults(defineProps<{
@@ -101,19 +101,18 @@ function handleMonthButtonClick() {
 
 <template>
   <div
-    class="flex items-center justify-center gap-1 sm:gap-2"
-    :class="{ 'calendar-nav-compact': props.compact }"
+    class="calendar-nav-group"
+    :class="{ 'calendar-nav-group-compact': props.compact }"
   >
     <button
       type="button"
       @click="emit('prev-month')"
-      class="calendar-nav-arrow"
-      :class="{ 'calendar-nav-arrow-compact': props.compact }"
+      class="calendar-nav-arrow calendar-nav-arrow-prev"
       :aria-label="t('common.calendar.previousMonth')"
     >
-      <ChevronLeft class="h-6 w-6 sm:h-7 sm:w-7" />
+      <ChevronLeft class="calendar-nav-arrow-icon" />
     </button>
-    <span class="relative inline-flex">
+    <span class="relative inline-flex self-stretch">
       <button
         type="button"
         @click="handleMonthButtonClick"
@@ -123,10 +122,10 @@ function handleMonthButtonClick() {
         @touchcancel="resetMonthTouch"
         @pointerdown.capture="dragClickGuard.handlePointerDown"
         @click.capture="dragClickGuard.handleClick"
-        class="calendar-nav-btn flex min-h-11 min-w-[5.5rem] touch-pan-y select-none items-center justify-center whitespace-nowrap rounded px-1 py-1 text-lg font-semibold cursor-pointer sm:min-w-[6.75rem] sm:px-3 sm:text-2xl"
-        :class="{ 'calendar-nav-month-compact': props.compact }"
+        class="calendar-nav-month touch-pan-y select-none whitespace-nowrap font-semibold cursor-pointer"
       >
-        {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
+        <span>{{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}</span>
+        <ChevronDown class="calendar-nav-month-chevron" aria-hidden="true" />
       </button>
       <button
         v-if="!isCurrentMonth"
@@ -143,11 +142,10 @@ function handleMonthButtonClick() {
     <button
       type="button"
       @click="emit('next-month')"
-      class="calendar-nav-arrow"
-      :class="{ 'calendar-nav-arrow-compact': props.compact }"
+      class="calendar-nav-arrow calendar-nav-arrow-next"
       :aria-label="t('common.calendar.nextMonth')"
     >
-      <ChevronRight class="h-6 w-6 sm:h-7 sm:w-7" />
+      <ChevronRight class="calendar-nav-arrow-icon" />
     </button>
   </div>
 </template>
