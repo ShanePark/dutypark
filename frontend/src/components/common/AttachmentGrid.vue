@@ -110,7 +110,7 @@ async function loadThumbnails() {
   for (const attachment of props.attachments) {
     if (thumbnailBlobUrls[attachment.id]) continue
 
-    // For images, always try to load thumbnail (backend falls back to original if thumbnail not ready)
+    // Try generated thumbnails for images; keep the file icon when none is available.
     if (attachment.isImage) {
       const thumbnailUrl = attachment.thumbnailUrl || `/api/attachments/${attachment.id}/thumbnail`
       const blobUrl = await fetchAuthenticatedImage(thumbnailUrl)
