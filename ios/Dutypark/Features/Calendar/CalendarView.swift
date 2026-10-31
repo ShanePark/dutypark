@@ -55,7 +55,7 @@ struct CalendarMonthCellGrid<Item: Identifiable, Cell: View>: View {
 struct CalendarMonthPageTrack<Page: Identifiable, Content: View>: View {
     let pages: [Page]
     let width: CGFloat
-    let height: CGFloat
+    let height: CGFloat?
     let offset: CGFloat
     @ViewBuilder let content: (Page, Int) -> Content
 
@@ -500,7 +500,7 @@ struct CalendarView: View {
                     }
                     swipeableCalendarGrid
                     if !model.isQuickDutyEditing {
-                        dDaySection
+                        monthDDayPager
                     }
                 }
                 .padding(.horizontal, DPSpacing.small)
@@ -1418,6 +1418,25 @@ struct CalendarView: View {
                 monthTrackOffset = 0
                 isSlidingMonth = false
                 isSwipingMonth = false
+            }
+        }
+    }
+
+    private var monthDDayPager: some View {
+        Group {
+            if let transition = monthTransition {
+                CalendarMonthPageTrack(
+                    pages: transition.pages,
+                    width: calendarGridWidth,
+                    height: nil,
+                    offset: monthTrackOffset
+                ) { _, index in
+                    dDaySection
+                        .allowsHitTesting(index == 1 && !isSwipingMonth && !isSlidingMonth)
+                        .accessibilityHidden(index != 1)
+                }
+            } else {
+                dDaySection
             }
         }
     }

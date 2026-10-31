@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { CalendarCheck, MessageSquareText, CheckSquare } from '@lucide/vue'
 import { isLightColor } from '@/utils/color'
 import { dutyTypeLabel } from '@/utils/dutyAbbreviation'
@@ -20,6 +20,7 @@ const props = defineProps<{
   calendarDataYear: number
   calendarDataMonth: number
   isCalendarMonthLoaded: boolean
+  isMonthLoading?: boolean
   holidays: HolidayDto[][]
   getDutyColorForDay: (day: CalendarDay) => string | null
   highlightDay: { year: number; month: number; day: number } | null
@@ -49,25 +50,30 @@ const emit = defineEmits<{
 // Swiping the grid sideways is the quick way through the months; the header
 // chevrons stay for taps and for keyboard and assistive-technology users.
 const swipeContainer = ref<HTMLElement | null>(null)
-const calendarTrack = ref<HTMLElement | null>(null)
+const calendarGridTrack = ref<HTMLElement | null>(null)
+const calendarHeight = ref<number | null>(null)
 let calendarTrackResizeObserver: ResizeObserver | null = null
 
 function syncCalendarHeight() {
-  const container = swipeContainer.value
-  const track = calendarTrack.value
-  if (!container || !track) return
+  const track = calendarGridTrack.value
+  if (!track || props.isMonthLoading) return
 
   const height = track.getBoundingClientRect().height
-  if (height > 0) container.style.height = `${height}px`
+  if (height > 0) calendarHeight.value = height
 }
 
 onMounted(() => {
-  if (!swipeContainer.value || !calendarTrack.value || typeof ResizeObserver === 'undefined') return
+  if (!calendarGridTrack.value || typeof ResizeObserver === 'undefined') return
 
-  syncCalendarHeight()
   calendarTrackResizeObserver = new ResizeObserver(syncCalendarHeight)
-  calendarTrackResizeObserver.observe(calendarTrack.value)
+  calendarTrackResizeObserver.observe(calendarGridTrack.value)
 })
+
+// Calendar rows and their contents arrive separately. Keep the old footprint
+// until the complete month is ready, then move the D-Day list once.
+watch(() => props.isMonthLoading, loading => {
+  if (!loading) syncCalendarHeight()
+}, { flush: 'post' })
 
 onUnmounted(() => {
   calendarTrackResizeObserver?.disconnect()
@@ -255,7 +261,13 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
     @pointerdown.capture="monthSwipe.dragClickGuard.handlePointerDown"
     @click.capture="monthSwipe.dragClickGuard.handleClick"
   >
-    <div ref="calendarTrack" class="calendar-month-swipe__track" :style="monthSwipe.trackStyle.value">
+    <div class="calendar-month-swipe__track" :style="monthSwipe.trackStyle.value">
+      <div
+        class="calendar-month-swipe__frame"
+        :style="calendarHeight === null ? undefined : { height: `${calendarHeight}px` }"
+        :class="{ 'calendar-month-swipe__frame--loading': isMonthLoading }"
+      >
+        <div ref="calendarGridTrack" class="calendar-month-swipe__grid">
       <CalendarGrid
         :days="days"
         :current-year="calendarDataYear"
@@ -449,6 +461,9 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
           </div>
         </template>
       </CalendarGrid>
+        </div>
+      </div>
+      <slot />
     </div>
   </div>
 </template>
@@ -458,13 +473,27 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   /* The grid slides a full width out and back in, and only the horizontal overflow
      may be hidden: day bubbles and tooltips still need to spill downwards. */
   overflow-x: clip;
+  /* Leave room for D-Day card hover scaling and focus rings at either edge. */
+  padding-inline: 8px;
+  margin-inline: -8px;
   /* The browser keeps the vertical scroll; sideways is this component's gesture. */
   touch-action: pan-y;
+}
+
+.calendar-month-swipe__frame {
   transition: height 220ms ease-out;
 }
 
+.calendar-month-swipe__frame--loading {
+  overflow: clip;
+}
+
+.calendar-month-swipe__grid {
+  display: flow-root;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .calendar-month-swipe {
+  .calendar-month-swipe__frame {
     transition: none;
   }
 }

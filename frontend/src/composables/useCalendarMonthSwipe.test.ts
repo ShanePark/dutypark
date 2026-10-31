@@ -198,7 +198,7 @@ describe('the duty calendar wiring', () => {
 
     const calendarContentTag = dutyView.slice(
       dutyView.indexOf('<DutyCalendarContent'),
-      dutyView.indexOf('/>', dutyView.indexOf('<DutyCalendarContent'))
+      dutyView.indexOf('</DutyCalendarContent>', dutyView.indexOf('<DutyCalendarContent'))
     )
     expect(calendarContentTag).toContain('@prev-month="prevMonth"')
     expect(calendarContentTag).toContain('@next-month="nextMonth"')

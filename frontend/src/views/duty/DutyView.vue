@@ -641,6 +641,9 @@ onUnmounted(() => {
   window.removeEventListener('duty-go-to-date', handleGoToDate)
 })
 
+const isMonthLoading = ref(false)
+let monthLoadSequence = 0
+
 // Watch for month changes to reload data
 watch(
   () => [currentYear.value, currentMonth.value],
@@ -651,10 +654,16 @@ watch(
       focusedDay.value = Math.min(focusedDay.value, lastDayInMonth.value)
     }
 
-    // Load calendar first to ensure index alignment
-    const calendarLoaded = await loadCalendar()
-    if (!calendarLoaded) return
-    await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties(), loadHolidays()])
+    const sequence = ++monthLoadSequence
+    isMonthLoading.value = true
+    try {
+      // Load calendar first to ensure index alignment.
+      const calendarLoaded = await loadCalendar()
+      if (!calendarLoaded) return
+      await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties(), loadHolidays()])
+    } finally {
+      if (sequence === monthLoadSequence) isMonthLoading.value = false
+    }
   }
 )
 
@@ -1627,6 +1636,7 @@ async function showExcelUploadModal() {
       :calendar-data-year="calendarDataYear"
       :calendar-data-month="calendarDataMonth"
       :is-calendar-month-loaded="isCalendarMonthLoaded"
+      :is-month-loading="isMonthLoading"
       :holidays="holidaysByDays"
       :get-duty-color-for-day="getDutyColorForDay"
       :highlight-day="searchDay"
@@ -1648,17 +1658,17 @@ async function showExcelUploadModal() {
       @todo-click="handleTodoBubbleClick"
       @prev-month="prevMonth"
       @next-month="nextMonth"
-    />
-
-    <DDayList
-      v-if="!batchEditMode"
-      :d-days="dDays"
-      :pinned-d-day-id="pinnedDDay?.id ?? null"
-      :is-my-calendar="isMyCalendar"
-      @open-detail="openDDayDetail"
-      @toggle-pin="togglePinnedDDay"
-      @add="openDDayModal()"
-    />
+    >
+      <DDayList
+        v-if="!batchEditMode"
+        :d-days="dDays"
+        :pinned-d-day-id="pinnedDDay?.id ?? null"
+        :is-my-calendar="isMyCalendar"
+        @open-detail="openDDayDetail"
+        @toggle-pin="togglePinnedDDay"
+        @add="openDDayModal()"
+      />
+    </DutyCalendarContent>
 
     <DayDetailModal
       :is-open="isDayDetailModalOpen"

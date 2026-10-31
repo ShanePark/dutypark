@@ -6,6 +6,26 @@ import XCTest
 @testable import Dutypark
 
 final class CalendarMonthSwipeTests: XCTestCase {
+    func testDDayCardsUseTheSameMonthTrackFromTheStartOfTheSwipe() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Dutypark/Features/Calendar/CalendarView.swift"),
+            encoding: .utf8
+        )
+        let start = try XCTUnwrap(source.range(of: "private var monthDDayPager: some View"))
+        let end = try XCTUnwrap(source.range(of: "private var dDaySection: some View"))
+        let pager = source[start.lowerBound..<end.lowerBound]
+        XCTAssertTrue(pager.contains("pages: transition.pages"))
+        XCTAssertTrue(pager.contains("width: calendarGridWidth"))
+        XCTAssertTrue(pager.contains("height: nil"), "D-Day cards must retain their full natural height")
+        XCTAssertTrue(pager.contains("offset: monthTrackOffset"))
+        XCTAssertTrue(pager.contains("dDaySection"))
+        XCTAssertTrue(pager.contains(".accessibilityHidden(index != 1)"))
+        XCTAssertTrue(source.contains("monthDDayPager\n"))
+    }
+
     @MainActor
     func testFirstPanKeepsItsRecognizerWhenTheMonthTrackAppears() throws {
         let events = CalendarPanLifecycleEvents()
@@ -277,6 +297,8 @@ final class CalendarMonthSwipeTests: XCTestCase {
             render()
             let restingY = try XCTUnwrap(state.frames["dday"]).minY
             let sourceHeight = try XCTUnwrap(state.frames["page-1"]).height
+            let restingX = try XCTUnwrap(state.frames["dday"]).minX
+            let pageWidth = try XCTUnwrap(state.frames["page-1"]).width
             XCTAssertTrue(restingY.isFinite)
             XCTAssertGreaterThan(restingY, sourceHeight)
             XCTAssertEqual(sourceHeight, CGFloat(sourceRows) * 60, accuracy: 0.5)
@@ -288,6 +310,14 @@ final class CalendarMonthSwipeTests: XCTestCase {
                 state.targetRowHeight = rowHeight
                 render()
                 XCTAssertEqual(try XCTUnwrap(state.frames["page-2"]).height, rowHeight * CGFloat(targetRows), accuracy: 0.5)
+                let currentDDay = try XCTUnwrap(state.frames["dday"])
+                let nextDDay = try XCTUnwrap(state.frames["dday-2"])
+                XCTAssertEqual(currentDDay.minX, restingX - pageWidth * progress, accuracy: 0.5)
+                XCTAssertEqual(nextDDay.minX, currentDDay.minX + pageWidth, accuracy: 0.5)
+                XCTAssertEqual(currentDDay.minX, try XCTUnwrap(state.frames["page-1"]).minX, accuracy: 0.5)
+                XCTAssertEqual(nextDDay.minX, try XCTUnwrap(state.frames["page-2"]).minX, accuracy: 0.5)
+                XCTAssertEqual(currentDDay.height, 108, accuracy: 0.5)
+                XCTAssertEqual(nextDDay.height, 108, accuracy: 0.5)
                 XCTAssertEqual(
                     try XCTUnwrap(state.frames["dday"]).minY,
                     restingY,
@@ -299,6 +329,7 @@ final class CalendarMonthSwipeTests: XCTestCase {
             state.didCancel = true
             render()
             XCTAssertEqual(try XCTUnwrap(state.frames["dday"]).minY, restingY, accuracy: 0.5)
+            XCTAssertEqual(try XCTUnwrap(state.frames["dday"]).minX, restingX, accuracy: 0.5)
             state.didCancel = false
             state.progress = 1
             render()
@@ -593,7 +624,7 @@ private final class CalendarMonthHeightFixtureState: ObservableObject {
 @MainActor
 private struct CalendarMonthHeightFixture: View {
     @ObservedObject var state: CalendarMonthHeightFixtureState
-    private let width: CGFloat = 351
+    private let width: CGFloat = 375 - 2 * DPSpacing.small
     private let viewport: CalendarMonthBodyViewport
     let sourceRows: Int
     let targetRows: Int
@@ -628,7 +659,18 @@ private struct CalendarMonthHeightFixture: View {
                         }
                     }
                 }
-                Color.cyan.frame(height: 60).background(framePreference("dday"))
+                if state.didCommit || state.didCancel {
+                    footer(index: 1)
+                } else {
+                    CalendarMonthPageTrack(
+                        pages: [-1, 0, 1].map(CalendarMonthLayoutPage.init(id:)),
+                        width: width,
+                        height: nil,
+                        offset: -width - width * state.progress
+                    ) { _, index in
+                        footer(index: index)
+                    }
+                }
             }
             .padding(.horizontal, DPSpacing.small)
         }
@@ -642,6 +684,11 @@ private struct CalendarMonthHeightFixture: View {
                 .frame(maxWidth: .infinity, minHeight: rowHeight, alignment: .topLeading)
         }
         .background(framePreference("page-\(index)"))
+    }
+
+    private func footer(index: Int) -> some View {
+        Color.cyan.frame(height: 108)
+            .background(framePreference(index == 1 ? "dday" : "dday-\(index)"))
     }
 
     private func framePreference(_ name: String) -> some View {

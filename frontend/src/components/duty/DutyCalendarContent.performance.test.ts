@@ -122,6 +122,54 @@ beforeEach(() => {
 afterEach(() => {
   apps.splice(0).forEach(app => app.unmount())
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
+describe('calendar month transition layout', () => {
+  it('holds the calendar height through intermediate month responses and ignores empty measurements', async () => {
+    let notifyResize: () => void = () => {}
+    let measuredHeight = 600
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) { notifyResize = callback }
+      observe(target: HTMLElement) {
+        target.getBoundingClientRect = () => ({ height: measuredHeight }) as DOMRect
+      }
+      disconnect() {}
+    })
+    const props = reactive({ ...makeProps(0), isMonthLoading: false })
+    const root = mountCalendar(props)
+    const frame = () => findHostNode(root, node => String(node.props.class).split(' ').includes('calendar-month-swipe__frame'))!
+    notifyResize()
+    await nextTick()
+    expect(frame()?.props.style).toEqual({ height: '600px' })
+
+    props.isMonthLoading = true
+    await nextTick()
+    measuredHeight = 400
+    notifyResize()
+    await nextTick()
+    expect(frame()?.props.style).toEqual({ height: '600px' })
+    measuredHeight = 550
+    notifyResize()
+    props.isMonthLoading = false
+    await nextTick()
+    expect(frame()?.props.style).toEqual({ height: '550px' })
+
+    measuredHeight = 0
+    notifyResize()
+    await nextTick()
+    expect(frame()?.props.style).toEqual({ height: '550px' })
+  })
+
+  it('keeps the D-Day list in the sliding track from the start of a gesture', () => {
+    const mounted = mountHost(createHostWrapper(() => h(DutyCalendarContent, makeProps(0), {
+      default: () => h('div', { 'data-test': 'dday-list' }, 'D-Day'),
+    })))
+    apps.push(mounted.app)
+
+    const track = findHostNode(mounted.root, node => node.props.class === 'calendar-month-swipe__track')!
+    expect(findHostNode(track, node => node.props['data-test'] === 'dday-list')).not.toBeNull()
+  })
 })
 
 describe('calendar derived display data', () => {

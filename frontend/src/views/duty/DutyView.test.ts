@@ -275,15 +275,17 @@ vi.mock('@/components/duty/DutyCalendarContent.vue', () => ({
       calendarDataYear: Number,
       calendarDataMonth: Number,
       isCalendarMonthLoaded: Boolean,
+      isMonthLoading: Boolean,
     },
-    setup(props) {
+    setup(props, { slots }) {
       return () => h('div', {
         'data-test': 'duty-calendar-content',
         'data-current-month': `${props.currentYear}-${props.currentMonth}`,
         'data-calendar-month': `${props.calendarDataYear}-${props.calendarDataMonth}`,
         'data-calendar-loaded': props.isCalendarMonthLoaded,
+        'data-month-loading': props.isMonthLoading,
         'data-day-count': props.days?.length ?? 0,
-      })
+      }, slots.default?.())
     },
   }),
 }))
@@ -562,6 +564,24 @@ describe('DutyView teamless duty guidance', () => {
 })
 
 describe('DutyView quick duty month changes', () => {
+  it('keeps the month height reserved until the aligned schedule response finishes', async () => {
+    mocks.dutyApi.getCalendar.mockImplementation((year: number, month: number) => Promise.resolve(makeCalendarDays(year, month)))
+    const mounted = await mountDutyView()
+    let resolveSchedules!: (value: never[]) => void
+    mocks.scheduleApi.getSchedules.mockReturnValueOnce(new Promise<never[]>(resolve => { resolveSchedules = resolve }))
+    const calendar = () => nodeByDataTest(mounted.root, 'duty-calendar-content')
+
+    triggerHost(nodeByDataTest(mounted.root, 'next-month'), 'onClick')
+    await flush()
+    expect(calendar().props['data-calendar-loaded']).toBe(true)
+    expect(calendar().props['data-month-loading']).toBe(true)
+
+    resolveSchedules([])
+    await flush()
+    expect(calendar().props['data-month-loading']).toBe(false)
+    closeMounted(mounted)
+  })
+
   it('keeps the old calendar and skips aligned data requests when the new calendar fails', async () => {
     const today = new Date()
     const initialYear = today.getFullYear()
@@ -647,11 +667,13 @@ describe('DutyView quick duty month changes', () => {
     resolveFirstTarget(makeCalendarDays(nextYear, nextMonth))
     await flush()
     expect(calendar().props['data-calendar-month']).toBe(`${initialYear}-${initialMonth}`)
+    expect(calendar().props['data-month-loading']).toBe(true)
 
     resolveLatestTarget(makeCalendarDays(followingYear, followingMonth))
     await flush()
     expect(calendar().props['data-calendar-month']).toBe(`${followingYear}-${followingMonth}`)
     expect(calendar().props['data-calendar-loaded']).toBe(true)
+    expect(calendar().props['data-month-loading']).toBe(false)
     triggerHost(nodeByDataTest(mounted.root, 'quick-duty-change'), 'onClick')
     await flush()
     expect(mocks.dutyApi.updateDuty).toHaveBeenCalledWith(1, followingYear, followingMonth, 1, null)
