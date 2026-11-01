@@ -546,13 +546,19 @@ private struct GuestCalendarDayCell: View {
                     span: DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays),
                     spanColor: primaryForeground
                 ) {
-                    scheduleTitleLine(schedule)
-                        .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
-                        .tracking(-0.3)
-                        .lineSpacing(1)
-                        .foregroundStyle(primaryForeground)
-                        .lineLimit(titleLineLimit(schedule))
-                        .truncationMode(.tail)
+                    DPCalendarScheduleTitle(
+                        daysFromStart: schedule.daysFromStart,
+                        totalDays: schedule.totalDays,
+                        counterColor: secondaryForeground
+                    ) {
+                        scheduleTitleLine(schedule)
+                            .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
+                            .tracking(-0.3)
+                            .lineSpacing(1)
+                            .foregroundStyle(primaryForeground)
+                            .lineLimit(2)
+                            .truncationMode(.tail)
+                    }
                 }
             }
         }
@@ -563,12 +569,6 @@ private struct GuestCalendarDayCell: View {
 
     private var cellSchedules: [ScheduleDTO] {
         DPCalendarSpan.orderedForCell(day.schedules, daysFromStart: { $0.daysFromStart }, totalDays: { $0.totalDays })
-    }
-
-    private func titleLineLimit(_ schedule: ScheduleDTO) -> Int {
-        DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays) == nil
-            ? 2
-            : DPCalendarSpan.titleLineLimit
     }
 
     private var primaryForeground: Color {
@@ -588,8 +588,8 @@ private struct GuestCalendarDayCell: View {
         return day.cell.year == today.year && day.cell.month == today.month && day.cell.day == today.day
     }
 
-    /// A narrow tile shows the title alone, as the member calendar does: the time and the
-    /// day counter belong to the day detail.
+    /// A narrow tile shows the title without the time, as the member calendar does; a
+    /// multi-day run's day counter is drawn after it by `DPCalendarScheduleTitle`.
     private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
         var line = Text(verbatim: schedule.content)
         if !schedule.description.isEmpty || !schedule.attachments.isEmpty {

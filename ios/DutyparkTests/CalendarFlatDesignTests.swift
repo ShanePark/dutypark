@@ -120,8 +120,7 @@ struct CalendarFlatDesignTests {
     }
 
     @Test
-    func aMultiDayTitleIsDrawnOnEveryDayOnOneLineAboveAnUnderline() throws {
-        #expect(DPCalendarSpan.titleLineLimit == 1)
+    func aMultiDayTitleIsDrawnOnEveryDayAboveAnUnderline() throws {
         let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
         #expect(!style.contains("showsTitle"), "Every day of a run names the schedule")
         #expect(!style.contains("dpCalendarWeekdayIndex"), "Tiles no longer pass their column to items")
@@ -142,7 +141,46 @@ struct CalendarFlatDesignTests {
         ]
         for cell in cells {
             #expect(cell.contains("DPCalendarSpan.orderedForCell("), "Multi-day schedules lead the cell")
-            #expect(cell.contains("DPCalendarSpan.titleLineLimit"), "A multi-day title keeps to one line")
+            #expect(cell.contains(".lineLimit(2)"), "A multi-day title wraps to two lines like any other")
+            #expect(!cell.contains("titleLineLimit"), "Multi-day and single-day titles share one line limit")
+        }
+        let teamCell = try declaration(
+            named: "private struct TeamCalendarDayCell: View",
+            in: source("Dutypark/Features/Team/TeamView.swift")
+        )
+        #expect(teamCell.contains(".lineLimit(2)"), "Team multi-day titles wrap to two lines too")
+    }
+
+    @Test
+    func aMultiDayTitleEndsWithItsDayCounterInEveryMonthCell() throws {
+        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 2, totalDays: 6) == "2/6")
+        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 6, totalDays: 6) == "6/6")
+        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 1, totalDays: 1) == nil)
+        #expect(DPCalendarSpan.dayCounterText(daysFromStart: nil, totalDays: 3) == nil)
+        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 1, totalDays: nil) == nil)
+
+        let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
+        let title = try declaration(named: "nonisolated struct DPCalendarScheduleTitle<Title: View>: View", in: style)
+        #expect(title.contains("DPCalendarSpan.dayCounterText("))
+        #expect(title.contains(".fixedSize()"), "The counter never truncates; the title gives way")
+        #expect(title.contains(".monospacedDigit()"))
+
+        let cells = [
+            try declaration(
+                named: "private struct CalendarDayCell: View",
+                in: source("Dutypark/Features/Calendar/CalendarView.swift")
+            ),
+            try declaration(
+                named: "private struct GuestCalendarDayCell: View",
+                in: source("Dutypark/Features/Guest/GuestPublicCalendarView.swift")
+            ),
+            try declaration(
+                named: "private struct TeamCalendarDayCell: View",
+                in: source("Dutypark/Features/Team/TeamView.swift")
+            ),
+        ]
+        for cell in cells {
+            #expect(cell.contains("DPCalendarScheduleTitle("), "Every month cell ends a multi-day title with n/m")
         }
     }
 

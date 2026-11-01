@@ -378,8 +378,8 @@ nonisolated struct DPCalendarTodayRing: View {
 /// One item line inside a tile (a schedule or a D-Day marker). Items after the first
 /// are separated by a hairline. A multi-day schedule is named on every day and underlined
 /// by a bar that runs to the tile edges, so the days of one schedule join across the week.
-/// Its title keeps to one line (`DPCalendarSpan.titleLineLimit`), so the bar lands at the
-/// same height in neighbouring tiles.
+/// Its title wraps like any other; the same title wraps the same way in every equal-width
+/// tile, so the bar lands at the same height in neighbouring tiles.
 nonisolated struct DPCalendarItemRow<Content: View>: View {
     let showsRule: Bool
     let rule: Color
@@ -432,9 +432,11 @@ nonisolated struct DPCalendarSpan: Equatable {
         isEnd = daysFromStart == totalDays
     }
 
-    /// A multi-day title keeps to one line so it has the same height on every day and the
-    /// run's bar stays level across the week.
-    static let titleLineLimit = 1
+    /// The "n/m" counter that ends a multi-day title; `nil` for a single-day schedule.
+    static func dayCounterText(daysFromStart: Int?, totalDays: Int?) -> String? {
+        guard let daysFromStart, let totalDays, totalDays > 1 else { return nil }
+        return "\(daysFromStart)/\(totalDays)"
+    }
 
     /// Multi-day items lead a calendar cell so their bars sit in the top rows. Among them
     /// the run that started earlier comes first, then the one that ends later; ties and
@@ -459,6 +461,30 @@ nonisolated struct DPCalendarSpan: Equatable {
             return lhs.offset < rhs.offset
         }
         .map(\.element)
+    }
+}
+
+/// A schedule title in a month tile. A multi-day run ends the line with a muted "n/m"
+/// day counter that never truncates, so a long title gives way to it instead.
+nonisolated struct DPCalendarScheduleTitle<Title: View>: View {
+    let daysFromStart: Int?
+    let totalDays: Int?
+    let counterColor: Color
+    @ViewBuilder var title: () -> Title
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 1) {
+            title()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if let counter = DPCalendarSpan.dayCounterText(daysFromStart: daysFromStart, totalDays: totalDays) {
+                Text(verbatim: counter)
+                    .font(DPFont.bold(size: CalendarTypography.cellMicro, relativeTo: .caption2).monospacedDigit())
+                    .tracking(-0.36)
+                    .foregroundStyle(counterColor)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+        }
     }
 }
 

@@ -492,19 +492,31 @@ function handleDayClick(day: CalendarDay, index: number) {
   border-bottom-right-radius: 2px;
 }
 
-/* Narrow tiles keep a multi-day title to one line so the bar below it lines up
-   across neighbouring days. The joined bar already shows the run, so the day
-   count is dropped. */
+/* On narrow tiles the day counter ends a multi-day title's first line and never
+   truncates. The title wraps to two lines like any other: the same title wraps the
+   same way in every equal-width tile, so the bar below it still lines up. */
 @media (max-width: 639.98px) {
   :slotted(.calendar-item--span .calendar-item__line) {
-    display: block;
+    display: flex;
+    align-items: baseline;
+    gap: 1px;
+  }
+
+  :slotted(.calendar-item--span .calendar-item__text) {
+    display: -webkit-box;
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 
   :slotted(.calendar-item--span .calendar-item__part) {
-    display: none;
+    flex: none;
+    margin-left: 0;
+    font-size: 9px;
+    letter-spacing: -0.04em;
   }
 }
 
@@ -597,13 +609,6 @@ function handleDayClick(day: CalendarDay, index: number) {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     line-clamp: 2;
-  }
-
-  :slotted(.calendar-item--span .calendar-item__text) {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   :slotted(.calendar-item__time) {

@@ -325,8 +325,8 @@ final class CalendarFeatureTests: XCTestCase {
             named: "private struct CalendarDayCell: View",
             in: calendarSource
         )
-        // The narrow month tile shows the title alone, as the mobile web does: the time
-        // and the day counter belong to the day detail.
+        // The narrow month tile shows the title without the time, as the mobile web does;
+        // a multi-day counter is drawn apart by DPCalendarScheduleTitle, not in the title text.
         XCTAssertTrue(calendarDayCell.contains("var line = Text(verbatim: schedule.content)"))
         XCTAssertFalse(calendarDayCell.contains("dayCounter"))
 
@@ -343,8 +343,8 @@ final class CalendarFeatureTests: XCTestCase {
             .deletingLastPathComponent()
             .appending(path: "Dutypark/Features/Guest/GuestPublicCalendarView.swift")
         let guestSource = try String(contentsOf: guestSourceURL, encoding: .utf8)
-        // The guest tile matches the member tile: the title alone, with the time and the
-        // day counter left to the day detail.
+        // The guest tile matches the member tile: the title without the time, and no
+        // counter folded into the title text.
         let guestDayCell = try Self.declaration(
             named: "private struct GuestCalendarDayCell: View",
             in: guestSource

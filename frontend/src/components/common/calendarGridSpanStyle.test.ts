@@ -15,15 +15,16 @@ function ruleBody(block: string, selector: string): string {
   return block.slice(block.indexOf('{', start) + 1, block.indexOf('}', start))
 }
 
-function expectSingleLine(body: string) {
-  expect(body).toContain('display: block')
+function expectTwoLineClamp(body: string) {
+  expect(body).toContain('display: -webkit-box')
   expect(body).toContain('overflow: hidden')
-  expect(body).toContain('text-overflow: ellipsis')
-  expect(body).toContain('white-space: nowrap')
+  expect(body).toContain('-webkit-line-clamp: 2')
+  expect(body).not.toContain('white-space: nowrap')
 }
 
 // Every day of a multi-day schedule shows its title, tags, and one bottom bar,
-// with a one-line title so the bar lines up across neighbouring tiles.
+// with the same two-line title clamp as single-day items: the same title wraps the
+// same way in every equal-width tile, so the bar still lines up across days.
 describe('multi-day schedule styling', () => {
   it('shows the title and tags on every day at every width', () => {
     expect(style).not.toContain('clip-path')
@@ -38,15 +39,21 @@ describe('multi-day schedule styling', () => {
     expect(style).not.toMatch(/calendar-item--span\)::after \{[^}]*top:/)
   })
 
-  it('keeps a multi-day title on one ellipsised line at every width', () => {
-    expectSingleLine(ruleBody(mobileBlock, ':slotted(.calendar-item--span .calendar-item__line)'))
-    expectSingleLine(ruleBody(desktopBlock, ':slotted(.calendar-item--span .calendar-item__text)'))
-    // The desktop rule must follow the two-line clamp of split titles to win the cascade.
-    expect(desktopBlock.indexOf(':slotted(.calendar-item--span .calendar-item__text) {'))
-      .toBeGreaterThan(desktopBlock.indexOf(':slotted(.calendar-item__line--split .calendar-item__text) {'))
+  it('wraps a multi-day title to two lines like any other title', () => {
+    expectTwoLineClamp(ruleBody(mobileBlock, ':slotted(.calendar-item--span .calendar-item__text)'))
+    expectTwoLineClamp(ruleBody(desktopBlock, ':slotted(.calendar-item__line--split .calendar-item__text)'))
+    expect(desktopBlock).not.toContain(':slotted(.calendar-item--span .calendar-item__text)')
   })
 
-  it('keeps the day counter off narrow tiles only', () => {
-    expect(ruleBody(mobileBlock, ':slotted(.calendar-item--span .calendar-item__part)')).toContain('display: none')
+  it('shows the day counter at the end of the title line on narrow tiles', () => {
+    const line = ruleBody(mobileBlock, ':slotted(.calendar-item--span .calendar-item__line)')
+    expect(line).toContain('display: flex')
+    expect(ruleBody(mobileBlock, ':slotted(.calendar-item--span .calendar-item__text)')).toContain('min-width: 0')
+
+    const part = ruleBody(mobileBlock, ':slotted(.calendar-item--span .calendar-item__part)')
+    expect(part).not.toContain('display: none')
+    expect(part).toContain('flex: none')
+    expect(ruleBody(baseBlock, ':slotted(.calendar-item__part)')).toContain('color: var(--calendar-ink-muted)')
+    expect(ruleBody(baseBlock, ':slotted(.calendar-item__part)')).toContain('font-variant-numeric: tabular-nums')
   })
 })

@@ -857,13 +857,17 @@ private struct TeamCalendarDayCell: View {
                     ForEach(Array(TeamCalendarCellSchedules.ordered(schedules).enumerated()), id: \.offset) { index, schedule in
                         let span = DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays)
                         DPCalendarItemRow(showsRule: index > 0, rule: rule, span: span, spanColor: ink) {
-                            Text(verbatim: schedule.content)
-                                .font(DPFont.light(size: 10, relativeTo: .caption2))
-                                .tracking(-0.3)
-                                .foregroundStyle(ink)
-                                // A multi-day schedule keeps to one line so its bar stays level.
-                                .lineLimit(span == nil ? 2 : 1)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            DPCalendarScheduleTitle(
+                                daysFromStart: schedule.daysFromStart,
+                                totalDays: schedule.totalDays,
+                                counterColor: mutedInk
+                            ) {
+                                Text(verbatim: schedule.content)
+                                    .font(DPFont.light(size: 10, relativeTo: .caption2))
+                                    .tracking(-0.3)
+                                    .foregroundStyle(ink)
+                                    .lineLimit(2)
+                            }
                         }
                     }
                 }

@@ -2137,12 +2137,6 @@ private struct CalendarDayCell: View {
         DPCalendarSpan.orderedForCell(day.schedules, daysFromStart: { $0.daysFromStart }, totalDays: { $0.totalDays })
     }
 
-    private func titleLineLimit(_ schedule: ScheduleDTO) -> Int {
-        DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays) == nil
-            ? 2
-            : DPCalendarSpan.titleLineLimit
-    }
-
     private var isOnFill: Bool {
         DPCalendarCellStyle.tone(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth) != .theme
     }
@@ -2193,14 +2187,19 @@ private struct CalendarDayCell: View {
                 if showsPrivateBadge(schedule) {
                     DPCalendarLockBadge(onFill: isOnFill)
                 }
-                scheduleTitleLine(schedule)
-                    .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
-                    .tracking(-0.3)
-                    .lineSpacing(1)
-                    .foregroundStyle(primaryForeground)
-                    .lineLimit(titleLineLimit(schedule))
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                DPCalendarScheduleTitle(
+                    daysFromStart: schedule.daysFromStart,
+                    totalDays: schedule.totalDays,
+                    counterColor: secondaryForeground
+                ) {
+                    scheduleTitleLine(schedule)
+                        .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
+                        .tracking(-0.3)
+                        .lineSpacing(1)
+                        .foregroundStyle(primaryForeground)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                }
             }
 
             if !tags.isEmpty {
@@ -2222,8 +2221,8 @@ private struct CalendarDayCell: View {
         isMyCalendar && !schedule.isTagged && schedule.visibility == .privateAccess
     }
 
-    /// A narrow tile shows the title alone: the time and the day counter belong to the
-    /// day detail, and the joined bar already shows a multi-day run.
+    /// A narrow tile shows the title without the time, which belongs to the day detail;
+    /// a multi-day run's day counter is drawn after it by `DPCalendarScheduleTitle`.
     private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
         var line = Text(verbatim: schedule.content)
         if !schedule.description.isEmpty || !schedule.attachments.isEmpty {
