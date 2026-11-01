@@ -349,7 +349,9 @@ function handleDayClick(day: CalendarDay, index: number) {
 }
 
 .calendar-day-top {
+  container: calendar-day-header / inline-size;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 2px;
@@ -359,6 +361,8 @@ function handleDayClick(day: CalendarDay, index: number) {
 
 .calendar-day-number {
   display: inline-flex;
+  flex: none;
+  white-space: nowrap;
   align-items: center;
   gap: 6px;
   font-size: 13px;
@@ -385,6 +389,7 @@ function handleDayClick(day: CalendarDay, index: number) {
 
 .calendar-day-today-circle {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   width: 19px;
@@ -396,9 +401,10 @@ function handleDayClick(day: CalendarDay, index: number) {
   font-size: 11.5px;
 }
 
-/* A filled pill rather than red text keeps the label legible on any fill. */
+/* A filled pill keeps the optional label legible on any fill. */
 .calendar-day-today-label {
   display: none;
+  white-space: nowrap;
   padding: 3px 6px;
   border-radius: 9999px;
   background: var(--calendar-today);
@@ -522,6 +528,14 @@ function handleDayClick(day: CalendarDay, index: number) {
   border-bottom-right-radius: 2px;
 }
 
+/* Use the tile's available width: the date and full D-Day label can wrap
+   onto separate header lines before either is squeezed or clipped. */
+@container calendar-day-header (min-width: 6rem) {
+  .calendar-day-today-label {
+    display: inline-block;
+  }
+}
+
 @media (min-width: 640px) {
   .calendar-grid {
     --calendar-pad-x: 8px;
@@ -560,10 +574,6 @@ function handleDayClick(day: CalendarDay, index: number) {
     height: 26px;
     margin: -1px 0 0 -3px;
     font-size: 15px;
-  }
-
-  .calendar-day-today-label {
-    display: inline-block;
   }
 
   .calendar-day-holiday {

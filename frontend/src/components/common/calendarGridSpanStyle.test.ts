@@ -70,3 +70,20 @@ describe('multi-day schedule styling', () => {
     expect(part).toContain('font-variant-numeric: tabular-nums')
   })
 })
+
+describe('responsive calendar day headers', () => {
+  it('wraps the full D-Day header while keeping the date and today badge intact', () => {
+    expect(ruleBody(baseBlock, '.calendar-day-top')).toContain('flex-wrap: wrap')
+    expect(ruleBody(baseBlock, '.calendar-day-top')).toContain('container: calendar-day-header / inline-size')
+    expect(ruleBody(baseBlock, '.calendar-day-number')).toContain('flex: none')
+    expect(ruleBody(baseBlock, '.calendar-day-number')).toContain('white-space: nowrap')
+    expect(ruleBody(baseBlock, '.calendar-day-today-circle')).toContain('flex: none')
+  })
+
+  it('shows the optional today word only when the actual header has enough room', () => {
+    expect(ruleBody(baseBlock, '.calendar-day-today-label')).toContain('display: none')
+    expect(desktopBlock).not.toContain('.calendar-day-today-label')
+    expect(style).toContain('@container calendar-day-header (min-width: 6rem)')
+    expect(ruleBody(baseBlock, '.calendar-day-today-label')).toContain('white-space: nowrap')
+  })
+})
