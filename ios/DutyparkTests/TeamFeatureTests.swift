@@ -137,10 +137,12 @@ struct TeamFeatureTests {
         let calendarEnd = try #require(source[calendarStart.lowerBound...].range(of: "private var selectedSchedules: some View"))
         let calendar = source[calendarStart.lowerBound..<calendarEnd.lowerBound]
 
-        #expect(dayCell.contains("DPCalendarDayNumber("))
-        #expect(dayCell.contains("DPCalendarCellStyle.cellBackground("))
-        #expect(dayCell.contains("DPCalendarCellStyle.cellBorder("))
+        // The shared flat tile draws the date number, the duty fill and today's ring.
+        #expect(dayCell.contains("DPCalendarDayTile("))
+        #expect(dayCell.contains("DPCalendarItemRow("))
+        #expect(!dayCell.contains("opacity("))
         #expect(calendar.contains("DPCalendarWeekdayHeaderCell("))
+        #expect(calendar.contains("DPCalendarCellStyle.todayWeekdayIndex("))
 
         // This gray sits between the old team cutoff (0.64) and the general calendar
         // cutoff (127.5/255), where the two calendars used to choose opposite text colors.

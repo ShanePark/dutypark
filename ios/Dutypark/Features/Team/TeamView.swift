@@ -411,25 +411,31 @@ struct TeamView: View {
     }
 
     private var calendar: some View {
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+        let gutter = DPCalendarCellStyle.gutterWidth
+        let columns = Array(repeating: GridItem(.flexible(), spacing: gutter), count: 7)
+        let todayIndex = DPCalendarCellStyle.todayWeekdayIndex(
+            year: viewModel.calendarMonth.year,
+            month: viewModel.calendarMonth.month,
+            today: Date(),
+            calendar: CalendarDateSupport.calendar
+        )
         // The weekday header and the day cells are indexed from zero, so sharing one
         // grid makes the first week collide with the header row in the grid's
         // identity space and render blank. Two grids keep the identities apart.
-        return VStack(spacing: 0) {
+        return VStack(spacing: gutter) {
             LazyVGrid(columns: columns, spacing: 0) {
                 ForEach(Array(TeamLocalization.shortStandaloneWeekdaySymbols().enumerated()), id: \.offset) { index, weekday in
-                    DPCalendarWeekdayHeaderCell(label: weekday, weekdayIndex: index)
+                    DPCalendarWeekdayHeaderCell(label: weekday, weekdayIndex: index, isToday: index == todayIndex)
                 }
             }
             monthBodyPager
         }
-        .background(DPColor.backgroundCard)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .background(DPCalendarCellStyle.gutterColor)
+        .clipShape(RoundedRectangle(cornerRadius: DPCalendarCellStyle.cornerRadius))
         .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.standard)
-                .stroke(DPColor.borderSecondary)
+            RoundedRectangle(cornerRadius: DPCalendarCellStyle.cornerRadius)
+                .stroke(DPCalendarCellStyle.gutterColor, lineWidth: 1)
         }
-        .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
     }
 
     private var monthBodyPager: some View {
@@ -461,7 +467,7 @@ struct TeamView: View {
                     .onChange(of: proxy.size.width) { _, width in calendarWidth = width }
             }
         }
-        .background(DPColor.backgroundCard)
+        .background(DPCalendarCellStyle.gutterColor)
         .clipped()
         .dpHorizontalPan(
             onChanged: followMonthSwipe,
@@ -471,7 +477,10 @@ struct TeamView: View {
     }
 
     private func calendarMonthBody(_ page: TeamCalendarMonthPage, isInteractive: Bool) -> some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: DPCalendarCellStyle.gutterWidth), count: 7),
+            spacing: DPCalendarCellStyle.gutterWidth
+        ) {
                 ForEach(Array(page.visibleIndices), id: \.self) { index in
                     let day = page.days[index]
                     TeamCalendarDayCell(
@@ -492,7 +501,7 @@ struct TeamView: View {
                     }
                 }
         }
-        .background(DPColor.backgroundCard)
+        .background(DPCalendarCellStyle.gutterColor)
         .background {
             GeometryReader { proxy in
                 Color.clear.preference(key: TeamCalendarMonthHeights.self, value: [page.key: proxy.size.height])
@@ -803,52 +812,40 @@ private struct TeamCalendarDayCell: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 1) {
-                DPCalendarDayNumber(
-                    day: day.day,
-                    weekdayIndex: weekdayIndex,
-                    dutyColor: duty?.dutyColor,
-                    hasHoliday: !holidays.isEmpty
-                )
-                ForEach(Array(holidays.enumerated()), id: \.offset) { _, holiday in
-                    Text(verbatim: holiday.dateName)
-                        .font(DPFont.light(size: 9, relativeTo: .caption2))
-                        .foregroundStyle(holiday.isHoliday ? DPCalendarCellStyle.holidayForeground(dutyColor: duty?.dutyColor) : adaptiveMuted)
-                        .lineLimit(1)
-                }
-                ForEach(Array(schedules.prefix(2).enumerated()), id: \.offset) { _, schedule in
-                    VStack(alignment: .leading, spacing: 0) {
-                        Rectangle().fill(adaptiveBorder).frame(height: 1)
-                        Text(verbatim: scheduleLabel(schedule))
-                            .font(DPFont.light(size: 9, relativeTo: .caption2))
-                            .foregroundStyle(adaptiveText)
-                            .lineLimit(2)
+            DPCalendarDayTile(
+                day: day.day,
+                weekdayIndex: weekdayIndex,
+                dutyColor: dutyColor,
+                isCurrentMonth: isCurrentMonth,
+                isToday: isToday,
+                hasHoliday: !holidays.isEmpty,
+                highlight: isSelected ? DPColor.accent : nil
+            ) {
+                EmptyView()
+            } content: {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(holidays.enumerated()), id: \.offset) { _, holiday in
+                        Text(verbatim: holiday.dateName)
+                            .font(DPFont.light(size: 10, relativeTo: .caption2))
+                            .foregroundStyle(holiday.isHoliday
+                                ? DPCalendarCellStyle.holidayForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+                                : mutedInk)
+                            .lineLimit(1)
+                    }
+                    // Every schedule is drawn; the tile grows instead of hiding any behind a count.
+                    ForEach(Array(schedules.enumerated()), id: \.offset) { index, schedule in
+                        let span = DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays)
+                        DPCalendarItemRow(showsRule: index > 0, rule: rule, span: span, spanColor: ink) {
+                            Text(verbatim: schedule.content)
+                                .font(DPFont.light(size: 10, relativeTo: .caption2))
+                                .tracking(-0.3)
+                                .foregroundStyle(ink)
+                                // A multi-day schedule keeps to one line so its bar stays level.
+                                .lineLimit(span == nil ? 2 : 1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
                 }
-                if schedules.count > 2 {
-                    Text(verbatim: "+\(schedules.count - 2)")
-                        .font(DPFont.light(size: 9, relativeTo: .caption2))
-                        .foregroundStyle(adaptiveMuted)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(3)
-            .frame(maxWidth: .infinity, minHeight: 60, alignment: .topLeading)
-            .background(cellBackground)
-            .opacity(day.month == currentMonth ? 1 : 0.45)
-            .overlay {
-                Rectangle()
-                    .stroke(isToday ? DPColor.danger : isSelected ? DPColor.accent : Color.clear, lineWidth: 2)
-            }
-            .overlay(alignment: .trailing) {
-                Rectangle()
-                    .fill(adaptiveBorder)
-                    .frame(width: DPCalendarCellStyle.cellSeparatorWidth)
-            }
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(adaptiveBorder)
-                    .frame(height: DPCalendarCellStyle.cellSeparatorWidth)
             }
         }
         .buttonStyle(.plain)
@@ -856,23 +853,20 @@ private struct TeamCalendarDayCell: View {
     }
 
     private var isToday: Bool {
-        let today = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        let today = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: Date())
         return today.year == day.year && today.month == day.month && today.day == day.day
     }
 
-    private var cellBackground: Color {
-        DPCalendarCellStyle.cellBackground(
-            dutyColor: duty?.dutyColor,
-            isCurrentMonth: day.month == currentMonth
-        )
+    private var dutyColor: String? { duty?.dutyColor }
+    private var isCurrentMonth: Bool { day.month == currentMonth }
+    private var ink: Color {
+        DPCalendarCellStyle.primaryForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
     }
-    private var adaptiveText: Color { DPCalendarCellStyle.primaryForeground(dutyColor: duty?.dutyColor) }
-    private var adaptiveMuted: Color { DPCalendarCellStyle.secondaryForeground(dutyColor: duty?.dutyColor) }
-    private var adaptiveBorder: Color { DPCalendarCellStyle.cellBorder(dutyColor: duty?.dutyColor) }
-
-    private func scheduleLabel(_ schedule: TeamScheduleDTO) -> String {
-        guard let from = schedule.daysFromStart, let total = schedule.totalDays, total > 1 else { return schedule.content }
-        return "\(schedule.content) (\(from)/\(total))"
+    private var mutedInk: Color {
+        DPCalendarCellStyle.secondaryForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+    }
+    private var rule: Color {
+        DPCalendarCellStyle.ruleColor(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
     }
 }
 

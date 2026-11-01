@@ -136,6 +136,26 @@ nonisolated enum DPMemberTagPresentation {
     }
 }
 
+/// Tag colours. A calendar duty fill is the same in light and dark, so a chip drawn on
+/// it uses fixed colours (the web's `rgba(255,255,255,.72)` / `#374151`).
+nonisolated enum DPMemberTagPalette {
+    static let fillBackground = Color(white: 1, opacity: 0.72)
+    static let fillBorder = Color(red: 31 / 255, green: 41 / 255, blue: 55 / 255).opacity(0.14)
+    static let fillForeground = Color(red: 55 / 255, green: 65 / 255, blue: 81 / 255)
+
+    static func background(onCalendarFill: Bool) -> Color {
+        onCalendarFill ? fillBackground : DPColor.backgroundCard
+    }
+
+    static func border(onCalendarFill: Bool) -> Color {
+        onCalendarFill ? fillBorder : DPColor.borderPrimary
+    }
+
+    static func foreground(onCalendarFill: Bool) -> Color {
+        onCalendarFill ? fillForeground : DPColor.textSecondary
+    }
+}
+
 /// A member's photo, circular, falling back to the shared profile asset.
 struct DPMemberAvatar: View {
     let item: DPMemberTagItem
@@ -156,6 +176,8 @@ struct DPMemberAvatar: View {
 struct DPMemberTagChip: View {
     let item: DPMemberTagItem
     var size: DPMemberTagSize = .regular
+    /// On a calendar duty fill the chip keeps fixed colours, identical in light and dark.
+    var onCalendarFill = false
 
     var body: some View {
         HStack(spacing: size.spacing) {
@@ -163,14 +185,14 @@ struct DPMemberTagChip: View {
 
             Text(DPMemberTagPresentation.displayName(item.name, limit: size.nameCharacterLimit))
                 .font(DPFont.light(size: size.fontSize, relativeTo: size.relativeTextStyle))
-                .foregroundStyle(DPColor.textSecondary)
+                .foregroundStyle(DPMemberTagPalette.foreground(onCalendarFill: onCalendarFill))
                 .lineLimit(1)
         }
         .padding(.leading, size.verticalPadding)
         .padding(.trailing, size.horizontalPadding)
         .padding(.vertical, size.verticalPadding)
-        .background(DPColor.backgroundCard, in: Capsule())
-        .overlay { Capsule().stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth) }
+        .background(DPMemberTagPalette.background(onCalendarFill: onCalendarFill), in: Capsule())
+        .overlay { Capsule().stroke(DPMemberTagPalette.border(onCalendarFill: onCalendarFill), lineWidth: DPChrome.borderWidth) }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(item.name)
     }
@@ -245,21 +267,22 @@ struct DPMemberTagChips: View {
     /// How many tags to draw before collapsing the rest into a count. `nil` draws all.
     var limit: Int?
     var alignment: HorizontalAlignment = .leading
+    var onCalendarFill = false
 
     var body: some View {
         DPMemberTagFlow(spacing: size.spacing, alignment: alignment) {
             ForEach(visibleItems) { item in
-                DPMemberTagChip(item: item, size: size)
+                DPMemberTagChip(item: item, size: size, onCalendarFill: onCalendarFill)
             }
 
             if hiddenCount > 0 {
                 Text(verbatim: "+\(hiddenCount)")
                     .font(DPFont.bold(size: size.fontSize, relativeTo: size.relativeTextStyle))
-                    .foregroundStyle(DPColor.textSecondary)
+                    .foregroundStyle(DPMemberTagPalette.foreground(onCalendarFill: onCalendarFill))
                     .padding(.horizontal, size.horizontalPadding)
                     .padding(.vertical, size.verticalPadding + size.avatarDiameter / 2 - size.fontSize / 2)
-                    .background(DPColor.backgroundCard, in: Capsule())
-                    .overlay { Capsule().stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth) }
+                    .background(DPMemberTagPalette.background(onCalendarFill: onCalendarFill), in: Capsule())
+                    .overlay { Capsule().stroke(DPMemberTagPalette.border(onCalendarFill: onCalendarFill), lineWidth: DPChrome.borderWidth) }
                     .accessibilityLabel(Text(verbatim: "+\(hiddenCount)"))
             }
         }

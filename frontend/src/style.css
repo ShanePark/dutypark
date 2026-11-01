@@ -607,17 +607,6 @@ html.dark {
     color: var(--dp-text-secondary);
 }
 
-/* D-Day Cards */
-.dday-card-past {
-    background: linear-gradient(to bottom right, var(--dp-bg-secondary), var(--dp-bg-tertiary));
-    border-color: var(--dp-border-secondary);
-}
-
-.dday-card-future {
-    background: linear-gradient(to bottom right, var(--dp-bg-card), var(--dp-bg-secondary));
-    border-color: var(--dp-border-primary);
-}
-
 /* D-Day Badge Colors */
 .dday-badge-today {
     background: linear-gradient(135deg, var(--dp-danger), var(--dp-danger-hover));

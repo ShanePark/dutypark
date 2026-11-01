@@ -557,7 +557,7 @@ final class CalendarViewModel: ObservableObject {
             profilePhotoVersion: profile.profilePhotoVersion
         )
         let loadedFriends = snapshot.friends
-        let loadedDDays = snapshot.dDays.sorted { $0.date.rawValue < $1.date.rawValue }
+        let loadedDDays = snapshot.dDays.sorted(by: DDayDTO.listOrder)
         let loadedTodoBoard = await cache.loadTodoBoard(accountID: accountID)
         guard isCurrentIdentityLoad(generation, accountID: accountID) else {
             throw CancellationError()
@@ -638,7 +638,7 @@ final class CalendarViewModel: ObservableObject {
                     let account = await cache.loadAccount(memberID: accountID)
                     guard isCurrentMonthRequest(context) else { return }
                     if let account {
-                        dDays = account.dDays.sorted { $0.date.rawValue < $1.date.rawValue }
+                        dDays = account.dDays.sorted(by: DDayDTO.listOrder)
                     }
                 }
             }
@@ -683,7 +683,7 @@ final class CalendarViewModel: ObservableObject {
         guard isCurrentMonthRequest(context) else { return }
         canManage = loadedCanManage
         todoBoard = loadedTodoBoard
-        dDays = loadedDDays.sorted { $0.date.rawValue < $1.date.rawValue }
+        dDays = loadedDDays.sorted(by: DDayDTO.listOrder)
         applyMonth(
             year: context.year,
             month: context.month,
@@ -2304,7 +2304,7 @@ final class CalendarViewModel: ObservableObject {
     private func upsertDDay(_ item: DDayDTO) {
         dDays.removeAll { $0.id == item.id }
         dDays.append(item)
-        dDays.sort { $0.date.rawValue < $1.date.rawValue }
+        dDays.sort(by: DDayDTO.listOrder)
         rebuildDDayDays()
     }
 

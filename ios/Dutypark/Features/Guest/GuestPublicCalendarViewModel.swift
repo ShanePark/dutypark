@@ -145,7 +145,7 @@ final class GuestPublicCalendarViewModel: ObservableObject {
         let duties = try await dutiesResult
         let schedules = try await schedulesResult
         let holidays = try await holidaysResult
-        let loadedDDays = try await dDaysResult.sorted { $0.date.rawValue < $1.date.rawValue }
+        let loadedDDays = try await dDaysResult.sorted(by: DDayDTO.listOrder)
 
         let loadedDays = cells.enumerated().map { index, cell in
             GuestCalendarDay(

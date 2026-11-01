@@ -590,35 +590,23 @@ onMounted(() => {
         :holidays="holidaysByDays"
         :get-duty-color="getDutyColor"
         :selected-day="selectedDay"
-        :use-adaptive-border="true"
         @day-click="selectDay"
       >
-        <template #day-content="{ day, index }">
-          <div v-if="teamSchedules[index]?.length" class="mt-0.5">
+        <template #day-content="{ index }">
+          <div v-if="teamSchedules[index]?.length" class="calendar-items">
             <div
-              v-for="schedule in teamSchedules[index].slice(0, 2)"
+              v-for="schedule in teamSchedules[index]"
               :key="schedule.id"
-              class="text-[10px] sm:text-sm leading-snug px-0.5 border-t-2 border-dashed break-words"
-              :style="{
-                color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)') : 'var(--dp-text-primary)',
-                borderColor: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-border-on-light)' : 'var(--dp-border-on-dark)') : 'var(--dp-border-primary)'
-              }"
+              class="calendar-item"
+              :class="(schedule.totalDays ?? 0) > 1 ? ['calendar-item--span', {
+                'calendar-item--span-start': schedule.daysFromStart === 1,
+                'calendar-item--span-end': schedule.daysFromStart === schedule.totalDays,
+              }] : null"
             >
-              {{ schedule.content }}
-              <span
-                v-if="schedule.totalDays && schedule.totalDays > 1"
-                class="text-[9px] sm:text-xs"
-                :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'var(--dp-text-on-dark-muted)') : 'var(--dp-text-muted)' }"
-              >
-                ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})
-              </span>
-            </div>
-            <div
-              v-if="teamSchedules[index].length > 2"
-              class="text-[10px] font-medium"
-              :style="{ color: getDutyColor(day) ? (isLightColor(getDutyColor(day)) ? 'var(--dp-text-muted)' : 'var(--dp-text-on-dark-soft)') : 'var(--dp-text-muted)' }"
-            >
-              +{{ teamSchedules[index].length - 2 }}
+              <div class="calendar-item__line calendar-item__line--split">
+                <span class="calendar-item__text">{{ schedule.content }}</span>
+                <span v-if="(schedule.totalDays ?? 0) > 1" class="calendar-item__part">{{ schedule.daysFromStart }}/{{ schedule.totalDays }}</span>
+              </div>
             </div>
           </div>
         </template>

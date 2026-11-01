@@ -325,7 +325,10 @@ final class CalendarFeatureTests: XCTestCase {
             named: "private struct CalendarDayCell: View",
             in: calendarSource
         )
-        XCTAssertTrue(calendarDayCell.contains("CalendarVisualLogic.scheduleTitleText("))
+        // The narrow month tile shows the title alone, as the mobile web does: the time
+        // and the day counter belong to the day detail.
+        XCTAssertTrue(calendarDayCell.contains("var line = Text(verbatim: schedule.content)"))
+        XCTAssertFalse(calendarDayCell.contains("dayCounter"))
 
         let dayDetail = try Self.declaration(
             named: "private struct DayDetailView: View",
@@ -542,87 +545,41 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
-    func testCalendarDayCellUsesATopBarForTodayWithoutReplacingDutyOrSelectionIndicators() throws {
+    func testCalendarDayCellUsesTheFlatTileWithATodayRingThatWinsOverSelection() throws {
         let source = try Self.calendarViewSource()
         let dayCell = try Self.declaration(
             named: "private struct CalendarDayCell: View",
             in: source
         )
-        let todayMarker = try Self.declaration(
-            named: "private var todayMarker: some View",
-            in: source
+        let styleURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Dutypark/Components/DPCalendarCellStyle.swift")
+        let style = try String(contentsOf: styleURL, encoding: .utf8)
+        let tile = try Self.declaration(
+            named: "nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View",
+            in: style
         )
 
+        XCTAssertTrue(dayCell.contains("DPCalendarDayTile("), "The month cell should be drawn by the shared flat tile")
         XCTAssertTrue(
-            dayCell.contains(".overlay(alignment: .top)"),
-            "Today should be painted as a separate marker attached to the cell top"
-        )
-        XCTAssertTrue(
-            dayCell.contains("if isToday && !hidesDetails"),
-            "Quick duty editing keeps its own selection indicator without adding the today bar"
+            dayCell.contains("isToday: isToday && !hidesDetails"),
+            "Quick duty editing keeps its own selection indicator without the today ring"
         )
         XCTAssertTrue(
-            todayMarker.contains("Capsule()") && todayMarker.contains(".fill(DPColor.danger)"),
-            "The today marker should be a red horizontal bar"
+            dayCell.contains("return hidesDetails ? DPColor.accent : DPColor.warning"),
+            "Quick duty focus keeps the accent border while a search result is marked in warning"
+        )
+        XCTAssertFalse(dayCell.contains("opacity(0.45)"), "Out-of-month days are faded by colour, not opacity")
+        XCTAssertTrue(
+            tile.contains(".background(DPCalendarCellStyle.cellBackground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth))"),
+            "The duty fill stays the tile's source of truth"
         )
         XCTAssertTrue(
-            todayMarker.contains("width: proxy.size.width * 0.7")
-                && todayMarker.contains("height: 4"),
-            "The today bar should be about 70% of the cell width and 4pt high"
+            tile.contains("if let highlight, !isToday"),
+            "Today's ring replaces the selection border instead of stacking on it"
         )
-        let todayBorder = try Self.declaration(
-            named: "private var todayBorder: some View",
-            in: source
-        )
-        XCTAssertTrue(
-            todayBorder.contains("if isToday && !hidesDetails"),
-            "The today border should follow the existing hidden-details behavior"
-        )
-        XCTAssertTrue(
-            todayBorder.contains("Rectangle().strokeBorder(DPColor.danger, lineWidth: 1)"),
-            "Today should have a thin red border inset inside the cell"
-        )
-        XCTAssertTrue(
-            todayBorder.contains(".allowsHitTesting(false)"),
-            "The decorative today border must not intercept cell interaction"
-        )
-        let focusBorder = try Self.declaration(
-            named: "private var focusBorder: Color",
-            in: source
-        )
-        XCTAssertTrue(
-            focusBorder.contains("highlighted && !(isToday && !hidesDetails)"),
-            "Today's normal calendar cell should use the red today border without a blue focus ring"
-        )
-        let focusOverlay = try XCTUnwrap(
-            dayCell.range(of: ".overlay(Rectangle().strokeBorder(focusBorder, lineWidth: highlighted ? (hidesDetails ? 2 : 1) : 0))"),
-            "The selected/focused border overlay should remain present"
-        )
-        let todayBorderOverlay = try XCTUnwrap(
-            dayCell.range(of: ".overlay { todayBorder }"),
-            "The today border overlay should remain present"
-        )
-        XCTAssertLessThan(
-            focusOverlay.lowerBound,
-            todayBorderOverlay.lowerBound,
-            "The red today border must be painted after the blue selection border so it remains visible"
-        )
-        XCTAssertFalse(
-            todayMarker.contains("Circle().fill(DPColor.accent)"),
-            "The today marker should no longer be a small dot"
-        )
-        XCTAssertTrue(
-            dayCell.contains(".background(cellBackground)"),
-            "The today bar and border must leave the duty background as the cell's source of truth"
-        )
-        XCTAssertTrue(
-            dayCell.contains(".overlay(Rectangle().strokeBorder(focusBorder, lineWidth: highlighted ? (hidesDetails ? 2 : 1) : 0))"),
-            "The selected/focused border remains available for non-today cells"
-        )
-        XCTAssertTrue(
-            dayCell.contains("highlighted ? (hidesDetails ? 2 : 1) : 0"),
-            "Quick duty editing should retain its existing 2pt selection while search focus uses the 1pt inset border"
-        )
+        XCTAssertTrue(tile.contains("DPCalendarTodayRing()"), "Today is marked with the red ring")
     }
 
     func testAMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() throws {
@@ -3067,8 +3024,7 @@ final class CalendarFeatureTests: XCTestCase {
     }
 
     func testCalendarUsesTheSameCompactCellMinimumAsMobileWeb() {
-        XCTAssertEqual(CalendarVisualLogic.compactCellMinimumHeight, 60)
-        XCTAssertEqual(CalendarVisualLogic.maximumSchedulesPerCell, 3)
+        XCTAssertEqual(CalendarVisualLogic.compactCellMinimumHeight, 64)
         XCTAssertEqual(CalendarVisualLogic.maximumTodosPerCell, 2)
     }
 
@@ -3118,8 +3074,8 @@ final class CalendarFeatureTests: XCTestCase {
     }
 
     func testCalendarTypographyMatchesReadableMobileWebScale() {
-        XCTAssertEqual(CalendarTypography.weekday, 14)
-        XCTAssertEqual(CalendarTypography.dayNumber, 12)
+        XCTAssertEqual(CalendarTypography.weekday, 12)
+        XCTAssertEqual(CalendarTypography.dayNumber, 13)
         XCTAssertEqual(CalendarTypography.cellContent, 10)
         XCTAssertEqual(CalendarTypography.cellMicro, 9)
         XCTAssertEqual(CalendarTypography.detailTitle, 16)

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { CalendarCheck, MessageSquareText, CheckSquare } from '@lucide/vue'
+import { Flag, MessageSquareText, CheckSquare } from '@lucide/vue'
 import { isLightColor } from '@/utils/color'
 import { dutyTypeLabel } from '@/utils/dutyAbbreviation'
 import { parseDateOnly } from '@/utils/date'
@@ -94,25 +94,6 @@ const focusedCalendarDay = computed(() => {
 const displayHolidays = computed(() => (props.batchEditMode ? [] : props.holidays))
 const MOBILE_VISIBLE_CALENDAR_TAGS = 3
 
-function getDutyColorAt(index: number): string | null {
-  return props.duties[index]?.dutyColor ?? null
-}
-
-function getMutedTextColor(dutyColor: string | null): string {
-  if (!dutyColor) return 'var(--dp-text-muted)'
-  return isLightColor(dutyColor) ? 'var(--dp-text-muted)' : 'var(--dp-text-on-dark-muted)'
-}
-
-function getPrimaryTextColor(dutyColor: string | null): string {
-  if (!dutyColor) return 'var(--dp-text-primary)'
-  return isLightColor(dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
-}
-
-function getBorderColor(dutyColor: string | null): string {
-  if (!dutyColor) return 'var(--dp-border-primary)'
-  return isLightColor(dutyColor) ? 'var(--dp-border-on-light)' : 'var(--dp-border-on-dark)'
-}
-
 function getOtherDutyTextColor(dutyColor: string | null): string {
   return isLightColor(dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
 }
@@ -167,13 +148,13 @@ function formatScheduleTime(schedule: Schedule) {
     !(schedule.totalDays === 1 && isSameDateTime)
 
   if (showStartTime && showEndTime) {
-    return `(${startHour}:${startMin}~${endHour}:${endMin})`
+    return `${startHour}:${startMin}~${endHour}:${endMin}`
   }
   if (showStartTime) {
-    return `(${startHour}:${startMin})`
+    return `${startHour}:${startMin}`
   }
   if (showEndTime) {
-    return `(~${endHour}:${endMin})`
+    return `~${endHour}:${endMin}`
   }
   return ''
 }
@@ -185,9 +166,9 @@ function hasScheduleDetails(schedule: Schedule) {
 const displayTagMembersBySchedule = computed(() => {
   const bySchedule = new Map<Schedule, ReturnType<typeof buildDisplayTagMembers>>()
   for (let index = 0; index < props.days.length; index++) {
-    // The grid renders up to three schedules per day. Keep identity-based keys
-    // because separate daily occurrences may share an id but carry different data.
-    for (const schedule of props.schedulesByDays[index]?.slice(0, 3) ?? []) {
+    // Keep identity-based keys because separate daily occurrences may share an id
+    // but carry different data.
+    for (const schedule of props.schedulesByDays[index] ?? []) {
       if (bySchedule.has(schedule)) continue
       bySchedule.set(schedule, buildDisplayTagMembers({
         itemKey: schedule.id,
@@ -212,8 +193,6 @@ function getCalendarTagLabel(name: string) {
   return chars.length > 3 ? `${chars.slice(0, 2).join('')}…` : name
 }
 
-const MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT = 10
-const MOBILE_CALENDAR_DDAY_TITLE_LIMIT = 10
 const MOBILE_CALENDAR_TODO_TITLE_LIMIT = 6
 
 function truncateMobileCalendarText(text: string, limit: number) {
@@ -221,15 +200,6 @@ function truncateMobileCalendarText(text: string, limit: number) {
   return chars.length > limit
     ? `${chars.slice(0, limit).join('')}…`
     : text
-}
-
-function getMobileCalendarScheduleTitle(schedule: Schedule) {
-  const title = schedule.contentWithoutTime || schedule.content
-  return truncateMobileCalendarText(title, MOBILE_CALENDAR_SCHEDULE_TITLE_LIMIT)
-}
-
-function getMobileCalendarDDayTitle(dday: LocalDDay) {
-  return truncateMobileCalendarText(dday.title, MOBILE_CALENDAR_DDAY_TITLE_LIMIT)
 }
 
 function getMobileCalendarTodoTitle(todo: TodoDueItem) {
@@ -280,11 +250,11 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
         :is-day-clickable="isDayClickable"
         @day-click="(day, index) => emit('day-click', day, index)"
       >
-        <template #day-header="{ day, index }">
+        <template #day-header="{ day }">
           <span
             v-if="!batchEditMode && calcDDayForDay(day)"
-            class="text-[9px] sm:text-xs"
-            :style="{ color: getMutedTextColor(getDutyColorAt(index)) }"
+            class="calendar-pin-label"
+            :class="{ 'calendar-pin-label--zero': calcDDayForDay(day) === 'D-Day' }"
           >
             {{ calcDDayForDay(day) }}
           </span>
@@ -301,7 +271,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               :aria-label="dutyType.name"
               class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] cursor-pointer"
               :class="{
-                'ring-2 ring-dp-text-primary font-bold shadow-sm':
+                'ring-2 ring-(--calendar-ink) font-bold shadow-sm':
                   (duties[index]?.dutyType === dutyType.name) ||
                   (!duties[index]?.dutyType && dutyType.id === null),
                 'hover:opacity-80': true,
@@ -316,7 +286,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
             </button>
           </div>
 
-          <div v-if="!batchEditMode" class="mt-0.5">
+          <div v-if="!batchEditMode" class="calendar-items">
             <div v-if="otherDuties.length > 0" class="mb-1 grid gap-0.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-1">
               <div
                 v-for="otherDuty in otherDuties"
@@ -350,32 +320,31 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               :aria-label="dday.title"
               :title="dday.title"
               @click.stop="emit('dday-click', dday)"
-              class="calendar-action-bubble calendar-action-bubble--dday mt-0.5 text-[10px] sm:text-xs"
+              class="calendar-item calendar-dday-marker"
             >
-              <span class="calendar-action-bubble__text">
-                <CalendarCheck class="calendar-action-bubble__icon" />
-                <span class="sm:hidden">{{ getMobileCalendarDDayTitle(dday) }}</span>
-                <span class="hidden sm:inline">{{ dday.title }}</span>
-              </span>
+              <span class="calendar-item__line"><Flag class="calendar-dday-marker__icon" aria-hidden="true" />{{ dday.title }}</span>
             </button>
 
             <div
-              v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
+              v-for="schedule in schedulesByDays[index]"
               :key="schedule.id"
-              class="px-0.5 text-[10px] leading-snug border-t-2 border-dashed sm:text-sm"
-              :style="{ color: getPrimaryTextColor(getDutyColorAt(index)), borderColor: getBorderColor(getDutyColorAt(index)) }"
+              class="calendar-item"
+              :class="schedule.totalDays > 1 ? ['calendar-item--span', {
+                'calendar-item--span-start': schedule.daysFromStart === 1,
+                'calendar-item--span-end': schedule.daysFromStart === schedule.totalDays,
+              }] : null"
             >
-              <div class="calendar-inline-text sm:whitespace-normal sm:break-words">
-                <VisibilityHintIcon
+              <div class="calendar-item__line calendar-item__line--split">
+                <span class="calendar-item__text"><VisibilityHintIcon
                   v-if="shouldShowPrivateVisibility(schedule)"
                   :visibility="schedule.visibility"
                   size="xs"
-                  class="mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
-                /><span class="sm:hidden">{{ getMobileCalendarScheduleTitle(schedule) }}</span><span class="hidden sm:inline">{{ schedule.contentWithoutTime || schedule.content }}</span><span v-if="formatScheduleTime(schedule)" class="calendar-schedule-time"> {{ formatScheduleTime(schedule) }}</span><template v-if="schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+                  class="calendar-visibility-hint mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
+                /><span v-if="formatScheduleTime(schedule)" class="calendar-item__time">{{ formatScheduleTime(schedule) }}</span>{{ schedule.contentWithoutTime || schedule.content }}<MessageSquareText
                   v-if="hasScheduleDetails(schedule)"
-                  class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
-                  :style="{ color: getPrimaryTextColor(getDutyColorAt(index)) }"
-                />
+                  class="calendar-schedule-detail-icon"
+                /></span>
+                <span v-if="schedule.totalDays > 1" class="calendar-item__part">{{ schedule.daysFromStart }}/{{ schedule.totalDays }}</span>
               </div>
               <div
                 v-if="getDisplayTagMembers(schedule).length"
@@ -424,13 +393,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                 </span>
               </div>
             </div>
-            <div
-              v-if="(schedulesByDays[index]?.length ?? 0) > 3"
-              class="text-[10px] font-medium"
-              :style="{ color: getMutedTextColor(getDutyColorAt(index)) }"
-            >
-              +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
-            </div>
 
             <template v-if="isMyCalendar && todosDueByDays[index]?.length">
               <button
@@ -452,8 +414,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               </button>
               <div
                 v-if="todosDueByDays[index].length > 2"
-                class="text-[10px] font-medium"
-                :style="{ color: 'var(--dp-text-muted)' }"
+                class="calendar-todo-overflow text-[10px] font-medium"
               >
                 +{{ todosDueByDays[index].length - 2 }}
               </div>
@@ -498,21 +459,102 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   }
 }
 
-.calendar-inline-text {
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.calendar-schedule-time {
-  margin-left: 0.3em;
-  opacity: 0.75;
+.calendar-pin-label {
+  flex: none;
+  color: var(--calendar-ink-muted);
+  font-size: 8px;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
-/* Mobile cells are already 10px, so only the wider layout shrinks the time. */
+.calendar-pin-label--zero {
+  color: var(--calendar-ink);
+  font-weight: 700;
+}
+
+.calendar-schedule-detail-icon {
+  display: inline;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-left: 0.125rem;
+  vertical-align: -1px;
+}
+
+.calendar-item.calendar-dday-marker {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--calendar-ink);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: left;
+  appearance: none;
+  cursor: pointer;
+}
+
+.calendar-item + .calendar-item.calendar-dday-marker {
+  border-top: 1px solid var(--calendar-rule);
+}
+
+.calendar-item.calendar-dday-marker::before {
+  content: none;
+}
+
+.calendar-dday-marker__icon {
+  display: inline;
+  width: 8px;
+  height: 8px;
+  margin-right: 1px;
+  vertical-align: -0.5px;
+  fill: currentColor;
+}
+
+.calendar-dday-marker:disabled {
+  cursor: default;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .calendar-dday-marker:not(:disabled):hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+.calendar-dday-marker:focus-visible,
+.calendar-action-bubble:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
 @media (min-width: 640px) {
-  .calendar-schedule-time {
-    font-size: 0.82em;
+  .calendar-pin-label {
+    font-size: 10.5px;
+    letter-spacing: -0.01em;
+  }
+
+  .calendar-schedule-detail-icon {
+    width: 0.75rem;
+    height: 0.75rem;
+    vertical-align: -2px;
+  }
+
+  .calendar-item.calendar-dday-marker {
+    padding-left: 0;
+    font-size: 12px;
+  }
+
+  .calendar-item + .calendar-item.calendar-dday-marker {
+    border-top: 0;
+  }
+
+  .calendar-dday-marker__icon {
+    width: 11px;
+    height: 11px;
+    margin-right: 3px;
+    vertical-align: -1px;
   }
 }
 
@@ -522,7 +564,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   min-height: 1.35rem;
   padding: 0.14rem 0.35rem;
   border: 1px solid transparent;
-  border-radius: 0.5rem;
+  border-radius: 4px;
   box-sizing: border-box;
   appearance: none;
   line-height: 1.2;
@@ -534,10 +576,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 .calendar-action-bubble:hover {
   transform: translateY(-1px);
   box-shadow: var(--dp-shadow-sm);
-}
-
-.calendar-action-bubble:focus-visible {
-  outline: none;
 }
 
 .calendar-action-bubble__icon {
@@ -554,16 +592,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
-}
-
-.calendar-action-bubble--dday {
-  background-color: var(--dp-success-bg);
-  border-color: var(--dp-success-border);
-  color: var(--dp-success-hover);
-}
-
-.calendar-action-bubble--dday:hover {
-  background-color: color-mix(in srgb, var(--dp-success-bg) 82%, var(--dp-success-border));
 }
 
 .calendar-action-bubble--todo {
@@ -678,6 +706,68 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   border-width: 1px;
   width: 0.58rem;
   height: 0.58rem;
+}
+
+/* Duty fills are identical in light and dark, so everything drawn on them uses
+   fixed colours; theme tokens above apply only to empty (no-duty) tiles.
+   The ancestor tile class comes from CalendarGrid, hence the unscoped prefix. */
+.calendar-day--on-light .schedule-tag,
+.calendar-day--on-dark .schedule-tag {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(31, 41, 55, 0.14);
+  color: #374151;
+}
+
+.calendar-day--on-light .calendar-items :deep(.schedule-tag-avatar.profile-avatar),
+.calendar-day--on-dark .calendar-items :deep(.schedule-tag-avatar.profile-avatar),
+.calendar-day--on-light .calendar-items :deep(.other-duty-chip__avatar.profile-avatar),
+.calendar-day--on-dark .calendar-items :deep(.other-duty-chip__avatar.profile-avatar) {
+  border-color: rgba(255, 255, 255, 0.9);
+  background-color: #e5e7eb;
+}
+
+.calendar-day--on-light .calendar-items :deep(.calendar-visibility-hint .visibility-hint-button--xs),
+.calendar-day--on-dark .calendar-items :deep(.calendar-visibility-hint .visibility-hint-button--xs) {
+  border-color: color-mix(in srgb, var(--visibility-hint-accent) 30%, #ffffff);
+  background-color: color-mix(in srgb, var(--visibility-hint-accent) 10%, #ffffff);
+}
+
+.calendar-day--on-light .calendar-items :deep(.calendar-visibility-hint .visibility-hint-button--xs:hover),
+.calendar-day--on-dark .calendar-items :deep(.calendar-visibility-hint .visibility-hint-button--xs:hover) {
+  background-color: color-mix(in srgb, var(--visibility-hint-accent) 20%, #ffffff);
+}
+
+.calendar-day--on-light .calendar-action-bubble--todo,
+.calendar-day--on-dark .calendar-action-bubble--todo {
+  background-color: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.calendar-day--on-light .calendar-action-bubble--progress,
+.calendar-day--on-dark .calendar-action-bubble--progress {
+  background-color: #fffbeb;
+  border-color: #fcd34d;
+  color: #b45309;
+}
+
+.calendar-day--on-light .calendar-action-bubble:hover,
+.calendar-day--on-dark .calendar-action-bubble:hover {
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.12);
+}
+
+.calendar-day--on-light .calendar-action-bubble--todo:hover,
+.calendar-day--on-dark .calendar-action-bubble--todo:hover {
+  background-color: #dbeafe;
+}
+
+.calendar-day--on-light .calendar-action-bubble--progress:hover,
+.calendar-day--on-dark .calendar-action-bubble--progress:hover {
+  background-color: #fef3c7;
+}
+
+.calendar-todo-overflow {
+  color: var(--calendar-ink-muted);
 }
 
 @media (min-width: 640px) {

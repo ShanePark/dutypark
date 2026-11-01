@@ -301,7 +301,7 @@ final class CalendarMonthSwipeTests: XCTestCase {
             let pageWidth = try XCTUnwrap(state.frames["page-1"]).width
             XCTAssertTrue(restingY.isFinite)
             XCTAssertGreaterThan(restingY, sourceHeight)
-            XCTAssertEqual(sourceHeight, CGFloat(sourceRows) * 60, accuracy: 0.5)
+            XCTAssertEqual(sourceHeight, calendarFixtureBodyHeight(rows: sourceRows, rowHeight: 60), accuracy: 0.5)
 
             // Reverse the finger and let the neighbour's taller schedules arrive
             // before cancellation. Neither event should move the D-Day cards.
@@ -309,7 +309,11 @@ final class CalendarMonthSwipeTests: XCTestCase {
                 state.progress = progress
                 state.targetRowHeight = rowHeight
                 render()
-                XCTAssertEqual(try XCTUnwrap(state.frames["page-2"]).height, rowHeight * CGFloat(targetRows), accuracy: 0.5)
+                XCTAssertEqual(
+                    try XCTUnwrap(state.frames["page-2"]).height,
+                    calendarFixtureBodyHeight(rows: targetRows, rowHeight: rowHeight),
+                    accuracy: 0.5
+                )
                 let currentDDay = try XCTUnwrap(state.frames["dday"])
                 let nextDDay = try XCTUnwrap(state.frames["dday-2"])
                 XCTAssertEqual(currentDDay.minX, restingX - pageWidth * progress, accuracy: 0.5)
@@ -337,7 +341,7 @@ final class CalendarMonthSwipeTests: XCTestCase {
 
             state.didCommit = true
             render()
-            let finalHeight = CGFloat(targetRows) * 74
+            let finalHeight = calendarFixtureBodyHeight(rows: targetRows, rowHeight: 74)
             XCTAssertEqual(try XCTUnwrap(state.frames["dday"]).minY, restingY + finalHeight - sourceHeight, accuracy: 0.5)
         }
     }
@@ -404,8 +408,8 @@ final class CalendarMonthSwipeTests: XCTestCase {
         let stripDeclaration = source[stripStart.lowerBound..<layoutStart.lowerBound]
 
         XCTAssertTrue(gridDeclaration.contains("calendarWeekdayHeader\n            monthBodyPager"))
-        XCTAssertTrue(headerDeclaration.contains("CalendarWeekdayStrip()"))
-        XCTAssertFalse(pagerDeclaration.contains("CalendarWeekdayStrip()"))
+        XCTAssertTrue(headerDeclaration.contains("CalendarWeekdayStrip("))
+        XCTAssertFalse(pagerDeclaration.contains("CalendarWeekdayStrip("))
         XCTAssertTrue(stripDeclaration.contains("DPCalendarWeekdayHeaderCell"))
         XCTAssertTrue(trackDeclaration.contains("HStack(spacing: 0)"))
         XCTAssertTrue(trackDeclaration.contains(".frame(width: width, height: height, alignment: .topLeading)"))
@@ -444,11 +448,13 @@ final class CalendarMonthSwipeTests: XCTestCase {
             XCTAssertEqual(currentPage.minX, header.minX, accuracy: 0.5)
 
             let firstCell = try XCTUnwrap(frames["cell-1-0-\(Int(screenWidth))"])
-            let columnWidth = gridWidth / 7
+            // Seven tiles share the width left after the six gutters between them.
+            let gutter = DPCalendarCellStyle.gutterWidth
+            let columnWidth = (gridWidth - 6 * gutter) / 7
             for column in 0..<7 {
                 let cell = try XCTUnwrap(frames["cell-1-\(column)-\(Int(screenWidth))"])
                 XCTAssertEqual(cell.width, columnWidth, accuracy: 0.5)
-                XCTAssertEqual(cell.minX, firstCell.minX + CGFloat(column) * columnWidth, accuracy: 0.5)
+                XCTAssertEqual(cell.minX, firstCell.minX + CGFloat(column) * (columnWidth + gutter), accuracy: 0.5)
                 XCTAssertGreaterThanOrEqual(cell.minX, viewport.minX - 0.5)
                 XCTAssertLessThanOrEqual(cell.maxX, viewport.maxX + 0.5)
             }
@@ -552,6 +558,11 @@ private struct CalendarMonthLayoutFramesPreferenceKey: PreferenceKey {
 }
 
 @MainActor
+/// A month body's height: its rows plus the gutters between them.
+private func calendarFixtureBodyHeight(rows: Int, rowHeight: CGFloat) -> CGFloat {
+    CGFloat(rows) * rowHeight + CGFloat(max(rows - 1, 0)) * DPCalendarCellStyle.gutterWidth
+}
+
 private struct CalendarMonthLayoutFixture: View {
     @State private var pageWidth: CGFloat
 
@@ -633,7 +644,7 @@ private struct CalendarMonthHeightFixture: View {
         self.state = state
         self.sourceRows = sourceRows
         self.targetRows = targetRows
-        viewport = CalendarMonthBodyViewport(sourceHeight: CGFloat(sourceRows) * 60)
+        viewport = CalendarMonthBodyViewport(sourceHeight: calendarFixtureBodyHeight(rows: sourceRows, rowHeight: 60))
     }
 
     var body: some View {

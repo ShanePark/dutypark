@@ -6,10 +6,10 @@ import { getCalendarGridSlice } from '@/utils/calendarGrid'
 import type { CalendarDay, LocalDDay, Schedule } from '@/views/duty/dutyViewTypes'
 
 vi.mock('@/i18n', () => ({ getCurrentLocale: () => 'ko' }))
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'ko' } }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'ko' }, t: (key: string) => key }) }))
 vi.mock('@lucide/vue', () => {
   const icon = defineComponent({ setup: () => () => h('span') })
-  return { CalendarCheck: icon, MessageSquareText: icon, CheckSquare: icon }
+  return { Flag: icon, MessageSquareText: icon, CheckSquare: icon }
 })
 vi.mock('@/components/common/ProfileAvatar.vue', () => ({
   default: defineComponent({
@@ -83,11 +83,11 @@ function mountCalendar(props: CalendarProps) {
 }
 
 function ddayButtons(root: HostNode) {
-  return findHostNodes(root, node => node.type === 'button' && String(node.props.class).includes('calendar-action-bubble--dday'))
+  return findHostNodes(root, node => node.type === 'button' && String(node.props.class).includes('calendar-dday-marker'))
 }
 
 function calendarDayCells(root: HostNode) {
-  return findHostNodes(root, node => String(node.props.class).includes('min-h-[60px]'))
+  return findHostNodes(root, node => String(node.props.class ?? '').split(' ').includes('calendar-day'))
 }
 
 function batchDutyButtons(root: HostNode) {
@@ -212,16 +212,16 @@ describe('calendar derived display data', () => {
     expect(ddayButtons(root)[0]!.props.disabled).toBe(false)
   })
 
-  it('parses each D-Day once and builds tags only for visible schedules', () => {
+  it('parses each D-Day once and shows every schedule of a day', () => {
     const props = makeProps()
     const root = mountCalendar(props)
 
     expect(ddayButtons(root)).toHaveLength(visibleDDayCount(props))
     expect(props.dDays).toHaveLength(100)
     expect(parseDateOnly).toHaveBeenCalledTimes(props.dDays.length)
-    expect(buildDisplayTagMembers).toHaveBeenCalledTimes(42 * 3)
-    expect(hostText(root)).not.toContain('Schedule 0-3')
-    expect(hostText(root)).toContain('+1')
+    expect(buildDisplayTagMembers).toHaveBeenCalledTimes(42 * 4)
+    expect(hostText(root)).toContain('Schedule 0-3')
+    expect(hostText(root)).toContain('Schedule 34-3')
   })
 
   it('keeps derived data cached when highlighting another day', async () => {
@@ -278,7 +278,7 @@ describe('calendar derived display data', () => {
     expect(buildDisplayTagMembers).toHaveBeenCalledTimes(2)
     expect(tagNames(root)).toContain('Different')
     expect(tagNames(root)).not.toContain('Viewer')
-    expect(hostText(root)).toContain('(2/3)')
+    expect(hostText(root)).toContain('2/3')
 
     props.schedulesByDays[0]![0]!.tags![1]!.name = 'Renamed'
     props.schedulesByDays[0]![0]!.taggedByMember!.profilePhotoVersion = 2
@@ -337,7 +337,7 @@ it.skipIf(!process.env.DUTYPARK_PERFORMANCE_BENCHMARK)('measures calendar mount 
   console.log(JSON.stringify({
     benchmark: 'calendar-rendering', days: 42, dDays: props.dDays.length,
     outputSha256: createHash('sha256').update(expectedText).digest('hex'),
-    schedulesPerDay: 4, visibleSchedulesPerDay: 3,
+    schedulesPerDay: 4, visibleSchedulesPerDay: 4,
     mountDateParses, mountTagBuilds, highlightDateParses, highlightTagBuilds,
     mountSamplesMs: mountSamples, mountMedianMs: mountSamples[4],
     highlightSamplesMs: highlightSamples, highlightMedianMs: highlightSamples[4],

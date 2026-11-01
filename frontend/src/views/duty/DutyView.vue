@@ -32,6 +32,7 @@ import { reportApi } from '@/api/report'
 import { blockApi } from '@/api/block'
 import type { ReportSubmission, ReportTarget } from '@/types/report'
 import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TaggableFriend, Todo as TodoDto, TodoStatus } from '@/types'
+import { compareDDays } from '@/utils/ddaySort'
 import type { LocalTodo, DutyType, Schedule, LocalDDay, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
 
 import { useAuthStore } from '@/stores/auth'
@@ -208,11 +209,8 @@ async function loadTodos() {
   }
 }
 
-// Sort D-Days by date ascending (same as backend: OrderByDate)
 function sortDDays() {
-  dDays.value.sort((a, b) => {
-    return a.date.localeCompare(b.date)
-  })
+  dDays.value.sort(compareDDays)
 }
 
 // Load D-Days from API
