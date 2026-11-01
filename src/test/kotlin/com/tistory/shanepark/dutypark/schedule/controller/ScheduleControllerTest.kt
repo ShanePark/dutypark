@@ -448,6 +448,51 @@ class ScheduleControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `public schedules expose only display fields and compatibility constants for private tagged members`() {
+        val owner = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        val tagged = memberRepository.findById(TestData.member2.id!!).orElseThrow()
+        owner.calendarVisibility = Visibility.PUBLIC
+        tagged.calendarVisibility = Visibility.PRIVATE
+        tagged.profilePhotoPath = "test-profile-photo.jpg"
+        tagged.profilePhotoVersion = 17
+        val schedule = Schedule(
+            member = owner,
+            content = "Public schedule with private tag",
+            startDateTime = fixedDateTime,
+            endDateTime = fixedDateTime.plusHours(1),
+            visibility = Visibility.PUBLIC,
+        )
+        schedule.addTag(tagged)
+        scheduleRepository.saveAndFlush(schedule)
+        val result = mockMvc.perform(
+            get("/api/schedules")
+                .param("memberId", owner.id.toString())
+                .param("year", "2025")
+                .param("month", "1")
+        )
+            .andExpect(status().isOk)
+            .andDo(MockMvcResultHandlers.print())
+            .andReturn()
+        val returnedSchedule = objectMapper.readTree(result.response.contentAsString)
+            .flatMap { it.toList() }
+            .single { it["id"].asText() == schedule.id.toString() }
+        val tag = returnedSchedule["tags"][0]
+        assertThat(tag.has("email")).isFalse()
+        assertThat(tag.has("kakaoId")).isFalse()
+        assertThat(tag.has("naverId")).isFalse()
+        assertThat(tag.has("appleId")).isFalse()
+        assertThat(tag.size()).isEqualTo(8)
+        assertThat(tag["id"].asLong()).isEqualTo(tagged.id)
+        assertThat(tag["name"].asText()).isEqualTo(tagged.name)
+        assertThat(tag["teamId"].asLong()).isEqualTo(tagged.team!!.id)
+        assertThat(tag["team"].asText()).isEqualTo(tagged.team!!.name)
+        assertThat(tag["hasProfilePhoto"].asBoolean()).isTrue()
+        assertThat(tag["profilePhotoVersion"].asLong()).isEqualTo(17)
+        assertThat(tag["hasPassword"].asBoolean()).isFalse()
+        assertThat(tag["calendarVisibility"].asText()).isEqualTo("PRIVATE")
+    }
+
+    @Test
     fun `getSchedules returns empty when not visible`() {
         val member = TestData.member
         val other = TestData.member2

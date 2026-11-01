@@ -1,6 +1,9 @@
 package com.tistory.shanepark.dutypark.schedule.domain.dto
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.TestUtils
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import org.assertj.core.api.Assertions.assertThat
@@ -9,6 +12,31 @@ import java.time.LocalDateTime
 
 class ScheduleDtoTest {
     val member = Member(name = "name", email = "email", password = "pass")
+
+    @Test
+    fun `schedule tags conceal account settings behind fixed legacy compatibility fields`() {
+        val tagged = Member(name = "Tagged", email = "private@example.com", password = "password")
+        tagged.calendarVisibility = Visibility.PUBLIC
+        tagged.team = Team("Team")
+        tagged.profilePhotoPath = "profile.jpg"
+        tagged.profilePhotoVersion = 9
+        val dateTime = LocalDateTime.of(2025, 1, 15, 12, 0)
+        val schedule = Schedule(member = member, content = "schedule", startDateTime = dateTime, endDateTime = dateTime)
+        schedule.addTag(tagged)
+        val mapper = TestUtils.jsr310JsonMapper()
+        val json = mapper.readTree(mapper.writeValueAsString(ScheduleDto.of(CalendarView(2025, 1), schedule).single()))
+        val tag = json["tags"][0]
+        assertThat(tag["hasPassword"].asBoolean()).isFalse()
+        assertThat(tag["calendarVisibility"].asText()).isEqualTo("PRIVATE")
+        assertThat(tag.has("email")).isFalse()
+        assertThat(tag.has("kakaoId")).isFalse()
+        assertThat(tag.has("naverId")).isFalse()
+        assertThat(tag.has("appleId")).isFalse()
+        assertThat(tag["name"].asText()).isEqualTo("Tagged")
+        assertThat(tag["team"].asText()).isEqualTo("Team")
+        assertThat(tag["hasProfilePhoto"].asBoolean()).isTrue()
+        assertThat(tag["profilePhotoVersion"].asLong()).isEqualTo(9)
+    }
 
     @Test
     fun `Long day Schedule on same month`() {

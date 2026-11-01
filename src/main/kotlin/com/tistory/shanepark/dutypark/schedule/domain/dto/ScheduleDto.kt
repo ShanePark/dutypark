@@ -2,9 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.domain.dto
 
 import com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
-import com.tistory.shanepark.dutypark.member.domain.dto.toMemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
@@ -27,7 +25,7 @@ data class ScheduleDto(
     val isTagged: Boolean,
     val owner: String,
     val taggedByMember: MemberPreviewDto? = null,
-    val tags: List<MemberDto> = listOf(),
+    val tags: List<ScheduleTagMemberDto> = listOf(),
     val visibility: Visibility? = null,
     val dateToCompare: LocalDate,
     val attachments: List<AttachmentDto> = listOf(),
@@ -60,7 +58,7 @@ data class ScheduleDto(
         fun of(calendarView: CalendarView, schedule: Schedule, isTagged: Boolean = false): List<ScheduleDto> {
             val startDate = schedule.startDateTime.toLocalDate()
             val endDate = schedule.endDateTime.toLocalDate()
-            val tags = schedule.tags.map { t -> t.member.toMemberDto() }
+            val tags = schedule.tags.map { t -> t.member.toScheduleTagMemberDto() }
 
             return calendarView.validDays(startDate = startDate, endDate = endDate)
                 .map {
