@@ -268,6 +268,20 @@ describe('calendar derived display data', () => {
     expect(ddayButtons(root).map(node => node.props.title)).toEqual(['Second', 'Normalized'])
   })
 
+  it('shows every due todo of a day without an overflow count', () => {
+    const props = makeProps(0)
+    props.schedulesByDays = []
+    props.todosDueByDays = []
+    props.todosDueByDays[2] = Array.from({ length: 4 }, (_, index) => ({
+      id: `todo-${index}`, title: `Todo ${index}`, status: 'TODO' as const,
+    }))
+    const root = mountCalendar(props)
+    const todoButtons = findHostNodes(root, node => node.type === 'button' && String(node.props.class).includes('calendar-action-bubble'))
+    expect(todoButtons.map(node => node.props.title)).toEqual(['Todo 0', 'Todo 1', 'Todo 2', 'Todo 3'])
+    expect(findHostNode(root, node => String(node.props.class ?? '').includes('calendar-todo-overflow'))).toBeNull()
+    expect(hostText(root)).not.toContain('+2')
+  })
+
   it('refreshes nested tag data and the viewed member without mixing same-id schedule occurrences', async () => {
     const props = reactive(makeProps(0))
     const shared = makeSchedule('shared')

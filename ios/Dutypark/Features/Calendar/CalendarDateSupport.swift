@@ -200,8 +200,6 @@ nonisolated enum CalendarVisualLogic {
     }
 
     static let compactCellMinimumHeight: CGFloat = DPCalendarCellStyle.cellMinimumHeight
-    /// Every schedule of a day is drawn and the tile grows; only to-dos are capped.
-    static let maximumTodosPerCell = 2
     /// A to-do bubble in a narrow tile keeps this many characters, as on the mobile web.
     static let cellTodoTitleLimit = 6
     /// A cell can show three faces beside a schedule before the row stops reading as

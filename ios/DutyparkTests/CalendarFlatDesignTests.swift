@@ -119,6 +119,84 @@ struct CalendarFlatDesignTests {
         #expect(end?.isStart == false && end?.isEnd == true)
     }
 
+    @Test
+    func aMultiDayTitleIsDrawnOnlyWhereTheRunStartsOrReentersAWeekRow() throws {
+        let first = try #require(DPCalendarSpan(daysFromStart: 1, totalDays: 5))
+        let middle = try #require(DPCalendarSpan(daysFromStart: 3, totalDays: 5))
+        let last = try #require(DPCalendarSpan(daysFromStart: 5, totalDays: 5))
+
+        #expect(first.showsTitle(weekdayIndex: 4))
+        #expect(!middle.showsTitle(weekdayIndex: 6))
+        #expect(!last.showsTitle(weekdayIndex: 1))
+        // A run that continues into the next week names itself again on Sunday.
+        #expect(middle.showsTitle(weekdayIndex: 0))
+        #expect(last.showsTitle(weekdayIndex: 0))
+        #expect(DPCalendarSpan.titleLineLimit == 2)
+    }
+
+    @Test
+    func aSelectionRingWinsOverTodaysRing() {
+        #expect(DPCalendarTileRing(isToday: true, hasHighlight: true) == .highlight)
+        #expect(DPCalendarTileRing(isToday: true, hasHighlight: false) == .today)
+        #expect(DPCalendarTileRing(isToday: false, hasHighlight: true) == .highlight)
+        #expect(DPCalendarTileRing(isToday: false, hasHighlight: false) == .none)
+    }
+
+    @Test
+    func theDayCellShowsEveryDueTodo() throws {
+        let cell = try declaration(
+            named: "private struct CalendarDayCell: View",
+            in: source("Dutypark/Features/Calendar/CalendarView.swift")
+        )
+        #expect(cell.contains("ForEach(day.todos, id: \\.id)"))
+        #expect(!cell.contains("maximumTodosPerCell"), "Due todos are no longer capped behind a count")
+    }
+
+    @Test
+    func theGuestCalendarUsesTheFlatGridAndDDayList() throws {
+        let guest = try source("Dutypark/Features/Guest/GuestPublicCalendarView.swift")
+        let cell = try declaration(named: "private struct GuestCalendarDayCell: View", in: guest)
+        #expect(cell.contains("DPCalendarDayTile("))
+        #expect(cell.contains("DPCalendarItemRow("))
+        #expect(cell.contains("DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays)"))
+        #expect(!cell.contains("prefix("), "Every schedule and D-Day is drawn")
+        #expect(!cell.contains("opacity("), "Out-of-month days are faded by colour, not opacity")
+
+        let grid = try declaration(named: "private var calendarGrid: some View", in: guest)
+        #expect(grid.contains("DPCalendarWeekdayRow("))
+        #expect(grid.contains("DPCalendarCellStyle.todayWeekdayIndex("))
+        #expect(grid.contains("CalendarMonthCellGrid(items: visibleCalendarDays)"))
+        #expect(grid.contains(".background(DPCalendarCellStyle.gutterColor)"))
+
+        let dDays = try declaration(named: "private var dDaySection: some View", in: guest)
+        #expect(dDays.contains("DDayRow("))
+        #expect(dDays.contains("canPin: false"), "A guest cannot pin another member's D-Day")
+        #expect(!dDays.contains("LazyVGrid("))
+    }
+
+    private func source(_ path: String) throws -> String {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: path)
+        return try String(contentsOf: url, encoding: .utf8)
+    }
+
+    private func declaration(named signature: String, in source: String) throws -> String {
+        let start = try #require(source.range(of: signature), "\(signature) is no longer declared").lowerBound
+        var depth = 0
+        var index = start
+        while index < source.endIndex {
+            if source[index] == "{" { depth += 1 }
+            if source[index] == "}" {
+                depth -= 1
+                if depth == 0 { return String(source[start...index]) }
+            }
+            index = source.index(after: index)
+        }
+        return String(source[start...])
+    }
+
     private func rgba(_ color: Color, _ style: UIUserInterfaceStyle) -> [Int] {
         let resolved = UIColor(color).resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0

@@ -294,7 +294,8 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
     let isCurrentMonth: Bool
     let isToday: Bool
     var hasHoliday = false
-    /// A border for a highlighted or focused day; today's ring always wins over it.
+    /// A border for a selected, highlighted or focused day. It wins over today's ring;
+    /// today stays recognisable by the red date circle.
     var highlight: Color?
     @ViewBuilder var accessory: () -> Accessory
     @ViewBuilder var content: () -> Content
@@ -316,6 +317,7 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
             .frame(minHeight: 18)
             .padding(.bottom, 2)
             content()
+                .environment(\.dpCalendarWeekdayIndex, weekdayIndex)
             Spacer(minLength: 0)
         }
         .padding(.top, 4)
@@ -324,22 +326,52 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
         .frame(maxWidth: .infinity, minHeight: DPCalendarCellStyle.cellMinimumHeight, alignment: .topLeading)
         .background(DPCalendarCellStyle.cellBackground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth))
         .overlay {
-            if let highlight, !isToday {
-                Rectangle().strokeBorder(highlight, lineWidth: 2)
-                    .allowsHitTesting(false)
-            }
-        }
-        .overlay {
-            if isToday {
+            switch ring {
+            case .highlight:
+                if let highlight {
+                    Rectangle().strokeBorder(highlight, lineWidth: 2)
+                        .allowsHitTesting(false)
+                }
+            case .today:
                 DPCalendarTodayRing()
+            case .none:
+                EmptyView()
             }
         }
         // Today's ring reaches over the gutter, so it must sit above its neighbours.
-        .zIndex(isToday ? 2 : highlight == nil ? 0 : 1)
+        .zIndex(ring == .today ? 2 : ring == .highlight ? 1 : 0)
+    }
+
+    private var ring: DPCalendarTileRing {
+        DPCalendarTileRing(isToday: isToday, hasHighlight: highlight != nil)
     }
 }
 
-/// Today wins over every other tile state: a red ring over the gutter with a thin
+/// The one ring a tile draws. A selection border wins over today's ring, so a selected
+/// today still reads as selected; the red date circle keeps marking today.
+nonisolated enum DPCalendarTileRing: Equatable {
+    case none
+    case today
+    case highlight
+
+    init(isToday: Bool, hasHighlight: Bool) {
+        self = hasHighlight ? .highlight : isToday ? .today : .none
+    }
+}
+
+/// The weekday column (0 = Sunday) of the tile an item is drawn in.
+private nonisolated struct DPCalendarWeekdayIndexKey: EnvironmentKey {
+    static let defaultValue: Int? = nil
+}
+
+extension EnvironmentValues {
+    nonisolated var dpCalendarWeekdayIndex: Int? {
+        get { self[DPCalendarWeekdayIndexKey.self] }
+        set { self[DPCalendarWeekdayIndexKey.self] = newValue }
+    }
+}
+
+/// Today's marker on an unselected tile: a red ring over the gutter with a thin
 /// white inner line that keeps it legible on any fill.
 nonisolated struct DPCalendarTodayRing: View {
     var body: some View {
@@ -357,40 +389,71 @@ nonisolated struct DPCalendarTodayRing: View {
 }
 
 /// One item line inside a tile (a schedule or a D-Day marker). Items after the first
-/// are separated by a hairline, and a multi-day schedule draws a bar that runs to the
-/// tile edges so the days of one schedule join across the week.
+/// are separated by a hairline. A multi-day schedule draws a bar at the top of the item
+/// that runs to the tile edges, so the days of one schedule join across the week at the
+/// same height; its title sits below the bar only where the run starts or enters a new
+/// week row, and the other days show the bar alone.
 nonisolated struct DPCalendarItemRow<Content: View>: View {
     let showsRule: Bool
     let rule: Color
     var span: DPCalendarSpan?
     var spanColor: Color = .clear
     @ViewBuilder var content: () -> Content
+    @Environment(\.dpCalendarWeekdayIndex) private var weekdayIndex
 
     var body: some View {
-        content()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 2)
-            .padding(.bottom, span == nil ? 0 : 3)
-            .overlay(alignment: .top) {
-                if showsRule {
-                    Rectangle().fill(rule).frame(height: 1)
-                }
+        VStack(alignment: .leading, spacing: 2) {
+            if let span {
+                spanBar(span)
             }
-            .overlay(alignment: .bottom) {
-                if let span {
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: span.isStart ? 2 : 0,
-                        bottomLeadingRadius: span.isStart ? 2 : 0,
-                        bottomTrailingRadius: span.isEnd ? 2 : 0,
-                        topTrailingRadius: span.isEnd ? 2 : 0
-                    )
-                    .fill(spanColor)
-                    .frame(height: 2.5)
-                    .padding(.leading, span.isStart ? 0 : -DPCalendarCellStyle.cellHorizontalPadding)
-                    .padding(.trailing, span.isEnd ? 0 : -DPCalendarCellStyle.cellHorizontalPadding)
-                    .accessibilityHidden(true)
-                }
+            if showsTitle {
+                content()
+                    .transformEnvironment(\.lineLimit) { limit in
+                        if span != nil { limit = DPCalendarSpan.titleLineLimit }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 2)
+        .overlay(alignment: .top) {
+            if showsRule {
+                Rectangle().fill(rule).frame(height: 1)
+            }
+        }
+        .modifier(DPCalendarHiddenTitleAccessibility(isHidden: !showsTitle, title: content))
+    }
+
+    private var showsTitle: Bool {
+        span?.showsTitle(weekdayIndex: weekdayIndex) ?? true
+    }
+
+    private func spanBar(_ span: DPCalendarSpan) -> some View {
+        UnevenRoundedRectangle(
+            topLeadingRadius: span.isStart ? 2 : 0,
+            bottomLeadingRadius: span.isStart ? 2 : 0,
+            bottomTrailingRadius: span.isEnd ? 2 : 0,
+            topTrailingRadius: span.isEnd ? 2 : 0
+        )
+        .fill(spanColor)
+        .frame(height: 2.5)
+        .padding(.leading, span.isStart ? 0 : -DPCalendarCellStyle.cellHorizontalPadding)
+        .padding(.trailing, span.isEnd ? 0 : -DPCalendarCellStyle.cellHorizontalPadding)
+        .accessibilityHidden(true)
+    }
+}
+
+/// A continuation day draws only the bar, but VoiceOver still reads the schedule's title there.
+private nonisolated struct DPCalendarHiddenTitleAccessibility<Title: View>: ViewModifier {
+    let isHidden: Bool
+    let title: () -> Title
+
+    func body(content: Content) -> some View {
+        if isHidden {
+            content.accessibilityRepresentation { title() }
+        } else {
+            content
+        }
     }
 }
 
@@ -405,6 +468,16 @@ nonisolated struct DPCalendarSpan: Equatable {
         isStart = daysFromStart == 1
         isEnd = daysFromStart == totalDays
     }
+
+    /// A title on every day of a run repeated itself across the week, so it is drawn where
+    /// the run starts and again on Sunday (column 0) when it continues into the next week
+    /// row. Outside a tile the column is unknown and the title is kept.
+    func showsTitle(weekdayIndex: Int?) -> Bool {
+        isStart || (weekdayIndex ?? 0) == 0
+    }
+
+    /// Where a title is drawn it may wrap, since the neighbouring days no longer repeat it.
+    static let titleLineLimit = 2
 }
 
 /// The small private-schedule badge drawn before a title. On a duty fill its colours

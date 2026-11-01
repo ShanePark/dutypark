@@ -348,7 +348,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               </div>
               <div
                 v-if="getDisplayTagMembers(schedule).length"
-                class="mt-px flex flex-wrap justify-end gap-px sm:hidden"
+                class="calendar-item__tags mt-px flex flex-wrap justify-end gap-px sm:hidden"
               >
                 <span
                   v-for="tag in getMobileCalendarTagMembers(schedule)"
@@ -396,7 +396,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 
             <template v-if="isMyCalendar && todosDueByDays[index]?.length">
               <button
-                v-for="todo in todosDueByDays[index].slice(0, 2)"
+                v-for="todo in todosDueByDays[index]"
                 :key="'due-' + todo.id"
                 type="button"
                 :disabled="!isCalendarMonthLoaded"
@@ -412,12 +412,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                   <span class="hidden sm:inline">{{ todo.title }}</span>
                 </span>
               </button>
-              <div
-                v-if="todosDueByDays[index].length > 2"
-                class="calendar-todo-overflow text-[10px] font-medium"
-              >
-                +{{ todosDueByDays[index].length - 2 }}
-              </div>
             </template>
           </div>
         </template>
@@ -764,10 +758,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 .calendar-day--on-light .calendar-action-bubble--progress:hover,
 .calendar-day--on-dark .calendar-action-bubble--progress:hover {
   background-color: #fef3c7;
-}
-
-.calendar-todo-overflow {
-  color: var(--calendar-ink-muted);
 }
 
 @media (min-width: 640px) {

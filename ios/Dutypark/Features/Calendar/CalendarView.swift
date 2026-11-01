@@ -1254,8 +1254,13 @@ struct CalendarView: View {
         .accessibilityHidden(!isInteractive)
     }
 
+    /// Starts a swipe on another member's already-fetched neighbouring month when
+    /// it is ready; otherwise date-only cells keep the neutral no-duty surface.
     private func placeholderMonthPage(for key: OfflineMonthKey) -> CalendarMonthPage {
-        CalendarMonthPage(
+        if let days = model.readyMonthPreview(year: key.year, month: key.month) {
+            return CalendarMonthPage(key: key, days: days)
+        }
+        return CalendarMonthPage(
             key: key,
             days: CalendarDateSupport.placeholderCells(year: key.year, month: key.month).map {
                 CalendarDayContent(
@@ -2071,14 +2076,15 @@ private struct CalendarDayCell: View {
                         Button(item.title) { openDDay(item) }
                     }
                 }
-                ForEach(day.todos.prefix(CalendarVisualLogic.maximumTodosPerCell), id: \.id) { todo in
+                ForEach(day.todos, id: \.id) { todo in
                     Button(todo.title) { openTodo(todo) }
                 }
             }
         }
     }
 
-    // Every schedule of the day is drawn: the tile grows instead of hiding any behind a count.
+    // Every schedule and due to-do of the day is drawn: the tile grows instead of hiding
+    // any behind a count.
     private var details: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(day.holidays.enumerated()), id: \.offset) { _, holiday in
@@ -2113,18 +2119,13 @@ private struct CalendarDayCell: View {
                     scheduleItem(schedule)
                 }
             }
-            ForEach(day.todos.prefix(CalendarVisualLogic.maximumTodosPerCell), id: \.id) { todo in
+            ForEach(day.todos, id: \.id) { todo in
                 Button { openTodo(todo) } label: {
                     todoBubble(todo)
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 2)
                 .accessibilityIdentifier("calendar.day.todo.\(todo.id)")
-            }
-            if day.todos.count > CalendarVisualLogic.maximumTodosPerCell {
-                Text(verbatim: "+\(day.todos.count - CalendarVisualLogic.maximumTodosPerCell)")
-                    .font(DPFont.bold(size: CalendarTypography.cellContent, relativeTo: .caption2))
-                    .foregroundStyle(secondaryForeground)
             }
         }
     }
@@ -2176,7 +2177,6 @@ private struct CalendarDayCell: View {
 
     private func scheduleItem(_ schedule: ScheduleDTO) -> some View {
         let tags = ScheduleTagDisplayPolicy.displayTags(for: schedule, calendarMemberID: calendarMemberID)
-        let isSpan = schedule.totalDays > 1
         return VStack(alignment: .leading, spacing: 1) {
             HStack(alignment: .top, spacing: 2) {
                 if showsPrivateBadge(schedule) {
@@ -2187,8 +2187,7 @@ private struct CalendarDayCell: View {
                     .tracking(-0.3)
                     .lineSpacing(1)
                     .foregroundStyle(primaryForeground)
-                    // A multi-day schedule keeps to one line so its bar stays level across the week.
-                    .lineLimit(isSpan ? 1 : 2)
+                    .lineLimit(2)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -4558,48 +4557,27 @@ private struct DDayDeleteConfirmationModal: View {
     }
 }
 
-private struct DDayRow: View {
+/// One row of the flat D-Day list, shared by member and guest calendars. Without
+/// `open` the row is read-only and is not offered as a button.
+struct DDayRow: View {
     let item: DDayDTO
     let isPinned: Bool
     let showsRule: Bool
     let canPin: Bool
-    let open: () -> Void
+    let open: (() -> Void)?
     let togglePin: () -> Void
 
     var body: some View {
         HStack(spacing: 0) {
-            Button(action: open) {
-                HStack(alignment: .center, spacing: 6) {
-                    Text(verbatim: DDayListPresentation.label(calc: item.calc))
-                        .font(DPFont.bold(size: 15, relativeTo: .subheadline))
-                        .monospacedDigit()
-                        .foregroundStyle(valueColor)
-                        .lineLimit(1)
-                        .frame(width: 60, alignment: .leading)
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 6) {
-                            lockSlot
-                            Text(verbatim: item.title)
-                                .font(DPFont.bold(size: 14, relativeTo: .subheadline))
-                                .foregroundStyle(state == .past ? DPColor.textSecondary : DPColor.textPrimary)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                        Text(verbatim: DDayListPresentation.dateText(item.date, locale: CalendarLocalization.selectedLocale))
-                            .font(DPFont.light(size: 12, relativeTo: .caption))
-                            .monospacedDigit()
-                            .foregroundStyle(DPColor.textMuted)
-                            .lineLimit(1)
-                            .padding(.leading, 19)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.leading, 14)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+            if let open {
+                Button(action: open) { rowContent }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("calendar.dday.row.\(item.id)")
+            } else {
+                rowContent
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("calendar.dday.row.\(item.id)")
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("calendar.dday.row.\(item.id)")
 
             if canPin {
                 Button(action: togglePin) {
@@ -4636,6 +4614,37 @@ private struct DDayRow: View {
                     .accessibilityHidden(true)
             }
         }
+    }
+
+    private var rowContent: some View {
+        HStack(alignment: .center, spacing: 6) {
+            Text(verbatim: DDayListPresentation.label(calc: item.calc))
+                .font(DPFont.bold(size: 15, relativeTo: .subheadline))
+                .monospacedDigit()
+                .foregroundStyle(valueColor)
+                .lineLimit(1)
+                .frame(width: 60, alignment: .leading)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    lockSlot
+                    Text(verbatim: item.title)
+                        .font(DPFont.bold(size: 14, relativeTo: .subheadline))
+                        .foregroundStyle(state == .past ? DPColor.textSecondary : DPColor.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                Text(verbatim: DDayListPresentation.dateText(item.date, locale: CalendarLocalization.selectedLocale))
+                    .font(DPFont.light(size: 12, relativeTo: .caption))
+                    .monospacedDigit()
+                    .foregroundStyle(DPColor.textMuted)
+                    .lineLimit(1)
+                    .padding(.leading, 19)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.leading, 14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 
     private var state: DDayListPresentation.State {

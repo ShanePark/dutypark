@@ -88,6 +88,12 @@ function isSelected(day: CalendarDay): boolean {
   )
 }
 
+// The selection border wins over today's border; today stays recognisable by
+// its filled date circle and label.
+function hasSelectionBorder(day: CalendarDay): boolean {
+  return !props.focusedDay && (isHighlighted(day) || isSelected(day))
+}
+
 function isFocused(day: CalendarDay): boolean {
   if (!props.focusedDay) return false
   return (
@@ -187,6 +193,7 @@ function handleDayClick(day: CalendarDay, index: number) {
         clickable && isDayClickable(day, getSourceIndex(idx)) ? 'cursor-pointer calendar-day-hoverable' : '',
         {
           'calendar-day--outside': !isCurrentMonth(day),
+          'calendar-day--week-start': idx % 7 === 0,
           'calendar-day--today': isToday(day),
           'calendar-day--highlighted': !focusedDay && isHighlighted(day),
           'highlight-pulse-glow': !focusedDay && isHighlighted(day),
@@ -196,7 +203,11 @@ function handleDayClick(day: CalendarDay, index: number) {
       ]"
       :style="getDayStyle(day)"
     >
-      <span v-if="isToday(day)" class="calendar-day-today-border" aria-hidden="true" />
+      <span
+        v-if="isToday(day) && !hasSelectionBorder(day)"
+        class="calendar-day-today-border"
+        aria-hidden="true"
+      />
       <span
         v-if="!focusedDay && isHighlighted(day)"
         class="calendar-day-highlight-border"
@@ -331,8 +342,8 @@ function handleDayClick(day: CalendarDay, index: number) {
   font-weight: 600;
 }
 
-/* Today wins over every other cell state: a ring over the gutter, a filled
-   date circle, and (on wider screens) a label. */
+/* Today: a ring over the gutter (unless the day is selected), a filled date
+   circle, and (on wider screens) a label. */
 .calendar-day-today-border {
   position: absolute;
   inset: -2px;
@@ -482,15 +493,44 @@ function handleDayClick(day: CalendarDay, index: number) {
   border-bottom-right-radius: 2px;
 }
 
-/* Narrow tiles keep a multi-day schedule on one line so its bar stays level
-   across the week. The day count would leave the title only a couple of
-   characters, and the joined bar already shows the run, so it is dropped. */
+/* Narrow tiles name a multi-day schedule only on its first day and at the
+   start of each later week row; the other days show just the joined bar. The
+   bar sits above the title so a two-line title cannot push it out of line
+   with its neighbours. The joined bar already shows the run, so the day count
+   is dropped. */
 @media (max-width: 639.98px) {
-  :slotted(.calendar-item--span .calendar-item__line) {
-    display: block;
+  :slotted(.calendar-item--span) {
+    padding-top: 6px;
+    padding-bottom: 2px;
+  }
+
+  :slotted(.calendar-item--span)::after {
+    top: 2px;
+    bottom: auto;
+  }
+
+  :slotted(.calendar-item--span:not(.calendar-item--span-start) .calendar-item__line) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+
+  :slotted(.calendar-item--span:not(.calendar-item--span-start) .calendar-item__tags) {
+    display: none;
+  }
+
+  .calendar-day--week-start :slotted(.calendar-item--span .calendar-item__line) {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: hidden;
+    clip-path: none;
+  }
+
+  .calendar-day--week-start :slotted(.calendar-item--span .calendar-item__tags) {
+    display: flex;
   }
 
   :slotted(.calendar-item--span .calendar-item__part) {

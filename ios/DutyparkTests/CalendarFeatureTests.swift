@@ -343,7 +343,14 @@ final class CalendarFeatureTests: XCTestCase {
             .deletingLastPathComponent()
             .appending(path: "Dutypark/Features/Guest/GuestPublicCalendarView.swift")
         let guestSource = try String(contentsOf: guestSourceURL, encoding: .utf8)
-        XCTAssertTrue(guestSource.contains("CalendarVisualLogic.scheduleTitleText("))
+        // The guest tile matches the member tile: the title alone, with the time and the
+        // day counter left to the day detail.
+        let guestDayCell = try Self.declaration(
+            named: "private struct GuestCalendarDayCell: View",
+            in: guestSource
+        )
+        XCTAssertTrue(guestDayCell.contains("var line = Text(verbatim: schedule.content)"))
+        XCTAssertFalse(guestDayCell.contains("dayCounter"))
         let guestDetail = try Self.declaration(
             named: "private struct GuestCalendarDayDetailView: View",
             in: guestSource
@@ -545,7 +552,7 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
-    func testCalendarDayCellUsesTheFlatTileWithATodayRingThatWinsOverSelection() throws {
+    func testCalendarDayCellUsesTheFlatTileWithASelectionRingThatWinsOverToday() throws {
         let source = try Self.calendarViewSource()
         let dayCell = try Self.declaration(
             named: "private struct CalendarDayCell: View",
@@ -576,10 +583,10 @@ final class CalendarFeatureTests: XCTestCase {
             "The duty fill stays the tile's source of truth"
         )
         XCTAssertTrue(
-            tile.contains("if let highlight, !isToday"),
-            "Today's ring replaces the selection border instead of stacking on it"
+            tile.contains("DPCalendarTileRing(isToday: isToday, hasHighlight: highlight != nil)"),
+            "The tile draws one ring, and a selection border replaces today's ring instead of stacking on it"
         )
-        XCTAssertTrue(tile.contains("DPCalendarTodayRing()"), "Today is marked with the red ring")
+        XCTAssertTrue(tile.contains("DPCalendarTodayRing()"), "An unselected today is marked with the red ring")
     }
 
     func testAMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() throws {
@@ -3025,7 +3032,6 @@ final class CalendarFeatureTests: XCTestCase {
 
     func testCalendarUsesTheSameCompactCellMinimumAsMobileWeb() {
         XCTAssertEqual(CalendarVisualLogic.compactCellMinimumHeight, 64)
-        XCTAssertEqual(CalendarVisualLogic.maximumTodosPerCell, 2)
     }
 
     func testCalendarOmitsEmptyDutyToolbarAboveMonthGrid() {

@@ -27,8 +27,4 @@ describe('duty calendar in-cell styling', () => {
     const body = ruleBody(selector)
     expect(body).not.toContain('var(--dp-')
   })
-
-  it('keeps the todo overflow count on the cell ink', () => {
-    expect(dutyCalendarContent).not.toContain("color: 'var(--dp-text-muted)'")
-  })
 })
