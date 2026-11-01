@@ -1,10 +1,12 @@
 package com.tistory.shanepark.dutypark.security.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
-import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
@@ -240,7 +242,7 @@ class AuthServiceTest {
         whenever(passwordEncoder.matches("wrong-password-secret", "stored-password-hash")).thenReturn(false)
 
         val logs = captureAuthLogs {
-            assertThrows<AuthException> {
+            assertThrows<BadRequestException> {
                 authService.changePassword(
                     PasswordChangeDto(
                         memberId = 1L,

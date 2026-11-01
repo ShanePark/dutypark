@@ -354,7 +354,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
                 .header("Authorization", "Bearer $accessToken")
-        ).andExpect(status().isUnauthorized)
+        ).andExpect(status().isForbidden)
     }
 
     @Test

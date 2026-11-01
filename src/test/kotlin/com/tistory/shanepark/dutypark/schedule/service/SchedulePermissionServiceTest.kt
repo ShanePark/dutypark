@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -64,7 +65,7 @@ class SchedulePermissionServiceTest {
         val loginMember = LoginMember(id = 1L, name = "other")
         whenever(memberService.isManager(eq(loginMember), eq(member))).thenReturn(false)
 
-        val exception = assertThrows<AuthException> {
+        val exception = assertThrows<ForbiddenException> {
             service.checkScheduleWriteAuthority(loginMember, member)
         }
 
@@ -90,7 +91,7 @@ class SchedulePermissionServiceTest {
         whenever(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         whenever(friendService.availableScheduleVisibilities(eq(loginMember), eq(member))).thenReturn(setOf(Visibility.PUBLIC))
 
-        val exception = assertThrows<AuthException> {
+        val exception = assertThrows<ForbiddenException> {
             service.checkScheduleReadAuthority(loginMember, schedule.id)
         }
 

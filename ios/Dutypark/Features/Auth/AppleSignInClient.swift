@@ -330,7 +330,8 @@ final class AppleSignInClient {
                 nonce: attempt.rawNonce,
                 purpose: purpose
             ),
-            retryingAfterUnauthorized: purpose != .login
+            retryingAfterUnauthorized: purpose != .login,
+            preservingSessionOnUnauthorizedCodes: purpose == .login ? [] : ["auth.apple.credential.invalid"]
         )
     }
 

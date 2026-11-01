@@ -309,6 +309,7 @@ nonisolated final class APIClient: Sendable {
         body: Body,
         headers: [String: String] = [:],
         retryingAfterUnauthorized: Bool = true,
+        preservingSessionOnUnauthorizedCodes: Set<String> = [],
         authenticationFailureHandling: AuthenticationFailureHandling = .awaitCompletion
     ) async throws -> Response {
         let bodyData: Data
@@ -324,6 +325,7 @@ nonisolated final class APIClient: Sendable {
             body: bodyData,
             headers: headers,
             retryingAfterUnauthorized: retryingAfterUnauthorized,
+            preservingSessionOnUnauthorizedCodes: preservingSessionOnUnauthorizedCodes,
             authenticationFailureHandling: authenticationFailureHandling
         )
         do {
@@ -363,6 +365,7 @@ nonisolated final class APIClient: Sendable {
         body: Data? = nil,
         headers: [String: String] = [:],
         retryingAfterUnauthorized: Bool = true,
+        preservingSessionOnUnauthorizedCodes: Set<String> = [],
         authenticationFailureHandling: AuthenticationFailureHandling = .awaitCompletion
     ) async throws -> Data {
         let authenticationSnapshot = await authenticationMode.requestSnapshot
@@ -378,7 +381,8 @@ nonisolated final class APIClient: Sendable {
             authenticationCookies: authenticationSnapshot.cookies
         )
 
-        if response.statusCode == 401, retryingAfterUnauthorized {
+        if response.statusCode == 401, retryingAfterUnauthorized,
+           !preservesSession(response, data: data, codes: preservingSessionOnUnauthorizedCodes) {
             if await authenticationMode.allowsRefresh {
                 do {
                     try await refreshGate.run(ifGenerationIs: observedRefreshGeneration) { [self] in
@@ -417,7 +421,8 @@ nonisolated final class APIClient: Sendable {
                     authenticationSession: retrySnapshot.session,
                     authenticationCookies: retrySnapshot.cookies
                 )
-                if retryResponse.statusCode == 401 {
+                if retryResponse.statusCode == 401,
+                   !preservesSession(retryResponse, data: retryData, codes: preservingSessionOnUnauthorizedCodes) {
                     await handleAuthenticationFailure(
                         authenticationFailureHandling,
                         context: authenticationSnapshot.session
@@ -590,6 +595,14 @@ nonisolated final class APIClient: Sendable {
             }
             throw APIError.server(status: response.statusCode, code: responseBody?.code)
         }
+    }
+
+    private func preservesSession(_ response: HTTPURLResponse, data: Data, codes: Set<String>) -> Bool {
+        guard response.statusCode == 401, !codes.isEmpty,
+              let rejection = try? JSONDecoder().decode(ErrorResponse.self, from: data)
+        else { return false }
+        // A failed secondary credential must not invalidate the signed-in account.
+        return codes.contains(rejection.code)
     }
 
     private func decode<Response: Decodable>(

@@ -256,6 +256,89 @@ final class AppleSignInClientTests: XCTestCase {
     }
 
     @MainActor
+    func testSecondaryAppleCredentialRejectionKeepsTheExistingSessionForLinkAndReauthentication() async throws {
+        for purpose in [AppleSignInPurpose.link, .deleteAccount] {
+            let recorder = AppleRequestRecorder()
+            recorder.linkStatus = 401
+            recorder.deleteStatus = 401
+            recorder.linkResponse = #"{"code":"auth.apple.credential.invalid"}"#
+            recorder.deleteResponse = recorder.linkResponse
+            AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+            let api = makeClient()
+            let failures = AppleAuthenticationFailureCounter()
+            await api.setAuthenticationFailureHandler { await failures.increment() }
+            let authorizer = AppleAuthorizerStub()
+            let client = AppleSignInClient(client: api, authorizer: authorizer)
+
+            do {
+                if purpose == .link { try await client.link() }
+                else { _ = try await client.reauthenticateForAccountDeletion() }
+                XCTFail("Expected the Apple credential rejection")
+            } catch {
+                XCTAssertEqual(error as? APIError, .server(status: 401, code: "auth.apple.credential.invalid"))
+            }
+
+            let failureCount = await failures.value
+            XCTAssertEqual(failureCount, 0)
+            XCTAssertEqual(recorder.requests.compactMap(\.url?.path), ["/api/auth/mobile/oauth/apple/exchange"])
+            XCTAssertEqual(authorizer.requests.count, 1)
+        }
+    }
+
+    @MainActor
+    func testAppleCredentialRejectionAfterSuccessfulRefreshDoesNotEndTheSession() async throws {
+        let recorder = AppleRequestRecorder(challengeFirstLink: true)
+        recorder.linkStatus = 401
+        recorder.linkResponse = #"{"code":"auth.apple.credential.invalid"}"#
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        let api = makeClient()
+        let failures = AppleAuthenticationFailureCounter()
+        await api.setAuthenticationFailureHandler { await failures.increment() }
+        let client = AppleSignInClient(client: api, authorizer: AppleAuthorizerStub())
+
+        do {
+            try await client.link()
+            XCTFail("Expected the retried Apple credential rejection")
+        } catch {
+            XCTAssertEqual(error as? APIError, .server(status: 401, code: "auth.apple.credential.invalid"))
+        }
+
+        let failureCount = await failures.value
+        XCTAssertEqual(failureCount, 0)
+        XCTAssertEqual(recorder.requests.compactMap(\.url?.path), [
+            "/api/auth/mobile/oauth/apple/exchange", "/api/auth/refresh", "/api/auth/mobile/oauth/apple/exchange",
+        ])
+    }
+
+    @MainActor
+    func testAppleLinkStillEndsTheSessionForRealOrUnknownAuthenticationRejections() async throws {
+        for code in ["auth.required", "auth.unauthorized", "auth.account.inactive", "auth.token.memberNotFound",
+                     "auth.apple.unknown", "auth.apple.credential.invalid.extra"] {
+            let recorder = AppleRequestRecorder()
+            recorder.linkStatus = 401
+            recorder.linkResponse = "{\"code\":\"\(code)\"}"
+            AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+            let api = makeClient()
+            let failures = AppleAuthenticationFailureCounter()
+            await api.setAuthenticationFailureHandler { await failures.increment() }
+            let client = AppleSignInClient(client: api, authorizer: AppleAuthorizerStub())
+
+            do {
+                try await client.link()
+                XCTFail("Expected authentication rejection")
+            } catch {
+                XCTAssertEqual(error as? APIError, .server(status: 401, code: code))
+            }
+
+            let failureCount = await failures.value
+            XCTAssertEqual(failureCount, 1, code)
+            XCTAssertEqual(recorder.requests.compactMap(\.url?.path), [
+                "/api/auth/mobile/oauth/apple/exchange", "/api/auth/refresh", "/api/auth/mobile/oauth/apple/exchange",
+            ])
+        }
+    }
+
+    @MainActor
     func testLinkRetriesExchangeAfterRefreshWithoutRepeatingAppleAuthorization() async throws {
         let recorder = AppleRequestRecorder(challengeFirstLink: true)
         AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
@@ -514,6 +597,8 @@ private final class AppleRequestRecorder: @unchecked Sendable {
     private var didChallengeLogin = false
     private var didChallengeDelete = false
     var loginResponse = #"{"signupRequired":false,"signupUuid":null,"expiresIn":3600,"reauthProof":null}"#
+    var linkStatus = 200
+    var deleteStatus = 200
     var linkResponse = #"{"signupRequired":false,"signupUuid":null,"expiresIn":null,"reauthProof":null}"#
     var deleteResponse = #"{"signupRequired":false,"signupUuid":null,"expiresIn":300,"reauthProof":"delete-proof"}"#
 
@@ -557,9 +642,9 @@ private final class AppleRequestRecorder: @unchecked Sendable {
             }
             switch request.url?.path {
             case "/api/auth/mobile/oauth/apple/exchange" where purpose == "DELETE_ACCOUNT":
-                return (200, deleteResponse)
+                return (deleteStatus, deleteResponse)
             case "/api/auth/mobile/oauth/apple/exchange" where purpose == "LINK":
-                return (200, linkResponse)
+                return (linkStatus, linkResponse)
             case "/api/auth/mobile/oauth/apple/exchange":
                 return (200, loginResponse)
             case "/api/auth/refresh":
@@ -578,6 +663,11 @@ private final class AppleRequestRecorder: @unchecked Sendable {
             Data(result.1.utf8)
         )
     }
+}
+
+private actor AppleAuthenticationFailureCounter {
+    private(set) var value = 0
+    func increment() { value += 1 }
 }
 
 private final class AppleURLProtocolStub: URLProtocol, @unchecked Sendable {

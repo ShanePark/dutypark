@@ -1,7 +1,8 @@
 package com.tistory.shanepark.dutypark.team.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.exceptions.InvalidScheduleTimeRangeExeption
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -215,9 +216,9 @@ class TeamScheduleServiceTest {
 
         whenever(teamScheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         whenever(teamService.checkCanManage(login = loginMember, teamId = actualTeam.id!!))
-            .thenThrow(AuthException("team.manage.forbidden"))
+            .thenThrow(ForbiddenException("team.manage.forbidden"))
 
-        assertThrows<AuthException> {
+        assertThrows<ForbiddenException> {
             teamScheduleService.update(loginMember, saveDto)
         }
 

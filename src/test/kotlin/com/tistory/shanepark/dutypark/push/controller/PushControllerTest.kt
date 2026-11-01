@@ -176,7 +176,7 @@ class PushControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `subscribe returns 401 when refresh token is missing`() {
+    fun `subscribe returns 403 when refresh token is missing`() {
         val requestBody = """
             {
               "endpoint": "https://fcm.googleapis.com/endpoint",
@@ -193,8 +193,8 @@ class PushControllerTest : RestDocsTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody)
         )
-            .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.status").value(403))
             .andExpect(jsonPath("$.code").value("auth.unauthorized"))
             .andDo(
                 document(
@@ -211,7 +211,7 @@ class PushControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `unsubscribe returns 401 when refresh token belongs to another member`() {
+    fun `unsubscribe returns 403 when refresh token belongs to another member`() {
         val refreshToken = refreshTokenService.createRefreshToken(
             memberId = TestData.member2.id!!,
             remoteAddr = "127.0.0.1",
@@ -223,8 +223,8 @@ class PushControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
                 .cookie(Cookie("refresh_token", refreshToken.token))
         )
-            .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.status").value(403))
             .andExpect(jsonPath("$.code").value("auth.unauthorized"))
             .andDo(
                 document(
@@ -287,7 +287,7 @@ class PushControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `subscribe returns 401 when refresh token is expired`() {
+    fun `subscribe returns 403 when refresh token is expired`() {
         val refreshToken = refreshTokenService.createRefreshToken(
             memberId = TestData.member.id!!,
             remoteAddr = "127.0.0.1",
@@ -313,8 +313,8 @@ class PushControllerTest : RestDocsTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody)
         )
-            .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.status").value(403))
             .andExpect(jsonPath("$.code").value("auth.unauthorized"))
     }
 

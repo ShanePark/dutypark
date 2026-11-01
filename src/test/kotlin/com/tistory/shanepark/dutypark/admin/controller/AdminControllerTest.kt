@@ -69,7 +69,7 @@ class AdminControllerTest : DutyparkIntegrationTest() {
             MockMvcRequestBuilders.get("/admin/api/refresh-tokens")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
     }
 
     @Test

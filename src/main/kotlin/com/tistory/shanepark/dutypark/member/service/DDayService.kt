@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.auditContext
@@ -110,7 +110,7 @@ class DDayService(
                     )
                 ),
             )
-            throw AuthException("dday.access.forbidden")
+            throw ForbiddenException("dday.access.forbidden")
         }
     }
 

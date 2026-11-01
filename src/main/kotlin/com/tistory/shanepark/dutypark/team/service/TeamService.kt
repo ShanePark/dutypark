@@ -4,7 +4,7 @@ import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.duty.domain.DutyColorPalette
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
@@ -343,7 +343,7 @@ class TeamService(
         if (login.isAdmin)
             return
         if (!team.isManager(login)) {
-            throw AuthException("team.manage.forbidden")
+            throw ForbiddenException("team.manage.forbidden")
         }
     }
 
@@ -352,7 +352,7 @@ class TeamService(
         if (login.isAdmin)
             return
         if (!team.isAdmin(login.id)) {
-            throw AuthException("team.admin.required")
+            throw ForbiddenException("team.admin.required")
         }
 
     }
@@ -363,7 +363,7 @@ class TeamService(
             return
         val member = memberRepository.findById(login.id).orElseThrow()
         if (member.team != team) {
-            throw AuthException("team.member.required")
+            throw ForbiddenException("team.member.required")
         }
     }
 

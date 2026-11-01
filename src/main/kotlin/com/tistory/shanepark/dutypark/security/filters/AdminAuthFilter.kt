@@ -45,12 +45,12 @@ class AdminAuthFilter : Filter {
                         "event" to "admin.access.denied",
                         "actor" to loginMember.toAuditActor(),
                         "request" to mapOf("method" to request.method, "path" to request.requestURI),
-                        "status" to HttpServletResponse.SC_UNAUTHORIZED,
+                        "status" to HttpServletResponse.SC_FORBIDDEN,
                         "reason" to "not_admin",
                     )
                 ),
             )
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
+            response.sendError(HttpServletResponse.SC_FORBIDDEN)
             return
         }
 

@@ -99,7 +99,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 .file(file)
                 .param("sessionId", session.id.toString())
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isUnauthorized)
+        ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("attachment.session.forbidden"))
             .andDo(MockMvcResultHandlers.print())
     }
@@ -169,7 +169,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
         mockMvc.perform(
             delete("/api/attachments/{id}", attachment.id)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isUnauthorized)
+        ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("attachment.session.forbidden"))
             .andDo(MockMvcResultHandlers.print())
     }

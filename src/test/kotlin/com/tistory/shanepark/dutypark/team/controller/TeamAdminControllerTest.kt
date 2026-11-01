@@ -45,7 +45,7 @@ class TeamAdminControllerTest : DutyparkIntegrationTest() {
                 .content(json)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
     }
 
     @Test

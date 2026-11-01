@@ -1,7 +1,8 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
@@ -99,7 +100,7 @@ class FriendServiceIntegrationTest : DutyparkIntegrationTest() {
         memberRepository.save(TestData.member)
         memberRepository.save(targetMember)
 
-        assertThrows<AuthException> {
+        assertThrows<ForbiddenException> {
             friendService.checkVisibility(loginMember, targetMember)
         }
     }

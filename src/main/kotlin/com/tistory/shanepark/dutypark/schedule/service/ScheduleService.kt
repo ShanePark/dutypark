@@ -8,7 +8,7 @@ import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.logging.AuditActor
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
@@ -363,7 +363,7 @@ class ScheduleService(
 
     private fun addTagToSchedule(schedule: Schedule, friend: Member) {
         if (!friendService.isFriend(schedule.member, friend)) {
-            throw AuthException("schedule.tag.notFriend")
+            throw ForbiddenException("schedule.tag.notFriend")
         }
 
         schedule.addTag(friend)

@@ -1,9 +1,10 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
@@ -121,7 +122,7 @@ class RefreshTokenServiceTest {
         )
 
         val logs = captureRefreshTokenLogs {
-            val exception = assertThrows<AuthException> {
+            val exception = assertThrows<ForbiddenException> {
                 refreshTokenService.deleteRefreshToken(loginMember, 1L)
             }
             assertThat(exception.message).isEqualTo("auth.refreshToken.delete.forbidden")

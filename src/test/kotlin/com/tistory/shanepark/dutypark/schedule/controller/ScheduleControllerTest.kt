@@ -584,7 +584,7 @@ class ScheduleControllerTest : RestDocsTest() {
         mockMvc.perform(
             get("/api/schedules/{id}", schedule.id)
                 .accept("application/json")
-        ).andExpect(status().isUnauthorized)
+        ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("schedule.visibility.forbidden"))
     }
 
@@ -778,7 +778,7 @@ class ScheduleControllerTest : RestDocsTest() {
         mockMvc.perform(
             post("/api/schedules/{scheduleId}/tags/{friendId}", schedule.id, stranger.id!!)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(owner)}")
-        ).andExpect(status().isUnauthorized)
+        ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("schedule.tag.notFriend"))
     }
 

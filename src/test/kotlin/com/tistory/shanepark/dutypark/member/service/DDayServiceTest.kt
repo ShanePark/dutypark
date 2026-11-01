@@ -1,9 +1,10 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -189,7 +190,7 @@ class DDayServiceTest {
         logger.addAppender(appender)
 
         val exception = try {
-            assertThrows<AuthException> {
+            assertThrows<ForbiddenException> {
                 dDayService.findDDay(loginMember(member2), event.id!!)
             }
         } finally {
@@ -256,11 +257,11 @@ class DDayServiceTest {
     fun `findDDays blocks when calendar is not visible`() {
         val viewer = loginMember(member2)
         whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
-        doThrow(AuthException("member.visibility.forbidden"))
+        doThrow(ForbiddenException("member.visibility.forbidden"))
             .whenever(friendService)
             .checkVisibility(viewer, member)
 
-        val exception = assertThrows<AuthException> {
+        val exception = assertThrows<ForbiddenException> {
             dDayService.findDDays(viewer, member.id!!)
         }
         assertThat(exception.message).isEqualTo("member.visibility.forbidden")
@@ -377,7 +378,7 @@ class DDayServiceTest {
         logger.addAppender(appender)
 
         val exception = try {
-            assertThrows<AuthException> {
+            assertThrows<ForbiddenException> {
                 dDayService.updateDDay(
                     loginMember(member2),
                     DDaySaveDto(
@@ -429,7 +430,7 @@ class DDayServiceTest {
         logger.addAppender(appender)
 
         val exception = try {
-            assertThrows<AuthException> {
+            assertThrows<ForbiddenException> {
                 dDayService.deleteDDay(loginMember(member2), event.id!!)
             }
         } finally {

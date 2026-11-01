@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
@@ -41,7 +41,7 @@ class DutyBatchController(
         @RequestParam month: Int,
     ): DutyBatchResult {
         if (dutyService.canEdit(loginMember = loginMember, memberId = memberId).not())
-            throw AuthException("duty.edit.forbidden")
+            throw ForbiddenException("duty.edit.forbidden")
 
         val dutyBatchTemplate = memberService.getDutyBatchTemplate(memberId)
             ?: throw IllegalArgumentException("dutyBatch.template.required")

@@ -3,6 +3,7 @@ import axios, { type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios
 import apiClient, {
   resetRefreshState,
   setAuthFailureHandler,
+  setImpersonationHandlers,
 } from './client'
 
 function unauthorized(config: InternalAxiosRequestConfig) {
@@ -24,11 +25,72 @@ describe('api client session recovery', () => {
   beforeEach(() => {
     resetRefreshState()
     setAuthFailureHandler(vi.fn())
+    setImpersonationHandlers(() => false, vi.fn())
   })
 
   afterEach(() => {
     apiClient.defaults.adapter = originalAdapter
+    setImpersonationHandlers(() => false, vi.fn())
     vi.restoreAllMocks()
+  })
+
+  it.each([
+    [400, false], [403, false], [400, true], [403, true],
+  ])('keeps the session for business status %i with impersonation %s', async (status, impersonating) => {
+    const authFailure = vi.fn()
+    const impersonationExpired = vi.fn()
+    setAuthFailureHandler(authFailure)
+    setImpersonationHandlers(() => impersonating, impersonationExpired)
+    const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: {} })
+    const adapter = vi.fn(async (config: InternalAxiosRequestConfig) => {
+      throw { ...unauthorized(config), response: {
+        ...unauthorized(config).response, status,
+        data: { code: status === 400 ? 'auth.password.currentMismatch' : 'auth.reauth.impersonationForbidden' },
+      } }
+    }) as AxiosAdapter
+    apiClient.defaults.adapter = adapter
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await expect(apiClient.put('/auth/password', {})).rejects.toMatchObject({ response: { status } })
+
+    expect(adapter).toHaveBeenCalledOnce()
+    expect(refresh).not.toHaveBeenCalled()
+    expect(authFailure).not.toHaveBeenCalled()
+    expect(impersonationExpired).not.toHaveBeenCalled()
+    log.mockRestore()
+  })
+
+  it('still refreshes a genuine session 401 and replays the request once', async () => {
+    const authFailure = vi.fn()
+    setAuthFailureHandler(authFailure)
+    const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: {} })
+    let attempt = 0
+    const adapter = vi.fn(async (config: InternalAxiosRequestConfig) => {
+      if (++attempt === 1) throw unauthorized(config)
+      return { data: { id: 1 }, status: 200, statusText: 'OK', headers: {}, config }
+    }) as AxiosAdapter
+    apiClient.defaults.adapter = adapter
+
+    await expect(apiClient.get('/members/me')).resolves.toMatchObject({ status: 200 })
+
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(adapter).toHaveBeenCalledTimes(2)
+    expect(authFailure).not.toHaveBeenCalled()
+  })
+
+  it('still expires an impersonation session once for genuine concurrent 401 responses', async () => {
+    const authFailure = vi.fn()
+    const impersonationExpired = vi.fn()
+    setAuthFailureHandler(authFailure)
+    setImpersonationHandlers(() => true, impersonationExpired)
+    const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: {} })
+    apiClient.defaults.adapter = vi.fn(async (config) => { throw unauthorized(config) }) as AxiosAdapter
+
+    await Promise.allSettled([apiClient.get('/members/me'), apiClient.get('/todos/board')])
+
+    expect(impersonationExpired).toHaveBeenCalledOnce()
+    expect(refresh).not.toHaveBeenCalled()
+    expect(authFailure).not.toHaveBeenCalled()
   })
 
   it('lets the auth store handle status 401 without interceptor refresh or redirect', async () => {

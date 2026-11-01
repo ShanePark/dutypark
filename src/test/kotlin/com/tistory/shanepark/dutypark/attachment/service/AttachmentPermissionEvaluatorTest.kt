@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.attachment.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
@@ -111,7 +113,7 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
-        }.isInstanceOf(AuthException::class.java)
+        }.isInstanceOf(ForbiddenException::class.java)
             .hasMessage("attachment.profile.forbidden")
     }
 
@@ -140,7 +142,7 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
-        }.isInstanceOf(AuthException::class.java)
+        }.isInstanceOf(ForbiddenException::class.java)
             .hasMessage("attachment.profile.forbidden")
     }
 
@@ -167,7 +169,7 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkSessionOwnership(loginMember, session)
-        }.isInstanceOf(AuthException::class.java)
+        }.isInstanceOf(ForbiddenException::class.java)
             .hasMessage("attachment.session.forbidden")
     }
 
@@ -184,7 +186,7 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
-        }.isInstanceOf(AuthException::class.java)
+        }.isInstanceOf(ForbiddenException::class.java)
             .hasMessage("attachment.session.forbidden")
     }
 
@@ -211,7 +213,7 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
-        }.isInstanceOf(AuthException::class.java)
+        }.isInstanceOf(ForbiddenException::class.java)
             .hasMessage("attachment.profile.forbidden")
     }
 
@@ -265,7 +267,7 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkReadPermission(loginMember, attachment)
-        }.isInstanceOf(AuthException::class.java)
+        }.isInstanceOf(ForbiddenException::class.java)
             .hasMessage("attachment.todo.access.forbidden")
     }
 
@@ -316,7 +318,7 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkWritePermission(loginMember, attachment)
-        }.isInstanceOf(AuthException::class.java)
+        }.isInstanceOf(ForbiddenException::class.java)
             .hasMessage("attachment.todo.write.forbidden")
     }
 
@@ -351,7 +353,7 @@ class AttachmentPermissionEvaluatorTest {
 
         assertThatThrownBy {
             evaluator.checkSessionWritePermission(loginMember, session)
-        }.isInstanceOf(AuthException::class.java)
+        }.isInstanceOf(ForbiddenException::class.java)
             .hasMessage("attachment.todo.write.forbidden")
     }
 

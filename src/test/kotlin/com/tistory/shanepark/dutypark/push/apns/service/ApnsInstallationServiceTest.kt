@@ -1,12 +1,13 @@
 package com.tistory.shanepark.dutypark.push.apns.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.push.apns.domain.entity.ApnsInstallation
 import com.tistory.shanepark.dutypark.push.apns.domain.repository.ApnsInstallationRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -104,7 +105,7 @@ class ApnsInstallationServiceTest {
 
         assertThatThrownBy {
             service.register(loginMember(2L), "refresh-token", "device-token", sandbox = false)
-        }.isInstanceOf(AuthException::class.java)
+        }.isInstanceOf(ForbiddenException::class.java)
     }
 
     private fun validRefreshToken(

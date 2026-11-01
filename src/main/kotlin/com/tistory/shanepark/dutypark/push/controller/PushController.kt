@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.push.controller
 
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.push.dto.PushSubscriptionRequest
@@ -61,5 +61,5 @@ class PushController(
         cookieService.extractRefreshToken(request.cookies)
             ?.let { refreshTokenService.findByToken(it) }
             ?.takeIf { it.member.id == loginMember.id && it.isValid() }
-            ?: throw AuthException()
+            ?: throw ForbiddenException("auth.unauthorized")
 }

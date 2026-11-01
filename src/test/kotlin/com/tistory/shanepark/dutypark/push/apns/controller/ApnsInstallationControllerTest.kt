@@ -117,7 +117,7 @@ class ApnsInstallationControllerTest : RestDocsTest() {
             contentType = MediaType.APPLICATION_JSON
             content = """{"deviceToken":"device-token"}"""
         }.andExpect {
-            status { isUnauthorized() }
+            status { isForbidden() }
             jsonPath("$.code") { value("auth.refresh.invalid") }
         }
     }
