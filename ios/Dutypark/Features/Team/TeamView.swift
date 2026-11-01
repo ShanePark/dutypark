@@ -503,8 +503,10 @@ struct TeamView: View {
                         guard !isSwipingMonth, !isSlidingMonth, !viewModel.isLoading else { return }
                         Task { await viewModel.selectDay(at: index) }
                     }
+                    .environment(\.calendarSpanCellIndex, index - (page.visibleIndices.first ?? 0))
                 }
         }
+        .calendarSpanConnections()
         .background(DPCalendarCellStyle.gutterColor)
         .background {
             GeometryReader { proxy in
@@ -871,7 +873,7 @@ private struct TeamCalendarDayCell: View {
                     // Every schedule is drawn; the tile grows instead of hiding any behind a count.
                     ForEach(Array(TeamCalendarCellSchedules.ordered(schedules).enumerated()), id: \.offset) { index, schedule in
                         let span = DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays)
-                        DPCalendarItemRow(showsRule: index > 0, rule: rule, span: span, spanColor: ink) {
+                        DPCalendarItemRow(showsRule: index > 0, rule: rule, span: span, spanColor: ink, spanID: schedule.id, spanDay: schedule.daysFromStart ?? 1) {
                             DPCalendarScheduleTitle.text(
                                 Text(verbatim: schedule.content),
                                 daysFromStart: schedule.daysFromStart,

@@ -50,8 +50,10 @@ struct CalendarMonthCellGrid<Item: Identifiable, Cell: View>: View {
         ) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 content(index, item)
+                    .environment(\.calendarSpanCellIndex, index)
             }
         }
+        .calendarSpanConnections()
     }
 }
 
@@ -2114,7 +2116,9 @@ private struct CalendarDayCell: View {
                     showsRule: index + day.dDays.count > 0,
                     rule: ruleColor,
                     span: DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays),
-                    spanColor: primaryForeground
+                    spanColor: primaryForeground,
+                    spanID: schedule.id,
+                    spanDay: schedule.daysFromStart
                 ) {
                     scheduleItem(schedule)
                 }

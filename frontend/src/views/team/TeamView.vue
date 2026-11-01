@@ -617,6 +617,8 @@ onMounted(() => {
                   v-for="schedule in orderForCalendarCell(teamSchedules[index] ?? [])"
                   :key="schedule.id"
                   class="calendar-item"
+                  :data-calendar-span-key="(schedule.totalDays ?? 0) > 1 ? JSON.stringify([schedule.teamId, schedule.id]) : undefined"
+                  :data-calendar-span-part="schedule.daysFromStart"
                   :class="(schedule.totalDays ?? 0) > 1 ? ['calendar-item--span', {
                     'calendar-item--span-start': schedule.daysFromStart === 1,
                     'calendar-item--span-end': schedule.daysFromStart === schedule.totalDays,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useCalendarSpanConnectors } from '@/composables/useCalendarSpanConnectors'
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import { getCalendarGridSlice } from '@/utils/calendarGrid'
@@ -35,6 +36,9 @@ const props = withDefaults(defineProps<Props>(), {
   clickable: true,
   isDayClickable: () => true,
 })
+
+const grid = ref<HTMLElement | null>(null)
+const { paths, gradientPrefix } = useCalendarSpanConnectors(grid)
 
 const emit = defineEmits<{
   (e: 'day-click', day: CalendarDay, index: number): void
@@ -171,7 +175,20 @@ function handleDayClick(day: CalendarDay, index: number) {
 </script>
 
 <template>
-  <div class="calendar-grid mb-2">
+  <div ref="grid" class="calendar-grid mb-2">
+    <svg class="calendar-span-connectors" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient v-for="(line, index) in paths" :id="`${gradientPrefix}-${index}`" :key="index"
+          gradientUnits="userSpaceOnUse" :x1="line.x1" :x2="line.x2" y1="0" y2="0">
+          <stop v-for="(stop, stopIndex) in line.stops" :key="stopIndex" :offset="stop.offset" :stop-color="stop.color" />
+        </linearGradient>
+        <clipPath v-for="(line, index) in paths" :id="`${gradientPrefix}-clip-${index}`" :key="`clip-${index}`" clipPathUnits="userSpaceOnUse">
+          <rect :x="line.clipLeft" y="0" :width="line.clipRight - line.clipLeft" height="100%" />
+        </clipPath>
+      </defs>
+      <path v-for="(line, index) in paths" :key="index" :d="line.path" :stroke="`url(#${gradientPrefix}-${index})`"
+        :stroke-width="line.thickness" :clip-path="`url(#${gradientPrefix}-clip-${index})`" />
+    </svg>
     <div
       v-for="(weekDay, idx) in weekDays"
       :key="weekDay"
@@ -251,6 +268,7 @@ function handleDayClick(day: CalendarDay, index: number) {
   --calendar-gap: 2px;
   --calendar-pad-x: 3px;
 
+  position: relative;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--calendar-gap);
@@ -258,6 +276,18 @@ function handleDayClick(day: CalendarDay, index: number) {
   border-radius: 8px;
   overflow: hidden;
   background: var(--calendar-gutter);
+}
+
+.calendar-span-connectors {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2;
+  fill: none;
+  stroke-linecap: round;
 }
 
 /* The dark prev/next surface is the page colour, so the header sits on the card instead. */
@@ -476,6 +506,7 @@ function handleDayClick(day: CalendarDay, index: number) {
   bottom: 0;
   left: calc(-1 * var(--calendar-pad-x));
   height: 2.5px;
+  visibility: var(--calendar-span-visibility, visible);
   background: var(--calendar-ink);
 }
 

@@ -382,13 +382,15 @@ nonisolated struct DPCalendarTodayRing: View {
 /// One item line inside a tile (a schedule or a D-Day marker). Items after the first
 /// are separated by a hairline. A multi-day schedule is named on every day and underlined
 /// by a bar that runs to the tile edges, so the days of one schedule join across the week.
-/// Its title wraps like any other; the same title wraps the same way in every equal-width
-/// tile, so the bar lands at the same height in neighbouring tiles.
+/// The month grid joins measured bars with a curve when surrounding content changes their height.
 nonisolated struct DPCalendarItemRow<Content: View>: View {
     let showsRule: Bool
     let rule: Color
     var span: DPCalendarSpan?
     var spanColor: Color = .clear
+    var spanID: ScheduleID?
+    var spanDay: Int = 1
+    @Environment(\.calendarSpanCellIndex) private var cellIndex
     @ViewBuilder var content: () -> Content
 
     var body: some View {
@@ -416,8 +418,12 @@ nonisolated struct DPCalendarItemRow<Content: View>: View {
             bottomTrailingRadius: span.isEnd ? 2 : 0,
             topTrailingRadius: span.isEnd ? 2 : 0
         )
-        .fill(spanColor)
+        .fill(cellIndex != nil && spanID != nil ? .clear : spanColor)
         .frame(height: 2.5)
+        .anchorPreference(key: CalendarSpanAnchors.self, value: .bounds) { bounds in
+            guard let spanID, let cellIndex else { return [] }
+            return [CalendarSpanAnchor(id: spanID, index: cellIndex, day: spanDay, span: span, color: spanColor, bounds: bounds)]
+        }
         .padding(.leading, span.isStart ? 0 : -DPCalendarCellStyle.cellHorizontalPadding)
         .padding(.trailing, span.isEnd ? 0 : -DPCalendarCellStyle.cellHorizontalPadding)
         .accessibilityHidden(true)

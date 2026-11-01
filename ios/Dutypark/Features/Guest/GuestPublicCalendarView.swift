@@ -544,7 +544,9 @@ private struct GuestCalendarDayCell: View {
                     showsRule: index + day.dDays.count > 0,
                     rule: ruleColor,
                     span: DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays),
-                    spanColor: primaryForeground
+                    spanColor: primaryForeground,
+                    spanID: schedule.id,
+                    spanDay: schedule.daysFromStart
                 ) {
                     DPCalendarScheduleTitle.text(
                         scheduleTitleLine(schedule),

@@ -332,6 +332,8 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               v-for="schedule in cellSchedulesByDays[index]"
               :key="schedule.id"
               class="calendar-item"
+              :data-calendar-span-key="schedule.totalDays > 1 ? JSON.stringify([schedule.id, schedule.startDateTime]) : undefined"
+              :data-calendar-span-part="schedule.daysFromStart"
               :class="schedule.totalDays > 1 ? ['calendar-item--span', {
                 'calendar-item--span-start': schedule.daysFromStart === 1,
                 'calendar-item--span-end': schedule.daysFromStart === schedule.totalDays,

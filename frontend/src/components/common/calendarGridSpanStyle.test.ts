@@ -23,9 +23,19 @@ function expectTwoLineClamp(body: string) {
 }
 
 // Every day of a multi-day schedule shows its title, tags, and one bottom bar,
-// with the same two-line title clamp as single-day items: the same title wraps the
-// same way in every equal-width tile, so the bar still lines up across days.
+// with the same two-line title clamp as single-day items. Measured connectors
+// bridge baseline differences caused by holidays, wrapping, and tags.
 describe('multi-day schedule styling', () => {
+  it('keeps SVG runs decorative and preserves measurable CSS fallbacks', () => {
+    const overlay = ruleBody(baseBlock, '.calendar-span-connectors')
+    expect(overlay).toContain('position: absolute')
+    expect(overlay).toContain('pointer-events: none')
+    expect(template).toContain('aria-hidden="true" focusable="false"')
+    const underline = ruleBody(baseBlock, ':slotted(.calendar-item--span)::after')
+    expect(underline).toContain('visibility: var(--calendar-span-visibility, visible)')
+    expect(underline).not.toContain('display: none')
+  })
+
   it('shows the title and tags on every day at every width', () => {
     expect(style).not.toContain('clip-path')
     expect(style).not.toContain('calendar-day--week-start')
