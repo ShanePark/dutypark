@@ -55,6 +55,22 @@ const memberProfilePhotoVersion = ref(0)
 const memberId = computed(() => {
   return parseInt(route.params.id as string)
 })
+let calendarContextRevision = 0
+let memberContextRevision = 0
+
+function calendarRequestContext() {
+  const revision = calendarContextRevision
+  return {
+    memberId: memberId.value, year: currentYear.value, month: currentMonth.value,
+    // A return to the same month is still a new context for pending responses.
+    isCurrent: () => revision === calendarContextRevision,
+  }
+}
+
+function memberRequestContext() {
+  const revision = memberContextRevision
+  return { memberId: memberId.value, isCurrent: () => revision === memberContextRevision }
+}
 const teamId = ref<number | null>(null)
 
 // isMyCalendar: true if viewing own calendar (id matches logged-in user)
@@ -199,12 +215,15 @@ function mapToLocalDDay(apiDDay: DDayDto): LocalDDay {
 // Load todos from API
 async function loadTodos() {
   if (!isMyCalendar.value) return
+  const context = memberRequestContext()
 
   try {
     const board = await todoApi.getBoard()
+    if (!context.isCurrent()) return
     // Combine TODO and IN_PROGRESS for active todos
     todos.value = [...board.todo, ...board.inProgress].map(mapToLocalTodo)
   } catch (error) {
+    if (!context.isCurrent()) return
     console.error('Failed to load todos:', error)
   }
 }
@@ -215,21 +234,24 @@ function sortDDays() {
 
 // Load D-Days from API
 async function loadDDays() {
+  const context = memberRequestContext()
   isLoadingDDays.value = true
   try {
     let apiDDays: DDayDto[]
     if (isMyCalendar.value) {
       apiDDays = (await ddayApi.getMyDDays()).data
     } else {
-      apiDDays = (await ddayApi.getDDaysByMemberId(memberId.value)).data
+      apiDDays = (await ddayApi.getDDaysByMemberId(context.memberId)).data
     }
+    if (!context.isCurrent()) return
     dDays.value = apiDDays.map(mapToLocalDDay)
     // Sort D-Days after loading
     sortDDays()
   } catch (error) {
+    if (!context.isCurrent()) return
     console.error('Failed to load D-Days:', error)
   } finally {
-    isLoadingDDays.value = false
+    if (context.isCurrent()) isLoadingDDays.value = false
   }
 }
 
@@ -278,17 +300,22 @@ function mapToSchedule(dto: ScheduleDto): Schedule {
 
 // Load schedules from API
 const isLoadingSchedules = ref(false)
+let scheduleLoadSequence = 0
 
 async function loadSchedules() {
   if (!memberId.value) return
+  const context = calendarRequestContext()
+  const sequence = ++scheduleLoadSequence
+  const isCurrent = () => context.isCurrent() && sequence === scheduleLoadSequence
 
   isLoadingSchedules.value = true
   try {
     const response = await scheduleApi.getSchedules(
-      memberId.value,
-      currentYear.value,
-      currentMonth.value
+      context.memberId,
+      context.year,
+      context.month
     )
+    if (!isCurrent()) return
     // API returns array indexed by day (0 = day 1, etc.)
     // We need to map this to our calendarDays structure
     const schedulesMap = new Map<string, Schedule[]>()
@@ -311,20 +338,24 @@ async function loadSchedules() {
       return schedulesMap.get(key) || []
     })
   } catch (error) {
+    if (!isCurrent()) return
     console.error('Failed to load schedules:', error)
   } finally {
-    isLoadingSchedules.value = false
+    if (isCurrent()) isLoadingSchedules.value = false
   }
 }
 
 // Load holidays from API
 async function loadHolidays() {
+  const context = calendarRequestContext()
   try {
-    holidaysByDays.value = await dutyApi.getHolidays(
-      currentYear.value,
-      currentMonth.value
+    const holidays = await dutyApi.getHolidays(
+      context.year,
+      context.month
     )
+    if (context.isCurrent()) holidaysByDays.value = holidays
   } catch (error) {
+    if (!context.isCurrent()) return
     console.error('Failed to load holidays:', error)
     holidaysByDays.value = []
   }
@@ -382,17 +413,18 @@ const searchPageInfo = ref({
 
 // Load calendar structure from backend API (cached)
 async function loadCalendar(): Promise<boolean> {
-  const year = currentYear.value
-  const month = currentMonth.value
+  const context = calendarRequestContext()
+  const { year, month } = context
   try {
     const days = await dutyApi.getCalendar(year, month)
-    if (year !== currentYear.value || month !== currentMonth.value) return false
+    if (!context.isCurrent()) return false
 
     rawCalendarDays.value = days
     calendarDataYear.value = year
     calendarDataMonth.value = month
     return true
   } catch (error) {
+    if (!context.isCurrent()) return false
     console.error('Failed to load calendar:', error)
     return false
   }
@@ -490,9 +522,13 @@ function getDutyColorForDay(day: CalendarDay): string | null {
 // Load team info and duty types
 async function loadTeam() {
   if (!teamId.value) return
+  const context = memberRequestContext()
+  const requestedTeamId = teamId.value
 
   try {
-    team.value = await dutyApi.getTeam(teamId.value)
+    const loadedTeam = await dutyApi.getTeam(requestedTeamId)
+    if (!context.isCurrent() || requestedTeamId !== teamId.value) return
+    team.value = loadedTeam
     // Map duty types from team
     dutyTypes.value = team.value.dutyTypes.filter((dt) => !dt.hidden).map((dt) => ({
       id: dt.id,
@@ -502,27 +538,35 @@ async function loadTeam() {
       shortName: dt.shortName,
     }))
   } catch (error) {
+    if (!context.isCurrent()) return
     console.error('Failed to load team:', error)
   }
 }
 
 // Load duties from API
+let dutyLoadSequence = 0
 async function loadDuties() {
   if (!memberId.value) return
+  const context = calendarRequestContext()
+  const sequence = ++dutyLoadSequence
+  const isCurrent = () => context.isCurrent() && sequence === dutyLoadSequence
 
   isLoadingDuties.value = true
   try {
-    rawDuties.value = await dutyApi.getDuties(
-      memberId.value,
-      currentYear.value,
-      currentMonth.value
+    const duties = await dutyApi.getDuties(
+      context.memberId,
+      context.year,
+      context.month
     )
+    if (!isCurrent()) return
+    rawDuties.value = duties
     loadError.value = null
   } catch (error) {
+    if (!isCurrent()) return
     console.error('Failed to load duties:', error)
     loadError.value = t('duty.view.loadDutiesFailed')
   } finally {
-    isLoadingDuties.value = false
+    if (isCurrent()) isLoadingDuties.value = false
   }
 }
 
@@ -531,35 +575,40 @@ async function checkCanManage() {
   amIManager.value = false
   if (!authStore.user?.id || !memberId.value) return
 
-  const targetMemberId = memberId.value
+  const context = memberRequestContext()
 
   try {
-    const canManage = await dutyApi.canManage(targetMemberId)
-    if (memberId.value === targetMemberId) {
+    const canManage = await dutyApi.canManage(context.memberId)
+    if (context.isCurrent()) {
       amIManager.value = canManage
     }
   } catch (error) {
+    if (!context.isCurrent()) return
     console.error('Failed to check management permission:', error)
   }
 }
 
 // Load member info (for both own and friend's calendar)
 async function loadMemberInfo() {
+  const context = memberRequestContext()
   try {
     if (isMyCalendar.value) {
       const response = await memberApi.getMyInfo()
+      if (!context.isCurrent()) return
       memberName.value = response.data.name
       teamId.value = response.data.teamId
       memberHasProfilePhoto.value = response.data.hasProfilePhoto ?? false
       memberProfilePhotoVersion.value = response.data.profilePhotoVersion ?? 0
     } else {
-      const response = await memberApi.getMemberById(memberId.value)
+      const response = await memberApi.getMemberById(context.memberId)
+      if (!context.isCurrent()) return
       memberName.value = response.data.name
       teamId.value = response.data.teamId
       memberHasProfilePhoto.value = response.data.hasProfilePhoto ?? false
       memberProfilePhotoVersion.value = response.data.profilePhotoVersion ?? 0
     }
   } catch (error) {
+    if (!context.isCurrent()) return
     console.error('Failed to load member info:', error)
     // Fallback to auth store for own calendar
     if (isMyCalendar.value && authStore.user) {
@@ -573,6 +622,7 @@ async function loadMemberInfo() {
 
 // Initialize on mount
 onMounted(async () => {
+  const context = memberRequestContext()
   isLoading.value = true
   loadError.value = null
 
@@ -584,9 +634,11 @@ onMounted(async () => {
   try {
     // Load calendar structure first (needed for index alignment with holidays)
     await loadCalendar()
+    if (!context.isCurrent()) return
 
     // Load member info to get teamId
     await loadMemberInfo()
+    if (!context.isCurrent()) return
 
     // Load data in parallel
     await Promise.all([
@@ -598,11 +650,13 @@ onMounted(async () => {
       checkCanManage(),
       loadHolidays(),
     ])
+    if (!context.isCurrent()) return
 
     // Load team info for duty types
     if (teamId.value) {
       await loadTeam()
     }
+    if (!context.isCurrent()) return
 
     // Set pinned DDay from localStorage (after D-Days are loaded)
     const storedDDay = localStorage.getItem(`selectedDday_${memberId.value}`)
@@ -626,21 +680,37 @@ onMounted(async () => {
       }
     }
   } catch (error) {
+    if (!context.isCurrent()) return
     console.error('Failed to initialize duty view:', error)
     loadError.value = t('duty.view.loadDataFailed')
   } finally {
-    isLoading.value = false
+    if (context.isCurrent()) isLoading.value = false
   }
 })
 
 // Cleanup on unmount
 onUnmounted(() => {
+  calendarContextRevision++
+  memberContextRevision++
   window.removeEventListener('duty-go-to-today', goToToday)
   window.removeEventListener('duty-go-to-date', handleGoToDate)
 })
 
 const isMonthLoading = ref(false)
 let monthLoadSequence = 0
+
+watch([memberId, currentYear, currentMonth], () => {
+  calendarContextRevision++
+  isLoadingDuties.value = false
+  isLoadingSchedules.value = false
+}, { flush: 'sync' })
+watch(memberId, () => {
+  memberContextRevision++
+  monthLoadSequence++
+  isMonthLoading.value = false
+  isLoadingDDays.value = false
+  isLoadingFriends.value = false
+}, { flush: 'sync' })
 
 // Watch for month changes to reload data
 watch(
@@ -678,6 +748,7 @@ watch(batchEditMode, (newVal) => {
 watch(
   () => route.params.id,
   async () => {
+    const context = memberRequestContext()
     isLoading.value = true
     loadError.value = null
 
@@ -709,7 +780,9 @@ watch(
     try {
       // Load calendar first to ensure index alignment
       await loadCalendar()
+      if (!context.isCurrent()) return
       await loadMemberInfo()
+      if (!context.isCurrent()) return
       await Promise.all([
         loadTodos(),
         loadDuties(),
@@ -719,9 +792,11 @@ watch(
         checkCanManage(),
         loadHolidays(),
       ])
+      if (!context.isCurrent()) return
       if (teamId.value) {
         await loadTeam()
       }
+      if (!context.isCurrent()) return
       // Restore pinned D-Day from localStorage
       const storedDDay = localStorage.getItem(`selectedDday_${memberId.value}`)
       if (storedDDay) {
@@ -729,10 +804,11 @@ watch(
         pinnedDDay.value = dDays.value.find((d) => d.id === id) || null
       }
     } catch (error) {
+      if (!context.isCurrent()) return
       console.error('Failed to reload duty view:', error)
       loadError.value = t('duty.view.loadDataFailed')
     } finally {
-      isLoading.value = false
+      if (context.isCurrent()) isLoading.value = false
     }
   }
 )
@@ -1202,7 +1278,11 @@ async function handleToggleOtherDuties() {
   }
 }
 
+let otherDutiesLoadSequence = 0
 async function loadOtherDuties() {
+  const context = calendarRequestContext()
+  const sequence = ++otherDutiesLoadSequence
+  const isCurrent = () => context.isCurrent() && sequence === otherDutiesLoadSequence
   // Build list of member IDs to fetch
   const memberIdsToFetch = [...selectedFriendIds.value]
   // Add logged-in user ID when "show my duties" is enabled on other's calendar
@@ -1218,9 +1298,10 @@ async function loadOtherDuties() {
   try {
     const response = await dutyApi.getOtherDuties(
       memberIdsToFetch,
-      currentYear.value,
-      currentMonth.value
+      context.year,
+      context.month
     )
+    if (!isCurrent()) return
     otherDuties.value = response.map((item) => ({
       memberId: item.memberId,
       memberName: item.name,
@@ -1232,6 +1313,7 @@ async function loadOtherDuties() {
       })),
     }))
   } catch (error) {
+    if (!isCurrent()) return
     console.error('Failed to load other duties:', error)
     showError(t('duty.view.loadOtherDutiesFailed'))
   }
@@ -1239,15 +1321,18 @@ async function loadOtherDuties() {
 
 async function loadFriends() {
   if (!isMyCalendar.value) return
+  const context = memberRequestContext()
 
   isLoadingFriends.value = true
   try {
     const response = await friendApi.getFriends()
+    if (!context.isCurrent()) return
     friends.value = response.data
   } catch (error) {
+    if (!context.isCurrent()) return
     console.error('Failed to load friends:', error)
   } finally {
-    isLoadingFriends.value = false
+    if (context.isCurrent()) isLoadingFriends.value = false
   }
 }
 
