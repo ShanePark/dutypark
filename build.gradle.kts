@@ -87,6 +87,8 @@ dependencies {
     // web-push 5.1.2 demotes httpcomponents to runtime scope, but PushService.send()
     // still returns org.apache.http.HttpResponse, so httpcore must be on the compile classpath.
     implementation("org.apache.httpcomponents:httpcore:4.4.16")
+    // Configure each Web Push request to forbid redirects.
+    implementation("org.apache.httpcomponents:httpclient:4.5.13")
 }
 
 dependencyManagement {

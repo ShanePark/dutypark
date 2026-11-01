@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import tools.jackson.databind.ObjectMapper
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
@@ -18,6 +19,7 @@ import nl.martijndwars.webpush.PushService
 import org.apache.http.ProtocolVersion
 import org.apache.http.message.BasicHttpResponse
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -29,6 +31,8 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.slf4j.LoggerFactory
 import java.math.BigInteger
+import java.net.InetAddress
+import java.net.UnknownHostException
 import java.security.KeyPairGenerator
 import java.security.Security
 import java.security.SecureRandom
@@ -48,6 +52,12 @@ class WebPushServiceTest {
     private val objectMapper: ObjectMapper = mock()
     private val pushService: PushService = mock()
 
+    private var addresses = arrayOf(InetAddress.getByAddress(byteArrayOf(8, 8, 8, 8)))
+    private var dnsUnavailable = false
+    private val endpointValidator = WebPushEndpointValidator {
+        if (dnsUnavailable) throw UnknownHostException()
+        addresses
+    }
     private lateinit var service: WebPushService
 
     @BeforeEach
@@ -58,19 +68,20 @@ class WebPushServiceTest {
         service = WebPushService(
             refreshTokenRepository = refreshTokenRepository,
             objectMapper = objectMapper,
-            pushService = pushService
+            pushService = pushService,
+            endpointValidator = endpointValidator,
         )
     }
 
     @Test
     fun `subscribe returns false when push disabled`() {
-        val disabledService = WebPushService(refreshTokenRepository, objectMapper, null)
+        val disabledService = WebPushService(refreshTokenRepository, objectMapper, null, endpointValidator)
         val token = refreshTokenWithId(1L, memberWithId(1L))
 
         val result = disabledService.subscribe(
             refreshToken = token,
             request = PushSubscriptionRequest(
-                endpoint = "endpoint",
+                endpoint = "https://fcm.googleapis.com/endpoint",
                 keys = PushSubscriptionKeys(p256dh = "p256dh", auth = "auth")
             )
         )
@@ -79,17 +90,88 @@ class WebPushServiceTest {
     }
 
     @Test
+    fun `subscribe rejects private destinations before storing subscription`() {
+        val token = refreshTokenWithId(1L, memberWithId(1L))
+        assertThatThrownBy {
+            service.subscribe(token, PushSubscriptionRequest(
+                "https://127.0.0.1/internal", PushSubscriptionKeys("p256dh", "auth"),
+            ))
+        }.isInstanceOf(BadRequestException::class.java)
+        assertThat(token.hasPushSubscription()).isFalse
+        verify(refreshTokenRepository, never()).save(any())
+    }
+
+    @Test
+    fun `sendToMember removes previously stored private endpoints without making a request`() {
+        val token = refreshTokenWithId(1L, memberWithId(1L))
+        subscribeValidPush(token)
+        token.pushEndpoint = "https://localhost/internal"
+        whenever(refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any()))
+            .thenReturn(listOf(token))
+        service.sendToMember(1L, pushPayload())
+        verify(pushService, never()).send(any())
+        assertThat(token.hasPushSubscription()).isFalse
+        verify(refreshTokenRepository).save(token)
+    }
+
+    @Test
+    fun `subscribe preserves existing subscription when DNS is temporarily unavailable`() {
+        val token = refreshTokenWithId(1L, memberWithId(1L))
+        subscribeValidPush(token)
+        val endpoint = token.pushEndpoint
+        dnsUnavailable = true
+        val result = service.subscribe(token, PushSubscriptionRequest(
+            "https://fcm.googleapis.com/new", PushSubscriptionKeys("p256dh", "auth"),
+        ))
+        assertThat(result).isFalse
+        assertThat(token.pushEndpoint).isEqualTo(endpoint)
+        verify(refreshTokenRepository, never()).save(any())
+    }
+
+    @Test
+    fun `sendToMember skips temporary DNS failure and retries the retained subscription`() {
+        val token = refreshTokenWithId(1L, memberWithId(1L))
+        subscribeValidPush(token)
+        whenever(refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any()))
+            .thenReturn(listOf(token))
+        dnsUnavailable = true
+        service.sendToMember(1L, pushPayload())
+        assertThat(token.hasPushSubscription()).isTrue
+        verify(refreshTokenRepository, never()).save(any())
+        verify(pushService, never()).send(any())
+        dnsUnavailable = false
+        whenever(objectMapper.writeValueAsString(any())).thenReturn("{}")
+        whenever(pushService.send(any<nl.martijndwars.webpush.Notification>()))
+            .thenReturn(BasicHttpResponse(ProtocolVersion("HTTP", 1, 1), 201, "Created"))
+        service.sendToMember(1L, pushPayload())
+        verify(pushService).send(any())
+    }
+
+    @Test
+    fun `sendToMember rechecks DNS and removes a subscription that now resolves privately`() {
+        val token = refreshTokenWithId(1L, memberWithId(1L))
+        subscribeValidPush(token)
+        addresses = arrayOf(InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1)))
+        whenever(refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any()))
+            .thenReturn(listOf(token))
+        service.sendToMember(1L, pushPayload())
+        assertThat(token.hasPushSubscription()).isFalse
+        verify(refreshTokenRepository).save(token)
+        verify(pushService, never()).send(any())
+    }
+
+    @Test
     fun `subscribe replaces existing token with same endpoint`() {
         val existing = refreshTokenWithId(1L, memberWithId(1L))
-        existing.subscribePush("endpoint", "p256dh", "auth")
+        existing.subscribePush("https://fcm.googleapis.com/endpoint", "p256dh", "auth")
         val current = refreshTokenWithId(2L, memberWithId(1L))
 
-        whenever(refreshTokenRepository.findByPushEndpoint("endpoint")).thenReturn(existing)
+        whenever(refreshTokenRepository.findByPushEndpoint("https://fcm.googleapis.com/endpoint")).thenReturn(existing)
 
         val result = service.subscribe(
             refreshToken = current,
             request = PushSubscriptionRequest(
-                endpoint = "endpoint",
+                endpoint = "https://fcm.googleapis.com/endpoint",
                 keys = PushSubscriptionKeys(p256dh = "p256dh2", auth = "auth2")
             )
         )
@@ -114,7 +196,7 @@ class WebPushServiceTest {
     @Test
     fun `unsubscribe clears subscription when present`() {
         val token = refreshTokenWithId(1L, memberWithId(1L))
-        token.subscribePush("endpoint", "p256dh", "auth")
+        token.subscribePush("https://fcm.googleapis.com/endpoint", "p256dh", "auth")
 
         val result = service.unsubscribe(token)
 
@@ -126,7 +208,7 @@ class WebPushServiceTest {
     @Test
     fun `sendToMember skips when payload serialization fails`() {
         val token = refreshTokenWithId(1L, memberWithId(1L))
-        token.subscribePush("endpoint", "p256dh", "auth")
+        token.subscribePush("https://fcm.googleapis.com/endpoint", "p256dh", "auth")
         whenever(
             refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any())
         ).thenReturn(listOf(token))
@@ -140,7 +222,7 @@ class WebPushServiceTest {
     @Test
     fun `sendToMember removes token when subscription data missing`() {
         val token = refreshTokenWithId(1L, memberWithId(1L))
-        token.subscribePush("endpoint", "p256dh", "auth")
+        token.subscribePush("https://fcm.googleapis.com/endpoint", "p256dh", "auth")
         token.pushP256dh = ""
         whenever(
             refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any())
@@ -155,7 +237,7 @@ class WebPushServiceTest {
 
     @Test
     fun `sendToMember returns early when push is disabled`() {
-        val disabledService = WebPushService(refreshTokenRepository, objectMapper, null)
+        val disabledService = WebPushService(refreshTokenRepository, objectMapper, null, endpointValidator)
 
         disabledService.sendToMember(1L, pushPayload())
 
@@ -213,7 +295,7 @@ class WebPushServiceTest {
     @Test
     fun `handleSendError unsubscribes token when expired`() {
         val token = refreshTokenWithId(1L, memberWithId(1L))
-        token.subscribePush("endpoint", "p256dh", "auth")
+        token.subscribePush("https://fcm.googleapis.com/endpoint", "p256dh", "auth")
         val method = WebPushService::class.java.getDeclaredMethod(
             "handleSendError",
             RefreshToken::class.java,
@@ -247,7 +329,7 @@ class WebPushServiceTest {
         val memberId = 8L
         val token = refreshTokenWithId(42L, memberWithId(memberId))
         subscribeValidPush(token)
-        token.pushEndpoint = "https://push.example/private-endpoint"
+        token.pushEndpoint = "https://fcm.googleapis.com/private-endpoint"
         val notificationId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000")
         val payload = PushNotificationPayload(
             type = NotificationType.FRIEND_REQUEST_RECEIVED,
@@ -270,7 +352,7 @@ class WebPushServiceTest {
         ).thenReturn(listOf(token))
         whenever(objectMapper.writeValueAsString(any())).thenReturn("{}")
         whenever(pushService.send(any<nl.martijndwars.webpush.Notification>())).thenThrow(
-            RuntimeException("provider request failed for https://push.example/private-endpoint")
+            RuntimeException("provider request failed for https://fcm.googleapis.com/private-endpoint")
         )
         val logger = LoggerFactory.getLogger(WebPushService::class.java) as Logger
         val appender = ListAppender<ILoggingEvent>().apply { start() }
@@ -285,7 +367,7 @@ class WebPushServiceTest {
         val event = appender.list.single()
         assertThat(event.formattedMessage)
             .contains("$memberId", "42", notificationId.toString(), "FRIEND_REQUEST_RECEIVED", "9", "Actor Name")
-            .doesNotContain("push.example", "private-endpoint", "provider request failed")
+            .doesNotContain("fcm.googleapis.com", "private-endpoint", "provider request failed")
         assertThat(event.throwableProxy).isNull()
     }
 
@@ -331,7 +413,7 @@ class WebPushServiceTest {
 
     private fun subscribeValidPush(token: RefreshToken) {
         val keys = generateKeys()
-        token.subscribePush("https://example.com/endpoint", keys.p256dh, keys.auth)
+        token.subscribePush("https://fcm.googleapis.com/endpoint", keys.p256dh, keys.auth)
     }
 
     private fun pushPayload(): PushNotificationPayload {
