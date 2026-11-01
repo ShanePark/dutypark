@@ -13,21 +13,9 @@ private struct TeamTopScrollEdgeEffectModifier: ViewModifier {
     }
 }
 
-private struct TeamCalendarMonthPage: Identifiable {
-    let key: OfflineMonthKey
-    let days: [TeamDayDTO]
-    let duties: [DutyDTO]
-    let holidays: [[HolidayDTO]]
-    let schedules: [[TeamScheduleDTO]]
-    let selectedDay: TeamDayDTO?
-    let visibleIndices: Range<Int>
-
-    var id: OfflineMonthKey { key }
-}
-
 private struct TeamCalendarMonthTransition: Identifiable {
     let id = UUID()
-    let pages: [TeamCalendarMonthPage]
+    var pages: [TeamCalendarMonthPage]
     let viewport: CalendarMonthBodyViewport
 }
 
@@ -51,6 +39,7 @@ struct TeamView: View {
     @State private var pendingTeamManagementDestination: TeamID?
     @State private var scheduleDeletionCandidate: TeamScheduleDTO?
     @State private var scheduleDeletionIsWorking = false
+    @State private var previewPages: [OfflineMonthKey: TeamCalendarMonthPage] = [:]
     @State private var monthTransition: TeamCalendarMonthTransition?
     @State private var monthTrackOffset: CGFloat = 0
     @State private var calendarWidth: CGFloat = 0
@@ -122,6 +111,7 @@ struct TeamView: View {
             }
         }
         .task { await viewModel.loadIfNeeded(memberID: memberID) }
+        .task(id: viewModel.calendarPreviewRevision) { await loadMonthPreviews() }
         .onDisappear {
             monthSlideTask?.cancel()
             resetMonthTransition()
@@ -525,7 +515,32 @@ struct TeamView: View {
         .accessibilityHidden(!isInteractive)
     }
 
+    private func loadMonthPreviews() async {
+        previewPages = [:]
+        let revision = viewModel.calendarPreviewRevision
+        let source = viewModel.calendarMonth
+        await withTaskGroup(of: TeamCalendarMonthPage?.self) { group in
+            for offset in [-1, 1] {
+                let key = source.offsetByMonths(offset)
+                group.addTask { await viewModel.monthPreview(for: key) }
+            }
+            for await page in group {
+                guard !Task.isCancelled,
+                      revision == viewModel.calendarPreviewRevision,
+                      let page else { continue }
+                previewPages[page.key] = page
+                if var transition = monthTransition,
+                   transition.pages[1].key == source,
+                   let index = transition.pages.firstIndex(where: { $0.key == page.key }) {
+                    transition.pages[index] = page
+                    withTransaction(Transaction(animation: nil)) { monthTransition = transition }
+                }
+            }
+        }
+    }
+
     private func placeholderMonthPage(_ key: OfflineMonthKey) -> TeamCalendarMonthPage {
+        if let page = previewPages[key] { return page }
         let cells = CalendarDateSupport.placeholderCells(year: key.year, month: key.month)
         return TeamCalendarMonthPage(
             key: key,

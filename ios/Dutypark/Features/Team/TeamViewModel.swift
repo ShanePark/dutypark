@@ -3,6 +3,7 @@ import Combine
 
 @MainActor
 final class TeamViewModel: ObservableObject {
+    @Published private(set) var calendarPreviewRevision = 0
     @Published private(set) var isLoading = false
     @Published private(set) var loadFailed = false
     @Published private(set) var isWorking = false
@@ -70,6 +71,9 @@ final class TeamViewModel: ObservableObject {
         let selectedDayBeforeLoad = selectedDay
         let requestedYear = year
         let requestedMonth = month
+        defer {
+            if !loadFailed, !Task.isCancelled { calendarPreviewRevision &+= 1 }
+        }
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-team-fixture") {
             self.memberID = memberID
@@ -199,6 +203,47 @@ final class TeamViewModel: ObservableObject {
             loadFailed = true
             guard !Task.isCancelled else { return }
             presentError(emitHaptic: emitErrorFeedback)
+        }
+    }
+
+    /// Preview reads never replace the active month, selection, or loading state.
+    func monthPreview(for key: OfflineMonthKey) async -> TeamCalendarMonthPage? {
+        guard let team else { return nil }
+        let revision = calendarPreviewRevision
+        let previewMemberID = memberID
+        do {
+#if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-ui-testing-team-fixture") {
+                let fixture = TeamUITestingFixture.make(year: key.year, month: key.month, includeShifts: false)
+                return TeamCalendarMonthPage(
+                    key: key, days: fixture.days, duties: fixture.duties,
+                    holidays: fixture.holidays, schedules: fixture.schedules, selectedDay: nil,
+                    visibleIndices: CalendarDateSupport.visibleCellRange(year: key.year, month: key.month, serverDays: fixture.days)
+                )
+            }
+#endif
+            async let days = repository.calendar(year: key.year, month: key.month)
+            async let schedules = repository.schedules(teamID: team.id, year: key.year, month: key.month)
+            async let holidays = repository.holidays(year: key.year, month: key.month)
+            let duties: [DutyDTO]
+            if let previewMemberID {
+                duties = try await repository.duties(memberID: previewMemberID, year: key.year, month: key.month)
+            } else {
+                duties = []
+            }
+            let (loadedDays, loadedSchedules, loadedHolidays) = try await (days, schedules, holidays)
+            try Task.checkCancellation()
+            guard revision == calendarPreviewRevision,
+                  self.team?.id == team.id,
+                  memberID == previewMemberID else { return nil }
+            return TeamCalendarMonthPage(
+                key: key, days: loadedDays, duties: duties,
+                holidays: loadedHolidays, schedules: loadedSchedules, selectedDay: nil,
+                visibleIndices: CalendarDateSupport.visibleCellRange(year: key.year, month: key.month, serverDays: loadedDays)
+            )
+        } catch {
+            // Preview failure is passive; the committed month load owns error feedback.
+            return nil
         }
     }
 
@@ -367,6 +412,7 @@ final class TeamViewModel: ObservableObject {
                 daySchedules.filter { $0.id != schedule.id }
             }
             schedulePendingDeletion = nil
+            calendarPreviewRevision &+= 1
             haptics.emit(.success)
         } catch {
             presentError()
@@ -392,6 +438,7 @@ final class TeamViewModel: ObservableObject {
     func applyManagedTeam(_ updatedTeam: TeamDTO) {
         guard team?.id == updatedTeam.id else { return }
         team = updatedTeam
+        calendarPreviewRevision &+= 1
         if let memberID {
             isTeamManager = updatedTeam.members.first { $0.id == memberID }?.isManager == true
         }
@@ -401,6 +448,7 @@ final class TeamViewModel: ObservableObject {
     /// member/session and calendar data refresh in the background.
     func applyCreatedTeam(_ createdTeam: TeamDTO) {
         team = createdTeam
+        calendarPreviewRevision &+= 1
         isTeamManager = true
         loadFailed = false
         showsError = false
@@ -412,6 +460,7 @@ final class TeamViewModel: ObservableObject {
         guard self.year == year, self.month == month, let memberID else { return }
         do {
             duties = try await repository.duties(memberID: memberID, year: year, month: month)
+            calendarPreviewRevision &+= 1
             await loadShifts(emitErrorFeedback: true)
         } catch {
             presentError()
@@ -488,6 +537,7 @@ final class TeamViewModel: ObservableObject {
             }
         }
         schedules = updatedSchedules
+        calendarPreviewRevision &+= 1
     }
 
     private static func dayCount(year: Int, month: Int) -> Int {

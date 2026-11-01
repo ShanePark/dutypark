@@ -20,6 +20,7 @@ import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
 import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
+import { useCalendarMonthSwipe } from '@/composables/useCalendarMonthSwipe'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import { isLightColor } from '@/utils/color'
 import { orderForCalendarCell } from '@/utils/calendarScheduleOrder'
@@ -81,6 +82,12 @@ const currentYear = ref(now.getFullYear())
 const currentMonth = ref(now.getMonth() + 1)
 
 const isYearMonthPickerOpen = ref(false)
+const swipeContainer = ref<HTMLElement | null>(null)
+const monthSwipe = useCalendarMonthSwipe({
+  onPrevMonth: prevMonth,
+  onNextMonth: nextMonth,
+  getWidth: () => swipeContainer.value?.clientWidth ?? 0,
+})
 
 function handleYearMonthSelect(year: number, month: number) {
   isYearMonthPickerOpen.value = false
@@ -582,35 +589,48 @@ onMounted(() => {
         </div>
       </div>
 
-      <CalendarGrid
-        :days="teamDays"
-        :current-year="calendarDataYear"
-        :current-month="calendarDataMonth"
-        :clickable="!isMonthLoading"
-        :aria-busy="isMonthLoading"
-        :holidays="holidaysByDays"
-        :get-duty-color="getDutyColor"
-        :selected-day="selectedDay"
-        @day-click="selectDay"
+      <div
+        ref="swipeContainer"
+        class="team-calendar-month-swipe"
+        @touchstart.passive="monthSwipe.handleTouchStart"
+        @touchmove.passive="monthSwipe.handleTouchMove"
+        @touchend="monthSwipe.handleTouchEnd"
+        @touchcancel="monthSwipe.handleTouchCancel"
+        @pointerdown.capture="monthSwipe.dragClickGuard.handlePointerDown"
+        @click.capture="monthSwipe.dragClickGuard.handleClick"
       >
-        <template #day-content="{ index }">
-          <div v-if="teamSchedules[index]?.length" class="calendar-items">
-            <div
-              v-for="schedule in orderForCalendarCell(teamSchedules[index] ?? [])"
-              :key="schedule.id"
-              class="calendar-item"
-              :class="(schedule.totalDays ?? 0) > 1 ? ['calendar-item--span', {
-                'calendar-item--span-start': schedule.daysFromStart === 1,
-                'calendar-item--span-end': schedule.daysFromStart === schedule.totalDays,
-              }] : null"
-            >
-              <div class="calendar-item__line">
-                <span class="calendar-item__text">{{ schedule.content }}<span v-if="(schedule.totalDays ?? 0) > 1" class="calendar-item__part"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</span></span>
+        <div :style="monthSwipe.trackStyle.value">
+          <CalendarGrid
+            :days="teamDays"
+            :current-year="calendarDataYear"
+            :current-month="calendarDataMonth"
+            :clickable="!isMonthLoading"
+            :aria-busy="isMonthLoading"
+            :holidays="holidaysByDays"
+            :get-duty-color="getDutyColor"
+            :selected-day="selectedDay"
+            @day-click="selectDay"
+          >
+            <template #day-content="{ index }">
+              <div v-if="teamSchedules[index]?.length" class="calendar-items">
+                <div
+                  v-for="schedule in orderForCalendarCell(teamSchedules[index] ?? [])"
+                  :key="schedule.id"
+                  class="calendar-item"
+                  :class="(schedule.totalDays ?? 0) > 1 ? ['calendar-item--span', {
+                    'calendar-item--span-start': schedule.daysFromStart === 1,
+                    'calendar-item--span-end': schedule.daysFromStart === schedule.totalDays,
+                  }] : null"
+                >
+                  <div class="calendar-item__line">
+                    <span class="calendar-item__text">{{ schedule.content }}<span v-if="(schedule.totalDays ?? 0) > 1" class="calendar-item__part"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</span></span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </template>
-      </CalendarGrid>
+            </template>
+          </CalendarGrid>
+        </div>
+      </div>
 
       <div class="rounded-lg border shadow-sm p-3 bg-dp-bg-card border-dp-border-secondary">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
@@ -927,3 +947,10 @@ onMounted(() => {
     />
   </div>
 </template>
+
+<style scoped>
+.team-calendar-month-swipe {
+  overflow-x: clip;
+  touch-action: pan-y;
+}
+</style>
