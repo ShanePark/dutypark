@@ -34,7 +34,7 @@ internal fun Member.toMemberDto(
         kakaoId = kakaoId,
         naverId = naverId,
         appleId = appleId,
-        hasPassword = password != null,
+        hasPassword = !password.isNullOrBlank(),
         hasProfilePhoto = preview.hasProfilePhoto,
         profilePhotoVersion = preview.profilePhotoVersion,
     )

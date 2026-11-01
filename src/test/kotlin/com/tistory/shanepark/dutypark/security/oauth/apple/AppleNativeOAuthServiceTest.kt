@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.security.oauth.apple
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
@@ -326,7 +328,7 @@ class AppleNativeOAuthServiceTest {
     fun `link while impersonating is rejected before consuming provider credentials`() {
         val impersonating = loginMember().copy(isImpersonating = true, originalMemberId = 9L)
 
-        val exception = assertThrows<AuthException> {
+        val exception = assertThrows<ForbiddenException> {
             service.exchange(request(MobileOAuthPurpose.LINK), impersonating, servletRequest)
         }
 

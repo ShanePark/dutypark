@@ -541,6 +541,7 @@
         }
       }
     },
+    "auth.reauth.impersonationForbidden": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Return to your own account before changing authentication settings." } }, "ko": { "stringUnit": { "state": "translated", "value": "본인 계정으로 돌아간 뒤 로그인 관련 설정을 변경해 주세요." } } } },
     "auth.refresh.invalid": {
       "localizations": {
         "en": {

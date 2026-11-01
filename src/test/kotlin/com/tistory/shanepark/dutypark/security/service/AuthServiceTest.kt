@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
@@ -20,6 +21,8 @@ import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mockito.never
@@ -28,6 +31,7 @@ import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpHeaders
 import org.springframework.mock.web.MockHttpServletRequest
@@ -170,6 +174,27 @@ class AuthServiceTest {
         assertThat(resolved).isEqualTo(loginMember)
         verify(memberRepository).findById(1L)
         verify(memberRepository, never()).findById(2L)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `password changes reject impersonation before accessing credentials or sessions`(byAdmin: Boolean) {
+        val actor = LoginMember(
+            id = if (byAdmin) 88L else 2L,
+            name = "Impersonated",
+            isAdmin = byAdmin,
+            isImpersonating = true,
+            originalMemberId = 99L,
+        )
+        val exception = assertThrows<ForbiddenException> {
+            authService.changePassword(
+                PasswordChangeDto(memberId = 2L, currentPassword = "correct-password", newPassword = "new-password"),
+                byAdmin = byAdmin,
+                actor = actor,
+            )
+        }
+        assertThat(exception.message).isEqualTo("auth.reauth.impersonationForbidden")
+        verifyNoInteractions(memberRepository, passwordEncoder, refreshTokenService)
     }
 
     @Test

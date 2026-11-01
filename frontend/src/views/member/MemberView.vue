@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -64,6 +64,7 @@ import {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const canManageOwnAccount = computed(() => !authStore.isImpersonating)
 const { t } = useI18n()
 const { showSuccess, showError, showWarning, showInfo, confirm, confirmDelete, toastSuccess } = useSwal()
 const contentFilterStore = useContentFilterStore()
@@ -160,7 +161,7 @@ const isApplePreparing = ref(false)
 const applePreparationFailed = ref(false)
 
 async function prepareAppleLink() {
-  if (!isAppleConfigured || isApplePreparing.value) return
+  if (!canManageOwnAccount.value || !isAppleConfigured || isApplePreparing.value) return
   isApplePreparing.value = true
   applePreparationFailed.value = false
   try {
@@ -315,6 +316,15 @@ const ssoConnections = ref<SsoConnection[]>([])
 const selectedSsoConnection = ref<SsoConnection | null>(null)
 let ssoSettingsTrigger: HTMLElement | null = null
 
+watch(canManageOwnAccount, (canManage) => {
+  if (!canManage) {
+    selectedSsoConnection.value = null
+    ssoSettingsTrigger = null
+    showPasswordModal.value = false
+    showAccountDeletionModal.value = false
+  }
+})
+
 function buildSsoConnections(member: MemberDto | null): SsoConnection[] {
   const connections: SsoConnection[] = [
     {
@@ -341,7 +351,7 @@ function buildSsoConnections(member: MemberDto | null): SsoConnection[] {
 }
 
 function canUnlinkSso(provider: SsoProvider): boolean {
-  return canUnlinkSocialAccount(memberInfo.value, provider)
+  return canManageOwnAccount.value && canUnlinkSocialAccount(memberInfo.value, provider)
 }
 
 function isWebConnectableSsoProvider(provider: SsoProvider): boolean {
@@ -376,7 +386,7 @@ function getAppleLinkErrorMessage(error: unknown): string {
 }
 
 function openSsoSettings(connection: SsoConnection, event: Event) {
-  if (isSsoActionPending.value || !connection.connected) return
+  if (!canManageOwnAccount.value || isSsoActionPending.value || !connection.connected) return
   ssoSettingsTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null
   selectedSsoConnection.value = connection
 }
@@ -390,7 +400,7 @@ async function closeSsoSettings() {
 }
 
 async function connectSso(provider: SsoProvider) {
-  if (isSsoActionPending.value || !isWebConnectableSsoProvider(provider)) return
+  if (!canManageOwnAccount.value || isSsoActionPending.value || !isWebConnectableSsoProvider(provider)) return
   if (provider === 'APPLE' && (!isAppleConfigured || !isAppleReady.value)) return
 
   const prompts: Record<SsoProvider, { message: string; title: string; connect: () => Promise<unknown> }> = {
@@ -413,7 +423,7 @@ async function connectSso(provider: SsoProvider) {
 
   const prompt = prompts[provider]
   const confirmed = await confirm(prompt.message, prompt.title)
-  if (!confirmed || isSsoActionPending.value) return
+  if (!confirmed || !canManageOwnAccount.value || isSsoActionPending.value) return
 
   connectingSso.value = provider
   try {
@@ -465,7 +475,7 @@ async function connectSso(provider: SsoProvider) {
 }
 
 async function unlinkSso(connection: SsoConnection) {
-  if (isSsoActionPending.value || !canUnlinkSso(connection.provider)) return
+  if (!canManageOwnAccount.value || isSsoActionPending.value || !canUnlinkSso(connection.provider)) return
 
   const confirmed = await confirmDelete(
     t(
@@ -477,7 +487,7 @@ async function unlinkSso(connection: SsoConnection) {
     t('member.sso.unlink.confirmTitle', { provider: connection.label }),
     t('member.sso.unlink.action'),
   )
-  if (!confirmed || isSsoActionPending.value) return
+  if (!confirmed || isSsoActionPending.value || !canUnlinkSso(connection.provider)) return
 
   let shouldCloseSettings = false
   unlinkingSso.value = connection.provider
@@ -564,6 +574,7 @@ const passwordSubmitHint = computed(() => {
 const isPasswordSubmitDisabled = computed(() => changingPassword.value || !!passwordSubmitHint.value)
 
 function openPasswordModal() {
+  if (!canChangePassword.value) return
   passwordForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
   passwordErrors.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
   showPasswordModal.value = true
@@ -601,6 +612,7 @@ function validatePasswordForm(): boolean {
 }
 
 async function changePassword() {
+  if (!canChangePassword.value) return
   if (!validatePasswordForm()) return
   if (!authStore.user) return
 
@@ -627,10 +639,7 @@ const showAccountDeletionModal = ref(false)
 const accountDeletionCompletion = ref<AccountDeletionCompletionResult | null>(null)
 
 function deleteAccount() {
-  if (authStore.isImpersonating) {
-    showError(t('member.accountDeletion.errors.impersonation'))
-    return
-  }
+  if (!canManageOwnAccount.value) return
   showAccountDeletionModal.value = true
 }
 
@@ -653,6 +662,9 @@ async function finishAccountDeletionCompletion() {
 
 // Member info (fetched from API)
 const memberInfo = ref<MemberDto | null>(null)
+const canChangePassword = computed(() =>
+  canManageOwnAccount.value && !!memberInfo.value?.hasPassword && !!memberInfo.value.email?.trim()
+)
 
 async function fetchMemberInfo() {
   try {
@@ -899,7 +911,7 @@ onMounted(async () => {
       </section>
 
       <!-- SSO Connections Section -->
-      <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
+      <section v-if="canManageOwnAccount" class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
           <Link class="w-5 h-5 text-dp-text-secondary" />
           {{ t('member.sso.sectionTitle') }}
@@ -982,14 +994,14 @@ onMounted(async () => {
       </section>
 
       <!-- Account Management Section -->
-      <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
+      <section v-if="canManageOwnAccount" class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-dp-text-primary">
           <Lock class="w-5 h-5 text-dp-text-secondary" />
           {{ t('member.account.sectionTitle') }}
         </h2>
         <div class="flex flex-wrap gap-3">
           <button
-            v-if="memberInfo?.hasPassword"
+            v-if="canChangePassword"
             @click="openPasswordModal"
             class="px-4 py-3 sm:py-2 min-h-11 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft-hover rounded-lg transition flex items-center gap-2 cursor-pointer"
           >
@@ -1009,7 +1021,7 @@ onMounted(async () => {
     </template>
 
     <AccountDeletionModal
-      v-if="memberInfo?.id"
+      v-if="memberInfo?.id && canManageOwnAccount"
       :is-open="showAccountDeletionModal"
       :member-id="memberInfo.id"
       :member-name="memberInfo.name"
@@ -1018,7 +1030,7 @@ onMounted(async () => {
     />
 
     <SocialAccountConnectionModal
-      v-if="selectedSsoConnection"
+      v-if="selectedSsoConnection && canManageOwnAccount"
       :is-open="true"
       :provider="selectedSsoConnection.provider"
       :provider-label="selectedSsoConnection.label"
@@ -1031,6 +1043,7 @@ onMounted(async () => {
 
     <!-- Password Change Modal -->
     <BaseModal
+      v-if="canChangePassword"
       :is-open="showPasswordModal"
       size="md"
       height="fit"

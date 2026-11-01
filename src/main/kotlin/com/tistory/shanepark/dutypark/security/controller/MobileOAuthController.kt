@@ -43,6 +43,7 @@ class MobileOAuthController(
         @RequestParam(required = false) code: String?,
         @RequestParam state: String,
         @RequestParam(required = false) error: String?,
+        @Login(required = false) loginMember: LoginMember?,
     ): ResponseEntity<Void> = ResponseEntity.status(HttpStatus.FOUND)
         .location(
             mobileOAuthService.completeCallback(
@@ -50,6 +51,7 @@ class MobileOAuthController(
                 code = code,
                 state = state,
                 error = error,
+                loginMember = loginMember,
             )
         )
         .build()

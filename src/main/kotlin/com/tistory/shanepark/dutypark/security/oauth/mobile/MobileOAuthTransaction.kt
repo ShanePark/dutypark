@@ -29,6 +29,10 @@ class MobileOAuthTransaction(
 
     @Column(name = "link_member_id")
     val authenticatedMemberId: Long? = null,
+
+    // Provider callbacks may run in a browser without the app's authenticated session.
+    @Column(name = "link_authorized", nullable = false)
+    val linkAuthorized: Boolean = false,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

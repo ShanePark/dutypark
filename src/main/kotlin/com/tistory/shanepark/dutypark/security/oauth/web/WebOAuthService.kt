@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.security.oauth.web
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
@@ -46,7 +47,11 @@ class WebOAuthService(
         val referer = validateReferer(request.referer)
         val memberId = when (purpose) {
             WebOAuthPurpose.LOGIN -> null
-            WebOAuthPurpose.LINK -> loginMember?.id ?: throw AuthException()
+            WebOAuthPurpose.LINK -> {
+                val member = loginMember ?: throw AuthException()
+                if (member.isImpersonating) throw ForbiddenException("auth.reauth.impersonationForbidden")
+                member.id
+            }
         }
         val quotaAcquired = try {
             authorizeRateLimitService.acquire(servletRequest.remoteAddr)
@@ -113,6 +118,7 @@ class WebOAuthService(
             transaction.stateConsumedAt != null -> "state_consumed"
             !now.isBefore(transaction.stateExpiresAt) -> "state_expired"
             !secureEquals(transaction.browserSessionHash, sha256Hex(browserSession)) -> "browser_session_mismatch"
+            transaction.purpose == WebOAuthPurpose.LINK && loginMember?.isImpersonating == true -> "impersonation_forbidden"
             !memberMatches -> "member_mismatch"
             else -> null
         }

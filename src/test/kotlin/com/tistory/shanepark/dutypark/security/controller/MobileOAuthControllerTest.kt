@@ -20,6 +20,8 @@ import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoResponse
 import com.tistory.shanepark.dutypark.security.oauth.apple.AppleNativeOAuthService
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthExchangeResponse
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthExchangeResult
+import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthPurpose
+import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthTransaction
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthService
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.startsWith
@@ -46,6 +48,7 @@ import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.time.Instant
 import java.util.Base64
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -302,6 +305,75 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
         em.clear()
         val linked = memberSocialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, KAKAO_ID.toString())
         assertThat(linked?.member?.id).isEqualTo(member.id)
+    }
+
+    @Test
+    fun `impersonated sessions cannot initiate mobile provider linking`() {
+        listOf("KAKAO", "NAVER").forEach { provider ->
+            mockMvc.perform(
+                post("/api/auth/mobile/oauth/authorize")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${getImpersonationJwt(TestData.member, TestData.admin)}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"provider":"$provider","purpose":"LINK","callbackUri":"dutypark://oauth/callback","codeChallenge":"${challenge("g".repeat(43))}"}""")
+            )
+                .andExpect(status().isForbidden)
+                .andExpect(jsonPath("$.code").value("auth.reauth.impersonationForbidden"))
+        }
+    }
+
+    @Test
+    fun `mobile provider link callback rejects an impersonated browser session`() {
+        listOf("KAKAO", "NAVER").forEach { provider ->
+            val state = URI.create(authorize(provider, "g".repeat(43), purpose = "LINK", bearer = getJwt(TestData.member))).queryParam("state")
+            mockMvc.perform(
+                get("/api/auth/mobile/oauth/callback/${provider.lowercase()}")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${getImpersonationJwt(TestData.member, TestData.admin)}")
+                    .param("code", "provider-code")
+                    .param("state", state)
+            )
+                .andExpect(status().isForbidden)
+                .andExpect(jsonPath("$.code").value("auth.reauth.impersonationForbidden"))
+        }
+        assertThat(memberSocialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, KAKAO_ID.toString())).isNull()
+        assertThat(memberSocialAccountRepository.findByProviderAndSocialId(SsoType.NAVER, NAVER_ID)).isNull()
+    }
+
+    @Test
+    fun `mobile link callback rejects legacy transactions without verified link authorization`() {
+        val state = "legacy-link-state"
+        em.persist(MobileOAuthTransaction(
+            provider = SsoType.KAKAO,
+            purpose = MobileOAuthPurpose.LINK,
+            callbackUri = "dutypark://oauth/callback",
+            codeChallenge = challenge("g".repeat(43)),
+            stateHash = MessageDigest.getInstance("SHA-256").digest(state.toByteArray()).joinToString("") { "%02x".format(it) },
+            stateExpiresAt = Instant.now().plusSeconds(300),
+            authenticatedMemberId = TestData.member.id,
+        ))
+        em.flush()
+        mockMvc.perform(
+            get("/api/auth/mobile/oauth/callback/kakao")
+                .param("code", "provider-code")
+                .param("state", state)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("auth.oauth.mobile.state.invalid"))
+        assertThat(memberSocialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, KAKAO_ID.toString())).isNull()
+    }
+
+    @Test
+    fun `mobile link callback permits a different non impersonated browser account`() {
+        val state = URI.create(authorize("KAKAO", "g".repeat(43), purpose = "LINK", bearer = getJwt(TestData.member))).queryParam("state")
+        mockMvc.perform(
+            get("/api/auth/mobile/oauth/callback/kakao")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member2)}")
+                .param("code", "provider-code")
+                .param("state", state)
+        )
+            .andExpect(status().isFound)
+            .andExpect(header().string(HttpHeaders.LOCATION, "dutypark://oauth/callback?linked=success"))
+        assertThat(memberSocialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, KAKAO_ID.toString())?.member?.id)
+            .isEqualTo(TestData.member.id)
     }
 
     @Test
