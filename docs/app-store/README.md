@@ -31,18 +31,47 @@ fixture so the English submission set contains no Korean public-holiday labels.
 Capture metadata for this refresh:
 
 ```text
-Capture date: 2026-08-29 (Asia/Seoul)
+Capture date: 2026-11-02 (Asia/Seoul)
 Device: iPhone 17 Pro Max
-OS: iOS 26.5
-App: 1.0.0 (1)
-Canvas: 1320x2868 portrait
-Account: local dutypark_demo
-Source commit: 1856c2aa
+OS: iOS 27.0 (24A434)
+App: 1.2.0 (20261102)
+Canvas: 1320x2868 portrait, 8-bit RGB PNG without alpha
+Account: isolated local dutypark_demo fixtures (Korean and English)
+Source commit: 7cfd67d93a5a4d905b8cf10951ef95ba43312c73
+Source state: capture harness-only modifications; production app UI unchanged
 Capture API: http://localhost:8081/api/
-Source: actual app capture, not generated UI
-Capture test: 2 PASS / 0 FAIL / 0 SKIP
-Result bundle: /private/tmp/dutypark-appstore-capture-final3-20260829.xcresult
+Source: actual app capture, not generated UI; actual simulator clock
+Final selected capture tests: Korean 1 PASS, English 1 PASS / 0 FAIL / 0 SKIP
+Korean result: /private/tmp/dutypark-appstore-capture-20261102-v1.xcresult
+English result: /private/tmp/dutypark-appstore-capture-20261102-en-v3.xcresult
+Visual QA: all 12 final screenshots passed individual and contact-sheet review
 ```
+
+The final Korean captures come from the Korean case in the initial two-case run;
+its English images were superseded after visual QA found a notification prompt on
+Home. The final English case captures Home only after the app's notification prompt
+has been dismissed through its normal Cancel action. No screenshot pixels were
+edited to remove UI. The English local demo schedule titles `Getaway` and
+`Workshop` are short enough to show the real multi-day counters in the calendar.
+
+Both locales use fictional November 2026 demo data, including a three-day personal
+schedule crossing a D-Day, a three-day team schedule, and seven D-Day rows covering
+future and past dates. The production App Review account is separate from these
+local capture fixtures; its August 2026 data was not changed by this refresh.
+
+The local capture data was prepared from a temporary copy of
+`scripts/seed-local-demo-content.sh` at
+`/private/tmp/dutypark-appstore-demo-20261102/seed-current-demo.sh`. August-derived
+content used a +68-day offset from the `2026-08-26` origin for the actual
+`2026-11-02` capture date, with the additional November personal/team spans and
+seven D-Days described above. The unchanged checked-in seed retains its original
+August defaults and does not by itself reproduce this refreshed dataset. Fixture
+provenance is recorded in
+`/private/tmp/dutypark-appstore-demo-20261102/provenance.json` and summarized in each
+manifest's `capture.fixturePreparation` object.
+
+Existing decorative artwork, fonts, headlines, and framing are unchanged. The full app viewport is preserved at one uniform scale. Recomposition from the
+canonical raw files and manifests reproduces all 12 final PNGs byte-for-byte.
 
 The same per-locale provenance is recorded in each checked-in manifest's
 top-level `capture` object. The compositor ignores this metadata while keeping
@@ -83,10 +112,11 @@ script:
 ```sh
 xcodebuild -project ios/Dutypark.xcodeproj \
   -scheme Dutypark \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+  -destination 'platform=iOS Simulator,name=Dutypark App Store Capture — iPhone 17 Pro Max' \
   -derivedDataPath /tmp/dutypark-appstore-capture-derived \
   -resultBundlePath /tmp/dutypark-appstore-capture.xcresult \
   CODE_SIGNING_ALLOWED=NO \
+  MARKETING_VERSION=1.2.0 CURRENT_PROJECT_VERSION=20261102 \
   API_BASE_URL='http://localhost:8081/api/' \
   -only-testing:DutyparkUITests/DemoAppStoreCaptureUITests test
 scripts/extract-app-store-captures.sh \

@@ -1,19 +1,104 @@
 {
   "version": 2,
   "capture": {
-    "date": "2026-08-29",
+    "date": "2026-11-02",
     "timezone": "Asia/Seoul",
     "device": "iPhone 17 Pro Max",
-    "os": "iOS 26.5",
-    "marketingVersion": "1.0.0",
-    "buildNumber": "1",
+    "simulatorName": "Dutypark App Store Capture — iPhone 17 Pro Max",
+    "simulatorUDID": "8F8E3E8F-3BAC-4984-865E-4B1FAADDC837",
+    "os": "iOS 27.0",
+    "osBuild": "24A434",
+    "marketingVersion": "1.2.0",
+    "buildNumber": "20261102",
+    "locale": "ko_KR",
     "account": "demo.seoa@dutypark.local",
-    "source": "actual local app capture",
-    "sourceCommit": "1856c2aa",
-    "sourceState": "working tree with Team month accessibility and screenshot harness changes",
-    "testResult": "2 PASS / 0 FAIL / 0 SKIP",
-    "resultBundle": "/private/tmp/dutypark-appstore-capture-final3-20260829.xcresult",
-    "apiEndpoint": "http://localhost:8081/api/"
+    "source": "actual local app capture, not generated UI",
+    "sourceCommit": "7cfd67d93a5a4d905b8cf10951ef95ba43312c73",
+    "productionEquivalentCommit": "7cfd67d93a5a4d905b8cf10951ef95ba43312c73",
+    "generatedCommitHash": "7cfd67d",
+    "generatedSourceState": "modified",
+    "sourceState": "capture harness-only modifications",
+    "modifiedSourceFiles": [
+      "ios/DutyparkUITests/DemoAppStoreCaptureUITests.swift"
+    ],
+    "testCase": "DutyparkUITests/DemoAppStoreCaptureUITests/testCapturesKoreanDemoScreensForAppStore",
+    "testResult": "1 PASS / 0 FAIL / 0 SKIP (selected Korean case)",
+    "resultBundleSummary": "2 PASS / 0 FAIL / 0 SKIP; English raw from this run was superseded after visual QA",
+    "resultBundle": "/private/tmp/dutypark-appstore-capture-20261102-v1.xcresult",
+    "apiEndpoint": "http://localhost:8081/api/",
+    "clock": "actual simulator clock; no date override",
+    "captureStartedAt": "2026-11-02T01:37:33.122000+09:00",
+    "captureFinishedAt": "2026-11-02T01:39:51.202000+09:00",
+    "fixtureProvenance": "/private/tmp/dutypark-appstore-demo-20261102/provenance.json",
+    "rawFiles": {
+      "calendar.png": {
+        "sha256": "423a98839750a2a313e512dd249280b5682761808e9b375daf9ed045f8ff9803",
+        "width": 1320,
+        "height": 2868,
+        "colorType": 2,
+        "alpha": false
+      },
+      "dday.png": {
+        "sha256": "3f8c83453e535afcb6db32ebae6f6a1ce77eb2ea5f78cd0acaf02e9bed8f1862",
+        "width": 1320,
+        "height": 2868,
+        "colorType": 2,
+        "alpha": false
+      },
+      "home.png": {
+        "sha256": "c775a7063e6001c80e92cb5eccaae1a5b567688ed592fdc6f1f60b2ee50c497d",
+        "width": 1320,
+        "height": 2868,
+        "colorType": 2,
+        "alpha": false
+      },
+      "more.png": {
+        "sha256": "487df01e3f4fa6f23bc2298d862a03ef0b08aadd4dad37198ebd3ff4243eedee",
+        "width": 1320,
+        "height": 2868,
+        "colorType": 2,
+        "alpha": false
+      },
+      "social.png": {
+        "sha256": "71b736dc1f0bc294219f69763a434ec862ae67f292154f4855b5222af4d39ea0",
+        "width": 1320,
+        "height": 2868,
+        "colorType": 2,
+        "alpha": false
+      },
+      "team.png": {
+        "sha256": "01ece18addba092c0666123bb971065db4a19fd450ac1dcec75518e2313f3c21",
+        "width": 1320,
+        "height": 2868,
+        "colorType": 2,
+        "alpha": false
+      },
+      "todo.png": {
+        "sha256": "766f7676dc03dcfcc02fc95570c1d890f621ec08fb6173f26b417ec28d18ec34",
+        "width": 1320,
+        "height": 2868,
+        "colorType": 2,
+        "alpha": false
+      }
+    },
+    "visualQA": "6 of 6 final screenshots passed individual visual review and contact-sheet review",
+    "fixturePreparation": {
+      "originalSeed": "scripts/seed-local-demo-content.sh",
+      "temporarySeed": "/private/tmp/dutypark-appstore-demo-20261102/seed-current-demo.sh",
+      "contentOrigin": "2026-08-26",
+      "shiftDays": 68,
+      "captureCalendarMonth": "2026-11",
+      "personalSpan": [
+        "2026-11-08",
+        "2026-11-10"
+      ],
+      "teamSpan": [
+        "2026-11-10",
+        "2026-11-12"
+      ],
+      "ddayCountPerOwner": 7,
+      "scope": "isolated local demo database only; production App Review account remains separate"
+    }
   },
   "output": {
     "width": 1320,

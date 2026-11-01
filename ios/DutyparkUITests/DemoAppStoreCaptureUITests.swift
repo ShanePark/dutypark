@@ -51,30 +51,31 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         let home = app.descendants(matching: .any)["screen.home"]
         XCTAssertTrue(home.waitForExistence(timeout: 30), "Demo account did not reach Home")
         waitForHomeContent(in: app)
-        capture("appstore-\(language)-01-home-demo")
+        dismissNotificationPreprompt(language: language, in: app)
+        capture("appstore-\(language)-01-home-demo", in: app)
 
         openPrimaryTab("tab.calendar", screen: "screen.calendar", in: app)
         waitForSettledContent(in: app, loadingIdentifier: nil)
         if language == "en" {
             selectEnglishCaptureMonth(in: app)
         }
-        capture("appstore-\(language)-02-calendar-demo")
+        capture("appstore-\(language)-02-calendar-demo", in: app)
         captureCalendarDDay(language: language, in: app)
 
         openPrimaryTab("tab.todo", screen: "screen.todo", in: app)
         waitForSettledContent(in: app, loadingIdentifier: nil)
-        capture("appstore-\(language)-03-todo-demo")
+        capture("appstore-\(language)-03-todo-demo", in: app)
 
         openPrimaryTab("tab.team", screen: "screen.team", in: app)
         waitForSettledContent(in: app, loadingIdentifier: nil)
         if language == "en" {
             selectEnglishTeamCaptureMonth(in: app)
         }
-        capture("appstore-\(language)-04-team-demo")
+        capture("appstore-\(language)-04-team-demo", in: app)
 
         openPrimaryTab("tab.more", screen: "screen.more", in: app)
         waitForSettledContent(in: app, loadingIdentifier: nil)
-        capture("appstore-\(language)-05-more-demo")
+        capture("appstore-\(language)-05-more-demo", in: app)
 
         let friends = app.buttons["more.friends"]
         XCTAssertTrue(friends.waitForExistence(timeout: 10), "More menu did not load friend entry")
@@ -82,7 +83,7 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         let social = app.descendants(matching: .any)["social.list"]
         XCTAssertTrue(social.waitForExistence(timeout: 20), "Friend list did not load")
         waitForSettledContent(in: app, loadingIdentifier: "social.loading")
-        capture("appstore-\(language)-06-social-demo")
+        capture("appstore-\(language)-06-social-demo", in: app)
     }
 
     @MainActor
@@ -171,14 +172,34 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
     }
 
     @MainActor
+    private func dismissNotificationPreprompt(language: String, in app: XCUIApplication) {
+        let prompt = app.alerts[language == "ko" ? "알림 켜기" : "Turn on notifications"]
+        // Notification authorization settings arrive asynchronously after sign-in.
+        // Dismiss the real preprompt rather than capturing its dimmed Home background.
+        if prompt.waitForExistence(timeout: 5) {
+            let cancel = prompt.buttons[language == "ko" ? "취소" : "Cancel"]
+            XCTAssertTrue(cancel.isHittable, "Notification preprompt must offer Cancel")
+            cancel.tap()
+            XCTAssertTrue(prompt.waitForNonExistence(timeout: 5), "Notification preprompt did not dismiss")
+        }
+        let unobstructedHome = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                !app.alerts.firstMatch.exists && app.buttons["tab.home"].isHittable
+                    && app.descendants(matching: .any)["home.friends.total"].isHittable
+            },
+            object: app
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [unobstructedHome], timeout: 10), .completed,
+            "Home must be loaded and unobstructed before capture"
+        )
+    }
+
+    @MainActor
     private func selectEnglishCaptureMonth(in app: XCUIApplication) {
         let monthDisplay = app.buttons["calendar.month.display"]
         XCTAssertTrue(monthDisplay.waitForExistence(timeout: 10), "Calendar month control did not load")
-        XCTAssertEqual(
-            monthDisplay.value as? String,
-            "2026-08",
-            "The English demo capture starts in August 2026 before its three-month move"
-        )
+        if monthDisplay.value as? String == "2026-11" { return }
 
         monthDisplay.tap()
         let monthPicker = app.descendants(matching: .any)["calendar.monthPicker"]
@@ -200,7 +221,7 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         XCTAssertEqual(
             XCTWaiter.wait(for: [monthChanged], timeout: 10),
             .completed,
-            "English capture must show November 2026 after moving three months"
+            "English capture must show the populated November 2026 fixture"
         )
         XCTAssertEqual(monthDisplay.value as? String, "2026-11")
     }
@@ -209,11 +230,7 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
     private func selectEnglishTeamCaptureMonth(in app: XCUIApplication) {
         let monthDisplay = app.buttons["team.calendar.month.display"]
         XCTAssertTrue(monthDisplay.waitForExistence(timeout: 10), "Team month control did not load")
-        XCTAssertEqual(
-            monthDisplay.value as? String,
-            "2026-08",
-            "The English team capture starts in August 2026 before its move to November"
-        )
+        if monthDisplay.value as? String == "2026-11" { return }
 
         monthDisplay.tap()
         let monthPicker = app.descendants(matching: .any)["team.calendar.monthPicker"]
@@ -241,30 +258,30 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         let calendar = app.descendants(matching: .any)["screen.calendar"]
         XCTAssertTrue(calendar.exists, "Calendar must remain visible before D-Day capture")
 
-        let dDayBadge = app.staticTexts.matching(
-            NSPredicate(
-                format: "label MATCHES %@",
-                "D(-|\\+)[0-9]+|D-Day"
-            )
-        ).firstMatch
+        let dDayRows = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "calendar.dday.row.")
+        )
+        let firstRow = dDayRows.firstMatch
         let scrollView = app.scrollViews.firstMatch
         XCTAssertTrue(scrollView.waitForExistence(timeout: 10), "Calendar scroll view did not load")
 
-        // Move the D-Day cards away from the calendar overview so this capture is
-        // visually distinct even on tall devices where a badge is already visible.
+        // Scroll the real flat D-Day list into view instead of looking for the
+        // counters that are now combined into each row's accessibility label.
         scrollView.swipeUp()
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
 
-        for _ in 0..<7 where !dDayBadge.exists {
+        for _ in 0..<7 where !firstRow.isHittable {
             scrollView.swipeUp()
             RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         }
 
         XCTAssertTrue(
-            dDayBadge.waitForExistence(timeout: 10),
-            "Calendar D-Day cards did not become visible after scrolling"
+            firstRow.waitForExistence(timeout: 10),
+            "Calendar D-Day rows did not load after scrolling"
         )
-        capture("appstore-\(language)-07-dday-demo")
+        XCTAssertTrue(firstRow.isHittable, "The captured D-Day list must be visible")
+        XCTAssertGreaterThanOrEqual(dDayRows.count, 2, "The demo must show multiple real D-Days")
+        capture("appstore-\(language)-07-dday-demo", in: app)
     }
 
     @MainActor
@@ -284,7 +301,8 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
     }
 
     @MainActor
-    private func capture(_ name: String) {
+    private func capture(_ name: String, in app: XCUIApplication) {
+        XCTAssertFalse(app.alerts.firstMatch.exists, "App Store captures must not contain an alert")
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
