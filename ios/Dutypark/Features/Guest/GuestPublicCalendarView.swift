@@ -287,18 +287,29 @@ struct GuestPublicCalendarView: View {
         return Array(model.days[visibleRange])
     }
 
+    private var displayedMonth: (year: Int, month: Int) {
+        guard let cell = model.days.first(where: { $0.cell.isCurrentMonth })?.cell else {
+            return (model.year, model.month)
+        }
+        return (cell.year, cell.month)
+    }
+
+    // The same flat, connected grid as the member calendar: the gutter colour shows
+    // through the gaps between tiles.
     private var calendarGrid: some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: 7),
-            spacing: 1
-        ) {
-            ForEach(["sun", "mon", "tue", "wed", "thu", "fri", "sat"], id: \.self) { weekday in
-                Text(GuestLocalization.text("guest.calendar.weekday.\(weekday)"))
-                    .font(DPFont.bold(size: 12, relativeTo: .caption))
-                    .foregroundStyle(weekday == "sun" ? DPColor.danger : DPColor.textSecondary)
-                    .frame(maxWidth: .infinity, minHeight: 30)
-            }
-            ForEach(Array(visibleCalendarDays.enumerated()), id: \.element.id) { index, day in
+        VStack(spacing: DPCalendarCellStyle.gutterWidth) {
+            DPCalendarWeekdayRow(
+                labels: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map {
+                    GuestLocalization.text("guest.calendar.weekday.\($0)")
+                },
+                todayIndex: DPCalendarCellStyle.todayWeekdayIndex(
+                    year: displayedMonth.year,
+                    month: displayedMonth.month,
+                    today: Date(),
+                    calendar: CalendarDateSupport.calendar
+                )
+            )
+            CalendarMonthCellGrid(items: visibleCalendarDays) { index, day in
                 GuestCalendarDayCell(day: day, weekday: index % 7)
                     .onTapGesture {
                         DPHapticCenter.shared.emit(.routine)
@@ -306,57 +317,58 @@ struct GuestPublicCalendarView: View {
                     }
             }
         }
-        .background(DPColor.borderPrimary)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .background(DPCalendarCellStyle.gutterColor)
+        .clipShape(RoundedRectangle(cornerRadius: DPCalendarCellStyle.cornerRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: DPRadius.standard)
-                .stroke(DPColor.borderPrimary)
+            RoundedRectangle(cornerRadius: DPCalendarCellStyle.cornerRadius)
+                .stroke(DPCalendarCellStyle.gutterColor, lineWidth: 1)
         )
     }
 
+    // The member calendar's flat D-Day list, read-only: a guest can neither open nor pin a D-Day.
     private var dDaySection: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.small) {
-            HStack {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
                 Text("guest.calendar.dday.title", tableName: "Guest")
                     .font(DPFont.bold(size: 17, relativeTo: .headline))
-                Spacer()
-                Text("\(model.dDays.count)")
-                    .font(DPTypography.label)
+                    .foregroundStyle(DPColor.textPrimary)
+                Text(verbatim: "\(model.dDays.count)")
+                    .font(DPFont.light(size: 13, relativeTo: .subheadline))
+                    .monospacedDigit()
                     .foregroundStyle(DPColor.textMuted)
+                Spacer(minLength: 0)
             }
-            if model.dDays.isEmpty {
-                Text("guest.calendar.dday.empty", tableName: "Guest")
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textMuted)
-                    .frame(maxWidth: .infinity, minHeight: 64)
-            } else {
-                LazyVGrid(
-                    columns: [GridItem(.flexible()), GridItem(.flexible())],
-                    spacing: DPSpacing.small
-                ) {
-                    ForEach(model.dDays, id: \.id) { item in
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            Text(item.title)
-                                .font(DPTypography.label)
-                                .lineLimit(1)
-                            Text(guestDDayLabel(item))
-                                .font(DPFont.bold(size: 20, relativeTo: .title3))
-                                .foregroundStyle(DPColor.accent)
-                            Text(item.date.rawValue)
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textMuted)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
-                        .padding(DPSpacing.small)
-                        .background(DPColor.backgroundSecondary)
-                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            .accessibilityElement(children: .combine)
+            .padding(.horizontal, 2)
+            .frame(minHeight: DPSize.minimumTouchTarget)
+
+            VStack(spacing: 0) {
+                if model.dDays.isEmpty {
+                    Text("guest.calendar.dday.empty", tableName: "Guest")
+                        .font(DPTypography.supporting)
+                        .foregroundStyle(DPColor.textMuted)
+                        .frame(maxWidth: .infinity, minHeight: DDayListPresentation.rowHeight)
+                } else {
+                    ForEach(Array(model.dDays.enumerated()), id: \.element.id) { index, item in
+                        DDayRow(
+                            item: item,
+                            isPinned: false,
+                            showsRule: index > 0,
+                            canPin: false,
+                            open: nil,
+                            togglePin: {}
+                        )
                     }
                 }
             }
+            .background(DPColor.backgroundCard)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
+            .overlay(
+                RoundedRectangle(cornerRadius: DPRadius.compact)
+                    .stroke(DPColor.borderPrimary, lineWidth: 1)
+            )
         }
-        .padding(DPSpacing.medium)
-        .background(DPColor.backgroundCard)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .padding(.top, DPSpacing.extraSmall)
     }
 }
 
@@ -490,47 +502,101 @@ private struct GuestCalendarDayCell: View {
     let weekday: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text("\(day.cell.day)")
-                    .font(DPFont.bold(size: 12, relativeTo: .caption))
-                    .foregroundStyle(day.holidays.isEmpty && weekday != 0 ? DPColor.textPrimary : DPColor.danger)
-                Spacer(minLength: 0)
-                if let duty = day.duty?.dutyType {
-                    Text(duty.prefix(4))
-                        .font(DPFont.bold(size: 9, relativeTo: .caption2))
-                }
-            }
-            if let holiday = day.holidays.first {
-                compactText(holiday.dateName, color: DPColor.danger)
-            }
-            ForEach(day.schedules.prefix(3), id: \.id) { schedule in
-                compactText(guestCalendarScheduleText(schedule), color: DPColor.accent)
-            }
-            ForEach(day.dDays.prefix(1), id: \.id) {
-                compactText($0.title, color: DPColor.warning)
-            }
-            Spacer(minLength: 0)
+        DPCalendarDayTile(
+            day: day.cell.day,
+            weekdayIndex: weekday,
+            dutyColor: dutyColor,
+            isCurrentMonth: isCurrentMonth,
+            isToday: isToday,
+            hasHoliday: !day.holidays.isEmpty
+        ) {
+            EmptyView()
+        } content: {
+            details
         }
-        .padding(4)
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
-        .background(cellBackground)
-        .opacity(day.cell.isCurrentMonth ? 1 : 0.45)
         .contentShape(Rectangle())
         .accessibilityLabel(day.cell.date.rawValue)
     }
 
-    private var cellBackground: Color {
-        guard let value = day.duty?.dutyColor else { return DPColor.backgroundCard }
-        return guestColor(hex: value).opacity(0.16)
+    // Every holiday, D-Day and schedule of the day is drawn: the tile grows instead of
+    // hiding any behind a count.
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(day.holidays.enumerated()), id: \.offset) { _, holiday in
+                Text(verbatim: holiday.dateName)
+                    .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
+                    .lineLimit(1)
+                    .padding(.horizontal, 1)
+                    .foregroundStyle(holiday.isHoliday
+                        ? DPCalendarCellStyle.holidayForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+                        : secondaryForeground)
+            }
+            ForEach(Array(day.dDays.enumerated()), id: \.element.id) { index, item in
+                DPCalendarItemRow(showsRule: index > 0, rule: ruleColor) {
+                    (Text(Image(systemName: "flag.fill")).font(.system(size: 7)) + Text(verbatim: " \(item.title)"))
+                        .font(DPFont.bold(size: CalendarTypography.cellContent, relativeTo: .caption2))
+                        .foregroundStyle(primaryForeground)
+                        .lineLimit(2)
+                }
+            }
+            ForEach(Array(cellSchedules.enumerated()), id: \.element.id) { index, schedule in
+                DPCalendarItemRow(
+                    showsRule: index + day.dDays.count > 0,
+                    rule: ruleColor,
+                    span: DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays),
+                    spanColor: primaryForeground,
+                    spanID: schedule.id,
+                    spanDay: schedule.daysFromStart
+                ) {
+                    DPCalendarScheduleTitle.text(
+                        scheduleTitleLine(schedule),
+                        daysFromStart: schedule.daysFromStart,
+                        totalDays: schedule.totalDays,
+                        counterColor: secondaryForeground
+                    )
+                    .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
+                    .tracking(-0.3)
+                    .lineSpacing(1)
+                    .foregroundStyle(primaryForeground)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                }
+            }
+        }
     }
 
-    private func compactText(_ text: String, color: Color) -> some View {
-        Text(text)
-            .font(DPFont.light(size: 9, relativeTo: .caption2))
-            .lineLimit(1)
-            .foregroundStyle(color)
-            .frame(maxWidth: .infinity, alignment: .leading)
+    private var dutyColor: String? { day.duty?.dutyColor }
+    private var isCurrentMonth: Bool { day.cell.isCurrentMonth }
+
+    private var cellSchedules: [ScheduleDTO] {
+        DPCalendarSpan.orderedForCell(day.schedules, daysFromStart: { $0.daysFromStart }, totalDays: { $0.totalDays })
+    }
+
+    private var primaryForeground: Color {
+        DPCalendarCellStyle.primaryForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+    }
+
+    private var secondaryForeground: Color {
+        DPCalendarCellStyle.secondaryForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+    }
+
+    private var ruleColor: Color {
+        DPCalendarCellStyle.ruleColor(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+    }
+
+    private var isToday: Bool {
+        let today = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: Date())
+        return day.cell.year == today.year && day.cell.month == today.month && day.cell.day == today.day
+    }
+
+    /// A narrow tile shows the title without the time, as the member calendar does; a
+    /// multi-day run's day counter is appended by `DPCalendarScheduleTitle`.
+    private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
+        var line = Text(verbatim: schedule.content)
+        if !schedule.description.isEmpty || !schedule.attachments.isEmpty {
+            line = line + Text(verbatim: " ") + Text(Image(systemName: "text.bubble"))
+        }
+        return line
     }
 }
 
@@ -719,23 +785,6 @@ private struct GuestScheduleAttachments: View {
                 gallery.apply(attachments)
             }
     }
-}
-
-private func guestCalendarScheduleText(_ schedule: ScheduleDTO) -> String {
-    let time = CalendarVisualLogic.calendarScheduleTimeText(
-        start: schedule.startDateTime,
-        end: schedule.endDateTime,
-        daysFromStart: schedule.daysFromStart,
-        totalDays: schedule.totalDays
-    )
-    let dayCounter = schedule.totalDays > 1
-        ? "(\(schedule.daysFromStart)/\(schedule.totalDays))"
-        : nil
-    return CalendarVisualLogic.scheduleTitleText(
-        content: schedule.content,
-        time: time,
-        dayCounter: dayCounter
-    )
 }
 
 private func guestScheduleTime(_ schedule: ScheduleDTO) -> String? {

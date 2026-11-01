@@ -1,9 +1,36 @@
 import SwiftUI
 
+private struct TeamTopScrollEdgeEffectModifier: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            // Same soft top edge as Calendar: only the bar controls float over the scrolled
+            // content instead of the default opaque band.
+            content.scrollEdgeEffectStyle(.soft, for: .top)
+        } else {
+            content
+        }
+    }
+}
+
+private struct TeamCalendarMonthTransition: Identifiable {
+    let id = UUID()
+    var pages: [TeamCalendarMonthPage]
+    let viewport: CalendarMonthBodyViewport
+}
+
+private struct TeamCalendarMonthHeights: PreferenceKey {
+    static let defaultValue: [OfflineMonthKey: CGFloat] = [:]
+
+    static func reduce(value: inout [OfflineMonthKey: CGFloat], nextValue: () -> [OfflineMonthKey: CGFloat]) {
+        value.merge(nextValue(), uniquingKeysWith: { max($0, $1) })
+    }
+}
+
 struct TeamView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @StateObject private var viewModel = TeamViewModel()
+    @StateObject private var viewModel: TeamViewModel
     @StateObject private var teamCreationViewModel = TeamCreationViewModel()
     @State private var monthPickerPresented = false
     @State private var teamCreationPresented = false
@@ -12,9 +39,21 @@ struct TeamView: View {
     @State private var pendingTeamManagementDestination: TeamID?
     @State private var scheduleDeletionCandidate: TeamScheduleDTO?
     @State private var scheduleDeletionIsWorking = false
+    @State private var previewPages: [OfflineMonthKey: TeamCalendarMonthPage] = [:]
+    @State private var monthTransition: TeamCalendarMonthTransition?
+    @State private var monthTrackOffset: CGFloat = 0
+    @State private var calendarWidth: CGFloat = 0
+    @State private var calendarBodyHeight: CGFloat = 0
+    @State private var isSwipingMonth = false
+    @State private var isSlidingMonth = false
+    @State private var monthSlideTask: Task<Void, Never>?
     private let onOpenCalendar: (MemberID) -> Void
 
-    init(onOpenCalendar: @escaping (MemberID) -> Void = { _ in }) {
+    init(
+        viewModel: TeamViewModel = TeamViewModel(),
+        onOpenCalendar: @escaping (MemberID) -> Void = { _ in }
+    ) {
+        _viewModel = StateObject(wrappedValue: viewModel)
         self.onOpenCalendar = onOpenCalendar
     }
 
@@ -72,6 +111,11 @@ struct TeamView: View {
             }
         }
         .task { await viewModel.loadIfNeeded(memberID: memberID) }
+        .task(id: viewModel.calendarPreviewRevision) { await loadMonthPreviews() }
+        .onDisappear {
+            monthSlideTask?.cancel()
+            resetMonthTransition()
+        }
         .navigationDestination(item: $teamManagementDestination) { teamID in
             teamManagementView(teamID: teamID)
         }
@@ -236,6 +280,7 @@ struct TeamView: View {
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isCurrentMonth)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .modifier(TeamTopScrollEdgeEffectModifier())
         .background(DPColor.backgroundPrimary)
         .toolbar { teamToolbar(team) }
     }
@@ -253,7 +298,7 @@ struct TeamView: View {
             DPThisMonthCallout(label: teamLocalized("team.view.calendar.thisMonth")) {
                 Task { await viewModel.goToToday() }
             }
-            .disabled(viewModel.isLoading)
+            .disabled(viewModel.isLoading || isSlidingMonth)
             .transition(.offset(y: -4).combined(with: .opacity))
         }
     }
@@ -349,7 +394,7 @@ struct TeamView: View {
         ) {
             monthPickerPresented = true
         }
-        .disabled(viewModel.isLoading)
+        .disabled(viewModel.isLoading || isSlidingMonth)
     }
 
     private var isCurrentMonth: Bool {
@@ -357,52 +402,237 @@ struct TeamView: View {
         return now.year == viewModel.year && now.month == viewModel.month
     }
 
-    private var visibleCalendarIndices: Range<Int> {
-        CalendarDateSupport.visibleCellRange(
-            year: viewModel.year,
-            month: viewModel.month,
-            serverDays: viewModel.days
+    private var currentMonthPage: TeamCalendarMonthPage {
+        TeamCalendarMonthPage(
+            key: viewModel.calendarMonth,
+            days: viewModel.days,
+            duties: viewModel.duties,
+            holidays: viewModel.holidays,
+            schedules: viewModel.schedules,
+            selectedDay: viewModel.selectedDay,
+            visibleIndices: viewModel.calendarVisibleRange
         )
     }
 
     private var calendar: some View {
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+        let gutter = DPCalendarCellStyle.gutterWidth
+        let columns = Array(repeating: GridItem(.flexible(), spacing: gutter), count: 7)
+        let todayIndex = DPCalendarCellStyle.todayWeekdayIndex(
+            year: viewModel.calendarMonth.year,
+            month: viewModel.calendarMonth.month,
+            today: Date(),
+            calendar: CalendarDateSupport.calendar
+        )
         // The weekday header and the day cells are indexed from zero, so sharing one
         // grid makes the first week collide with the header row in the grid's
         // identity space and render blank. Two grids keep the identities apart.
-        return VStack(spacing: 0) {
+        return VStack(spacing: gutter) {
             LazyVGrid(columns: columns, spacing: 0) {
                 ForEach(Array(TeamLocalization.shortStandaloneWeekdaySymbols().enumerated()), id: \.offset) { index, weekday in
-                    DPCalendarWeekdayHeaderCell(label: weekday, weekdayIndex: index)
+                    DPCalendarWeekdayHeaderCell(label: weekday, weekdayIndex: index, isToday: index == todayIndex)
                 }
             }
-            LazyVGrid(columns: columns, spacing: 0) {
-                ForEach(Array(visibleCalendarIndices), id: \.self) { index in
+            monthBodyPager
+        }
+        .background(DPCalendarCellStyle.gutterColor)
+        .clipShape(RoundedRectangle(cornerRadius: DPCalendarCellStyle.cornerRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPCalendarCellStyle.cornerRadius)
+                .stroke(DPCalendarCellStyle.gutterColor, lineWidth: 1)
+        }
+    }
+
+    private var monthBodyPager: some View {
+        Group {
+            if let transition = monthTransition {
+                CalendarMonthPageTrack(
+                    pages: transition.pages,
+                    width: calendarWidth,
+                    height: transition.viewport.height,
+                    offset: monthTrackOffset
+                ) { page, index in
+                    calendarMonthBody(page, isInteractive: index == 1)
+                }
+            } else {
+                calendarMonthBody(currentMonthPage, isInteractive: true)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .onPreferenceChange(TeamCalendarMonthHeights.self) { heights in
+            if monthTransition == nil, let height = heights[viewModel.calendarMonth], height > 0 {
+                calendarBodyHeight = height
+            }
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { calendarWidth = proxy.size.width }
+                    .onChange(of: proxy.size.width) { _, width in calendarWidth = width }
+            }
+        }
+        .background(DPCalendarCellStyle.gutterColor)
+        .clipped()
+        .dpHorizontalPan(
+            onChanged: followMonthSwipe,
+            onEnded: finishMonthSwipe,
+            onCancelled: cancelMonthSwipe
+        )
+    }
+
+    private func calendarMonthBody(_ page: TeamCalendarMonthPage, isInteractive: Bool) -> some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: DPCalendarCellStyle.gutterWidth), count: 7),
+            spacing: DPCalendarCellStyle.gutterWidth
+        ) {
+                ForEach(Array(page.visibleIndices), id: \.self) { index in
+                    let day = page.days[index]
                     TeamCalendarDayCell(
-                        day: viewModel.days[index],
-                        currentMonth: viewModel.month,
-                        duty: viewModel.duty(for: viewModel.days[index]),
-                        holidays: viewModel.holidays.indices.contains(index)
-                            ? viewModel.holidays[index]
+                        day: day,
+                        currentMonth: page.key.month,
+                        duty: page.duties.first { $0.year == day.year && $0.month == day.month && $0.day == day.day },
+                        holidays: page.holidays.indices.contains(index)
+                            ? page.holidays[index]
                             : [],
-                        schedules: viewModel.schedules.indices.contains(index)
-                            ? viewModel.schedules[index]
+                        schedules: page.schedules.indices.contains(index)
+                            ? page.schedules[index]
                             : [],
                         weekdayIndex: index % 7,
-                        isSelected: index == viewModel.selectedIndex
+                        isSelected: day == page.selectedDay
                     ) {
+                        guard !isSwipingMonth, !isSlidingMonth, !viewModel.isLoading else { return }
                         Task { await viewModel.selectDay(at: index) }
                     }
+                    .environment(\.calendarSpanCellIndex, index - (page.visibleIndices.first ?? 0))
+                }
+        }
+        .calendarSpanConnections()
+        .background(DPCalendarCellStyle.gutterColor)
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: TeamCalendarMonthHeights.self, value: [page.key: proxy.size.height])
+            }
+        }
+        .allowsHitTesting(isInteractive && !viewModel.isLoading && !isSlidingMonth)
+        .accessibilityHidden(!isInteractive)
+    }
+
+    private func loadMonthPreviews() async {
+        previewPages = [:]
+        let revision = viewModel.calendarPreviewRevision
+        let source = viewModel.calendarMonth
+        await withTaskGroup(of: TeamCalendarMonthPage?.self) { group in
+            for offset in [-1, 1] {
+                let key = source.offsetByMonths(offset)
+                group.addTask { await viewModel.monthPreview(for: key) }
+            }
+            for await page in group {
+                guard !Task.isCancelled,
+                      revision == viewModel.calendarPreviewRevision,
+                      let page else { continue }
+                previewPages[page.key] = page
+                if var transition = monthTransition,
+                   transition.pages[1].key == source,
+                   let index = transition.pages.firstIndex(where: { $0.key == page.key }) {
+                    transition.pages[index] = page
+                    withTransaction(Transaction(animation: nil)) { monthTransition = transition }
                 }
             }
         }
-        .background(DPColor.backgroundCard)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-        .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.standard)
-                .stroke(DPColor.borderSecondary)
+    }
+
+    private func placeholderMonthPage(_ key: OfflineMonthKey) -> TeamCalendarMonthPage {
+        if let page = previewPages[key] { return page }
+        let cells = CalendarDateSupport.placeholderCells(year: key.year, month: key.month)
+        return TeamCalendarMonthPage(
+            key: key,
+            days: cells.map {
+                TeamDayDTO(year: $0.year, month: $0.month, day: $0.day)
+            },
+            duties: [], holidays: [], schedules: [], selectedDay: nil,
+            visibleIndices: CalendarDateSupport.displayedCellRange(in: cells)
+        )
+    }
+
+    private func followMonthSwipe(_ translation: CGSize) {
+        guard !isSlidingMonth, !viewModel.isLoading, calendarWidth > 0 else { return }
+        if monthTransition == nil {
+            let page = currentMonthPage
+            guard page.days.count == 42,
+                  page.key == OfflineMonthKey(year: viewModel.year, month: viewModel.month)
+            else { return }
+            let transition = TeamCalendarMonthTransition(
+                pages: [placeholderMonthPage(page.key.offsetByMonths(-1)), page, placeholderMonthPage(page.key.offsetByMonths(1))],
+                viewport: CalendarMonthBodyViewport(sourceHeight: max(
+                    calendarBodyHeight, CGFloat(page.visibleIndices.count / 7) * 60
+                ))
+            )
+            withTransaction(Transaction(animation: nil)) {
+                monthTransition = transition
+                monthTrackOffset = CalendarMonthSwipe.trackOffset(width: calendarWidth, drag: 0)
+            }
         }
-        .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
+        let drag = CalendarMonthSwipe.followOffset(translation: translation, viewportWidth: calendarWidth)
+        monthTrackOffset = CalendarMonthSwipe.trackOffset(width: calendarWidth, drag: drag)
+        if drag != 0 { isSwipingMonth = true }
+    }
+
+    private func finishMonthSwipe(_ translation: CGSize, velocity: CGSize) {
+        guard !isSlidingMonth else { return }
+        let offset = CalendarMonthSwipe.monthOffset(translation: translation, velocity: velocity, viewportWidth: calendarWidth)
+        guard offset != 0, let transition = monthTransition else {
+            settleMonthSwipe()
+            return
+        }
+        isSlidingMonth = true
+        let width = calendarWidth
+        withAnimation(reduceMotion ? nil : .easeOut(duration: CalendarMonthSwipe.slideOutDuration)) {
+            monthTrackOffset = CalendarMonthSwipe.settledTrackOffset(width: width, monthOffset: offset)
+        }
+        monthSlideTask?.cancel()
+        monthSlideTask = Task {
+            if !reduceMotion { try? await Task.sleep(for: .seconds(CalendarMonthSwipe.slideOutDuration)) }
+            guard !Task.isCancelled, monthTransition?.id == transition.id else { return }
+            if offset > 0 { await viewModel.nextMonth() }
+            else { await viewModel.previousMonth() }
+            guard !Task.isCancelled, monthTransition?.id == transition.id else { return }
+            let destination = transition.pages[1].key.offsetByMonths(offset)
+            if !viewModel.loadFailed, viewModel.calendarMonth == destination {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: CalendarMonthSwipe.slideInDuration)) {
+                    resetMonthTransition()
+                }
+            } else {
+                await returnMonthSwipeToCenter(width: width)
+            }
+        }
+    }
+
+    private func cancelMonthSwipe(_ translation: CGSize) {
+        guard !isSlidingMonth else { return }
+        settleMonthSwipe()
+    }
+
+    private func settleMonthSwipe() {
+        guard monthTransition != nil else { isSwipingMonth = false; return }
+        isSlidingMonth = true
+        monthSlideTask?.cancel()
+        monthSlideTask = Task { await returnMonthSwipeToCenter(width: calendarWidth) }
+    }
+
+    private func returnMonthSwipeToCenter(width: CGFloat) async {
+        withAnimation(reduceMotion ? nil : .easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
+            monthTrackOffset = CalendarMonthSwipe.trackOffset(width: width, drag: 0)
+        }
+        if !reduceMotion { try? await Task.sleep(for: .seconds(CalendarMonthSwipe.slideInDuration)) }
+        guard !Task.isCancelled else { return }
+        withTransaction(Transaction(animation: nil)) { resetMonthTransition() }
+    }
+
+    private func resetMonthTransition() {
+        monthTransition = nil
+        monthTrackOffset = 0
+        isSwipingMonth = false
+        isSlidingMonth = false
     }
 
     private var selectedSchedules: some View {
@@ -601,6 +831,13 @@ private struct TeamMemberAvatar: View {
     }
 }
 
+nonisolated enum TeamCalendarCellSchedules {
+    // Multi-day schedules lead the cell, matching the personal calendar.
+    static func ordered(_ schedules: [TeamScheduleDTO]) -> [TeamScheduleDTO] {
+        DPCalendarSpan.orderedForCell(schedules, daysFromStart: \.daysFromStart, totalDays: \.totalDays)
+    }
+}
+
 private struct TeamCalendarDayCell: View {
     let day: TeamDayDTO
     let currentMonth: Int
@@ -613,52 +850,43 @@ private struct TeamCalendarDayCell: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 1) {
-                DPCalendarDayNumber(
-                    day: day.day,
-                    weekdayIndex: weekdayIndex,
-                    dutyColor: duty?.dutyColor,
-                    hasHoliday: !holidays.isEmpty
-                )
-                ForEach(Array(holidays.enumerated()), id: \.offset) { _, holiday in
-                    Text(verbatim: holiday.dateName)
-                        .font(DPFont.light(size: 9, relativeTo: .caption2))
-                        .foregroundStyle(holiday.isHoliday ? DPCalendarCellStyle.holidayForeground(dutyColor: duty?.dutyColor) : adaptiveMuted)
-                        .lineLimit(1)
-                }
-                ForEach(Array(schedules.prefix(2).enumerated()), id: \.offset) { _, schedule in
-                    VStack(alignment: .leading, spacing: 0) {
-                        Rectangle().fill(adaptiveBorder).frame(height: 1)
-                        Text(verbatim: scheduleLabel(schedule))
-                            .font(DPFont.light(size: 9, relativeTo: .caption2))
-                            .foregroundStyle(adaptiveText)
+            DPCalendarDayTile(
+                day: day.day,
+                weekdayIndex: weekdayIndex,
+                dutyColor: dutyColor,
+                isCurrentMonth: isCurrentMonth,
+                isToday: isToday,
+                hasHoliday: !holidays.isEmpty,
+                highlight: isSelected ? DPColor.accent : nil
+            ) {
+                EmptyView()
+            } content: {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(holidays.enumerated()), id: \.offset) { _, holiday in
+                        Text(verbatim: holiday.dateName)
+                            .font(DPFont.light(size: 10, relativeTo: .caption2))
+                            .foregroundStyle(holiday.isHoliday
+                                ? DPCalendarCellStyle.holidayForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+                                : mutedInk)
+                            .lineLimit(1)
+                    }
+                    // Every schedule is drawn; the tile grows instead of hiding any behind a count.
+                    ForEach(Array(TeamCalendarCellSchedules.ordered(schedules).enumerated()), id: \.offset) { index, schedule in
+                        let span = DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays)
+                        DPCalendarItemRow(showsRule: index > 0, rule: rule, span: span, spanColor: ink, spanID: schedule.id, spanDay: schedule.daysFromStart ?? 1) {
+                            DPCalendarScheduleTitle.text(
+                                Text(verbatim: schedule.content),
+                                daysFromStart: schedule.daysFromStart,
+                                totalDays: schedule.totalDays,
+                                counterColor: mutedInk
+                            )
+                            .font(DPFont.light(size: 10, relativeTo: .caption2))
+                            .tracking(-0.3)
+                            .foregroundStyle(ink)
                             .lineLimit(2)
+                        }
                     }
                 }
-                if schedules.count > 2 {
-                    Text(verbatim: "+\(schedules.count - 2)")
-                        .font(DPFont.light(size: 9, relativeTo: .caption2))
-                        .foregroundStyle(adaptiveMuted)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(3)
-            .frame(maxWidth: .infinity, minHeight: 60, alignment: .topLeading)
-            .background(cellBackground)
-            .opacity(day.month == currentMonth ? 1 : 0.45)
-            .overlay {
-                Rectangle()
-                    .stroke(isToday ? DPColor.danger : isSelected ? DPColor.accent : Color.clear, lineWidth: 2)
-            }
-            .overlay(alignment: .trailing) {
-                Rectangle()
-                    .fill(adaptiveBorder)
-                    .frame(width: DPCalendarCellStyle.cellSeparatorWidth)
-            }
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(adaptiveBorder)
-                    .frame(height: DPCalendarCellStyle.cellSeparatorWidth)
             }
         }
         .buttonStyle(.plain)
@@ -666,23 +894,20 @@ private struct TeamCalendarDayCell: View {
     }
 
     private var isToday: Bool {
-        let today = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        let today = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: Date())
         return today.year == day.year && today.month == day.month && today.day == day.day
     }
 
-    private var cellBackground: Color {
-        DPCalendarCellStyle.cellBackground(
-            dutyColor: duty?.dutyColor,
-            isCurrentMonth: day.month == currentMonth
-        )
+    private var dutyColor: String? { duty?.dutyColor }
+    private var isCurrentMonth: Bool { day.month == currentMonth }
+    private var ink: Color {
+        DPCalendarCellStyle.primaryForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
     }
-    private var adaptiveText: Color { DPCalendarCellStyle.primaryForeground(dutyColor: duty?.dutyColor) }
-    private var adaptiveMuted: Color { DPCalendarCellStyle.secondaryForeground(dutyColor: duty?.dutyColor) }
-    private var adaptiveBorder: Color { DPCalendarCellStyle.cellBorder(dutyColor: duty?.dutyColor) }
-
-    private func scheduleLabel(_ schedule: TeamScheduleDTO) -> String {
-        guard let from = schedule.daysFromStart, let total = schedule.totalDays, total > 1 else { return schedule.content }
-        return "\(schedule.content) (\(from)/\(total))"
+    private var mutedInk: Color {
+        DPCalendarCellStyle.secondaryForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+    }
+    private var rule: Color {
+        DPCalendarCellStyle.ruleColor(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
     }
 }
 

@@ -346,6 +346,7 @@ export default {
       yearLabel: '{year}년',
       thisMonth: '이번달 ({date})',
       goToThisMonth: '이번달',
+      today: '오늘',
     },
     datePicker: {
       placeholder: '날짜 선택',
@@ -1264,6 +1265,8 @@ export default {
       },
     },
     ddayList: {
+      title: 'D-Day',
+      addShort: '추가',
       add: 'D-Day 추가',
       pinToCalendar: '달력에 고정',
       unpin: '고정 해제',

@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.security.oauth.mobile
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
@@ -80,7 +81,7 @@ class MobileNativeOAuthService(
         val authenticated = loginMember ?: throw AuthException()
         if (authenticated.isImpersonating) {
             logDenied("impersonation_forbidden", authenticated.id)
-            throw AuthException("auth.reauth.impersonationForbidden")
+            throw ForbiddenException("auth.reauth.impersonationForbidden")
         }
         return authenticated
     }

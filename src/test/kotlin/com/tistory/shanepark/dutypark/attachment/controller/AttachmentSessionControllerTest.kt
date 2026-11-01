@@ -192,7 +192,7 @@ class AttachmentSessionControllerTest : RestDocsTest() {
         mockMvc.perform(
             delete("/api/attachments/sessions/{sessionId}", session.id)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isUnauthorized)
+        ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("attachment.session.forbidden"))
             .andDo(MockMvcResultHandlers.print())
             .andDo(

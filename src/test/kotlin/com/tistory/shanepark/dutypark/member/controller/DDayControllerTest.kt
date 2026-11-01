@@ -256,7 +256,7 @@ class DDayControllerTest : RestDocsTest() {
             RestDocumentationRequestBuilders.get("/api/dday/{id}", TestData.member2.id!!)
                 .accept(MediaType.APPLICATION_JSON)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("member.visibility.forbidden"))
     }
 
@@ -308,7 +308,7 @@ class DDayControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member2)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("dday.access.forbidden"))
     }
 

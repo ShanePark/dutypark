@@ -109,11 +109,16 @@ class OperationalLoggingTest {
         val token = RefreshToken(member, LocalDateTime.now().plusDays(1), null, null)
         ReflectionTestUtils.setField(token, "id", 34L)
         val request = com.tistory.shanepark.dutypark.push.dto.PushSubscriptionRequest(
-            "endpoint-secret",
+            "https://fcm.googleapis.com/endpoint-secret",
             com.tistory.shanepark.dutypark.push.dto.PushSubscriptionKeys("p256-secret", "auth-secret"),
         )
         capture(com.tistory.shanepark.dutypark.push.service.WebPushService::class.java) { events ->
-            val service = com.tistory.shanepark.dutypark.push.service.WebPushService(repository, mock(), mock())
+            val service = com.tistory.shanepark.dutypark.push.service.WebPushService(
+                repository, mock(), mock(),
+                com.tistory.shanepark.dutypark.push.service.WebPushEndpointValidator {
+                    arrayOf(java.net.InetAddress.getByAddress(byteArrayOf(8, 8, 8, 8)))
+                },
+            )
             val actor = com.tistory.shanepark.dutypark.common.logging.AuditActor(12L, "effective", 99L)
             service.subscribe(token, request, actor)
             service.subscribe(token, request, actor)

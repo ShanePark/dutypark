@@ -48,7 +48,7 @@ class AdminAuthFilterTest {
     }
 
     @Test
-    fun `should 401 error for non-admin user`() {
+    fun `should 403 error for non-admin user`() {
         val loginMember = mock(LoginMember::class.java)
         `when`(loginMember.id).thenReturn(42L)
         `when`(loginMember.name).thenReturn("Ordinary Member")
@@ -61,10 +61,10 @@ class AdminAuthFilterTest {
             adminAuthFilter.doFilter(request, response, filterChain)
         }
 
-        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED)
+        verify(response).sendError(HttpServletResponse.SC_FORBIDDEN)
         verify(filterChain, never()).doFilter(any(), any())
         assertThat(logs)
-            .contains("Ordinary Member", "42", "/api/admin/members/73", "DELETE", "401", "not_admin")
+            .contains("Ordinary Member", "42", "/api/admin/members/73", "DELETE", "403", "not_admin")
             .doesNotContain("private@example.com")
     }
 

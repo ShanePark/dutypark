@@ -146,7 +146,7 @@ class RefreshTokenControllerTest : RestDocsTest() {
             MockMvcRequestBuilders.delete("/api/auth/refresh-tokens/{id}", token.id)
                 .withAuth(TestData.member2)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("auth.refreshToken.delete.forbidden"))
     }
 

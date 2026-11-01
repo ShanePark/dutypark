@@ -2,6 +2,18 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
+nonisolated struct MyInfoAccountActionVisibility {
+    let isImpersonating: Bool
+    let hasPassword: Bool
+    let email: String?
+
+    var showsAccountControls: Bool { !isImpersonating }
+    var showsPasswordChange: Bool {
+        showsAccountControls && hasPassword
+            && email?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+}
+
 /// Account-owned settings: the member profile, the duty pattern, managers and managed
 /// accounts, sessions, linked social logins and the account actions. Preferences that
 /// are not tied to the account identity stay in `SettingsView`.
@@ -74,8 +86,10 @@ struct MyInfoView: View {
                         if model.loadedSections.contains(.sessions) {
                             sessionSection
                         }
-                        socialSection
-                        accountSection
+                        if accountActionVisibility.showsAccountControls {
+                            socialSection
+                            accountSection
+                        }
                     }
                     .padding(.horizontal, DPSpacing.medium)
                     .padding(.top, DPSpacing.large)
@@ -87,6 +101,15 @@ struct MyInfoView: View {
         }
         .accessibilityIdentifier("screen.myInfo")
         .task { await model.load(.myInfo) }
+        .onChange(of: isImpersonating) { _, isImpersonating in
+            guard isImpersonating else { return }
+            socialManagementPresentation = nil
+            showPassword = false
+            showAccountDeletion = false
+        }
+        .onChange(of: accountActionVisibility.showsPasswordChange) { _, canShowPasswordChange in
+            if !canShowPasswordChange { showPassword = false }
+        }
         .onChange(of: model.member) { _, member in
             guard let member else { return }
             onProfilePhotoStateChanged(member.hasProfilePhoto, member.profilePhotoVersion)
@@ -108,7 +131,8 @@ struct MyInfoView: View {
             .ignoresSafeArea()
         }
         .fullScreenCover(isPresented: $showPassword) {
-            if let memberID = model.member?.id {
+            if accountActionVisibility.showsPasswordChange,
+               let memberID = model.member?.id {
                 DPModalOverlay(
                     onDismiss: { showPassword = false },
                     closeOnBackdrop: false,
@@ -150,7 +174,8 @@ struct MyInfoView: View {
             }
         }
         .fullScreenCover(isPresented: $showAccountDeletion) {
-            if let memberID = model.member?.id,
+            if accountActionVisibility.showsAccountControls,
+               let memberID = model.member?.id,
                let memberName = model.member?.name {
                 DPModalOverlay(
                     onDismiss: { showAccountDeletion = false },
@@ -170,17 +195,19 @@ struct MyInfoView: View {
             }
         }
         .fullScreenCover(item: $socialManagementPresentation) { presentation in
-            DPModalOverlay(
-                onDismiss: { socialManagementPresentation = nil },
-                canDismiss: !socialAction.isWorking
-            ) { availableSize, dismiss in
-                SocialConnectionManagementView(
-                    state: socialManagementState(for: presentation.provider),
-                    maximumHeight: availableSize.height,
-                    dismiss: dismiss,
-                    connect: { await link(presentation.provider) },
-                    unlink: { await unlink(presentation.provider) }
-                )
+            if accountActionVisibility.showsAccountControls {
+                DPModalOverlay(
+                    onDismiss: { socialManagementPresentation = nil },
+                    canDismiss: !socialAction.isWorking
+                ) { availableSize, dismiss in
+                    SocialConnectionManagementView(
+                        state: socialManagementState(for: presentation.provider),
+                        maximumHeight: availableSize.height,
+                        dismiss: dismiss,
+                        connect: { await link(presentation.provider) },
+                        unlink: { await unlink(presentation.provider) }
+                    )
+                }
             }
         }
         .fullScreenCover(item: $confirmation) { requestedAction in
@@ -535,11 +562,25 @@ struct MyInfoView: View {
         }
     }
 
+    private var isImpersonating: Bool {
+        if case .authenticated(let member) = session.state { return member.isImpersonating }
+        return false
+    }
+
+    private var accountActionVisibility: MyInfoAccountActionVisibility {
+        MyInfoAccountActionVisibility(
+            isImpersonating: isImpersonating,
+            hasPassword: model.member?.hasPassword == true,
+            email: model.member?.email
+        )
+    }
+
     private var accountSection: some View {
         SettingsCard(title: "settings.account.title", icon: "lock") {
             HStack(spacing: DPSpacing.compact) {
-            if model.member?.hasPassword == true {
+            if accountActionVisibility.showsPasswordChange {
                 Button {
+                    guard accountActionVisibility.showsPasswordChange else { return }
                     DPHapticCenter.shared.emit(.routine)
                     withoutPresentationAnimation { showPassword = true }
                 } label: {
@@ -549,6 +590,7 @@ struct MyInfoView: View {
                 .buttonStyle(AccentSoftButtonStyle())
             }
             Button {
+                guard accountActionVisibility.showsAccountControls else { return }
                 withoutPresentationAnimation { showAccountDeletion = true }
             } label: {
                 Label(SettingsLocalization.string("settings.account.delete"), systemImage: "person.crop.circle.badge.xmark")
@@ -640,7 +682,7 @@ struct MyInfoView: View {
                     .foregroundStyle(DPColor.success)
                     .fixedSize()
                 Button {
-                    guard !socialAction.isWorking else { return }
+                    guard !isImpersonating, !socialAction.isWorking else { return }
                     withoutPresentationAnimation {
                         DPHapticCenter.shared.emit(.routine)
                         socialManagementPresentation = .init(provider: provider)
@@ -653,13 +695,13 @@ struct MyInfoView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(DPColor.textSecondary)
-                .disabled(socialAction.isWorking)
+                .disabled(isImpersonating || socialAction.isWorking)
                 .accessibilityLabel(SettingsSocialManagementPolicy.manageLabel(for: provider))
                 .accessibilityHint(SettingsLocalization.string("settings.social.manageHint"))
                 .accessibilityIdentifier("settings.social.manage.\(provider.rawValue.lowercased())")
             case .connect:
                 Button {
-                    guard !socialAction.isWorking else { return }
+                    guard !isImpersonating, !socialAction.isWorking else { return }
                     Task { await link(provider) }
                 } label: {
                     HStack(spacing: DPSpacing.extraSmall) {
@@ -674,7 +716,7 @@ struct MyInfoView: View {
                     .fixedSize()
                 }
                 .buttonStyle(AccentSoftButtonStyle())
-                .disabled(socialAction.isWorking)
+                .disabled(isImpersonating || socialAction.isWorking)
                 .accessibilityIdentifier("settings.social.connect.\(provider.rawValue.lowercased())")
             }
         }
@@ -715,6 +757,7 @@ struct MyInfoView: View {
     }
 
     private func link(_ provider: OAuthProvider) async {
+        guard !isImpersonating else { return }
         guard isLinking == nil, isUnlinking == nil, socialAction.start() else { return }
         isLinking = provider
         defer {
@@ -743,6 +786,7 @@ struct MyInfoView: View {
     }
 
     private func unlink(_ provider: OAuthProvider) async {
+        guard !isImpersonating else { return }
         guard SettingsSocialUnlinkPolicy.canUnlink(
             connectedProviderCount: connectedSocialProviderCount
         ) else {
@@ -782,7 +826,8 @@ struct MyInfoView: View {
             isConnected: connected,
             connectedProviderCount: connectedSocialProviderCount,
             linkingProvider: isLinking,
-            unlinkingProvider: isUnlinking
+            unlinkingProvider: isUnlinking,
+            isImpersonating: isImpersonating
         )
     }
 

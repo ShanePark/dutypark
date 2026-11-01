@@ -10,6 +10,7 @@ import {
 } from './useCalendarMonthSwipe'
 import dutyCalendarContent from '@/components/duty/DutyCalendarContent.vue?raw'
 import dutyView from '@/views/duty/DutyView.vue?raw'
+import teamView from '@/views/team/TeamView.vue?raw'
 
 function touchEvent(x: number, y: number) {
   const touch = { clientX: x, clientY: y }
@@ -198,9 +199,31 @@ describe('the duty calendar wiring', () => {
 
     const calendarContentTag = dutyView.slice(
       dutyView.indexOf('<DutyCalendarContent'),
-      dutyView.indexOf('/>', dutyView.indexOf('<DutyCalendarContent'))
+      dutyView.indexOf('</DutyCalendarContent>', dutyView.indexOf('<DutyCalendarContent'))
     )
     expect(calendarContentTag).toContain('@prev-month="prevMonth"')
     expect(calendarContentTag).toContain('@next-month="nextMonth"')
+  })
+})
+
+describe('the team calendar wiring', () => {
+  it('uses the shared month swipe on the calendar without swiping the selected-day details', () => {
+    expect(teamView).toContain('const monthSwipe = useCalendarMonthSwipe({')
+    expect(teamView).toContain('onPrevMonth: prevMonth')
+    expect(teamView).toContain('onNextMonth: nextMonth')
+    expect(teamView).toContain('getWidth: () => swipeContainer.value?.clientWidth ?? 0')
+    const swipeSurface = teamView.slice(
+      teamView.indexOf('ref="swipeContainer"'),
+      teamView.indexOf('</CalendarGrid>'),
+    )
+    expect(swipeSurface).toContain('@touchstart.passive="monthSwipe.handleTouchStart"')
+    expect(swipeSurface).toContain('@touchmove.passive="monthSwipe.handleTouchMove"')
+    expect(swipeSurface).toContain('@touchend="monthSwipe.handleTouchEnd"')
+    expect(swipeSurface).toContain('@touchcancel="monthSwipe.handleTouchCancel"')
+    expect(swipeSurface).toContain('@pointerdown.capture="monthSwipe.dragClickGuard.handlePointerDown"')
+    expect(swipeSurface).toContain('@click.capture="monthSwipe.dragClickGuard.handleClick"')
+    expect(swipeSurface).toContain(':style="monthSwipe.trackStyle.value"')
+    expect(teamView).toContain('touch-action: pan-y;')
+    expect(teamView).toMatch(/<\/CalendarGrid>\s*<\/div>\s*<\/div>\s*<div class="rounded-lg border shadow-sm/)
   })
 })

@@ -1,8 +1,9 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
@@ -379,7 +380,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto).schedule
 
 
-        val exception = assertThrows<AuthException> {
+        val exception = assertThrows<ForbiddenException> {
             scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
         }
         assertThat(exception.message).isEqualTo("schedule.tag.notFriend")
@@ -684,7 +685,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         memberRepository.save(target)
         memberRepository.save(login)
 
-        assertThrows<AuthException> {
+        assertThrows<ForbiddenException> {
             scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
         }
     }
@@ -710,7 +711,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         val login = TestData.member2
         makeThemFriend(target, login)
 
-        assertThrows<AuthException> {
+        assertThrows<ForbiddenException> {
             scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
         }
     }

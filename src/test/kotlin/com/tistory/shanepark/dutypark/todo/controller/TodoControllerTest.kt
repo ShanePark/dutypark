@@ -555,7 +555,7 @@ class TodoControllerTest : RestDocsTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .withAuth(owner)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("todo.tag.notFriend"))
     }
 

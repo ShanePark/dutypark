@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.oauth.apple
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -224,7 +225,7 @@ class AppleNativeOAuthService(
     private fun authenticatedMember(purpose: MobileOAuthPurpose, loginMember: LoginMember?): Long? {
         if (purpose == MobileOAuthPurpose.LOGIN) return null
         val member = loginMember ?: throw AuthException()
-        if (member.isImpersonating) throw AuthException("auth.reauth.impersonationForbidden")
+        if (member.isImpersonating) throw ForbiddenException("auth.reauth.impersonationForbidden")
         if (purpose == MobileOAuthPurpose.LINK) {
             val locked = memberRepository.findMemberWithTeamForUpdate(member.id)
                 .orElseThrow { AuthException("auth.token.memberNotFound") }

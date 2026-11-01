@@ -132,7 +132,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
                 .content(json)
                 .withAuth(TestData.member2)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
     }
 
@@ -327,7 +327,7 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
                 .content("""{"hidden":true}""")
                 .withAuth(TestData.member)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
 
         assertThat(dutyTypeRepository.findById(dutyType.id!!).orElseThrow().hidden).isFalse()

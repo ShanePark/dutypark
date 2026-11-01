@@ -4,7 +4,7 @@ import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextT
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.logging.AuditActor
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
@@ -602,7 +602,7 @@ class TodoService(
             return
         }
         if (!friendService.isFriend(todo.member, friend)) {
-            throw AuthException("todo.tag.notFriend")
+            throw ForbiddenException("todo.tag.notFriend")
         }
         // Compute the top of the friend's target column before adding the tag so the
         // freshly-tagged todo lands on top of the friend's board.

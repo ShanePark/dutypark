@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.common.domain.dto.DutyParkErrorResponse
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
@@ -44,7 +45,7 @@ class AuthController(
         @Valid @RequestBody(required = true) param: PasswordChangeDto
     ): ResponseEntity<Void> {
         if (loginMember.id != param.memberId && !loginMember.isAdmin) {
-            throw AuthException("auth.password.changeUnauthorized")
+            throw ForbiddenException("auth.password.changeUnauthorized")
         }
         val byAdmin = loginMember.isAdmin && loginMember.id != param.memberId
         authService.changePassword(param, byAdmin, actor = loginMember)

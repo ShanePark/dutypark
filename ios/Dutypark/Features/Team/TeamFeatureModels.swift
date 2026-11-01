@@ -1,5 +1,17 @@
 import Foundation
 
+nonisolated struct TeamCalendarMonthPage: Identifiable, Sendable {
+    let key: OfflineMonthKey
+    let days: [TeamDayDTO]
+    let duties: [DutyDTO]
+    let holidays: [[HolidayDTO]]
+    let schedules: [[TeamScheduleDTO]]
+    let selectedDay: TeamDayDTO?
+    let visibleIndices: Range<Int>
+
+    var id: OfflineMonthKey { key }
+}
+
 nonisolated struct TeamScheduleDraft: Equatable, Sendable {
     var id: UUID?
     var content: String

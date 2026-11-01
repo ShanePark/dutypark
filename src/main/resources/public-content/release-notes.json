@@ -40,6 +40,19 @@
         }
       },
       "entries": {
+        "pr-434": {
+          "title": "한눈에 보는 달력과 더 안전한 계정 이용",
+          "summary": "웹과 iPhone의 달력을 간결하게 정리하고, 여러 날 일정의 연결과 월 이동을 자연스럽게 개선했습니다. 계정과 첨부파일의 보호도 강화했습니다.",
+          "changes": [
+            "근무 색상과 날짜 구분을 살린 간결한 달력으로 바꾸고, 오늘과 선택한 날짜를 더 알아보기 쉽게 표시합니다.",
+            "여러 날 이어지는 일정의 제목과 일차를 매일 표시하고, 공휴일이나 긴 제목 때문에 높이가 달라도 밑줄이 자연스럽게 이어집니다.",
+            "팀 달력도 좌우로 밀어 월을 이동할 수 있으며, 개인·팀 달력에서 뒤늦은 응답 때문에 보고 있는 달의 내용이 바뀌지 않도록 월 이동을 안정화했습니다.",
+            "iPhone에서는 다른 회원과 팀 달력의 앞뒤 달을 미리 준비해 더 자연스럽게 넘길 수 있습니다.",
+            "D-Day 목록을 가까운 예정일부터 보기 쉽게 정리하고, 날짜에 해당하는 할 일을 빠짐없이 표시합니다.",
+            "권한이 없거나 입력 내용을 확인해야 하는 상황에서 불필요하게 로그아웃되지 않도록 개선하고, 다른 회원 계정으로 접속 중에는 계정 보안 설정을 변경할 수 없게 했습니다.",
+            "첨부파일을 더 안전하게 처리하고, 일정 태그의 개인정보와 알림 전송에 대한 보호를 강화했습니다."
+          ]
+        },
         "pr-433": {
           "title": "월 이동 디자인 개선·빠른 저장",
           "summary": "웹과 iPhone에서 월 이동 화살표와 년-월을 누르기 쉬운 하나의 버튼으로 합치고, 저장 단축키를 추가했습니다.",
@@ -2387,6 +2400,19 @@
         }
       },
       "entries": {
+        "pr-434": {
+          "title": "Clearer calendars and safer account access",
+          "summary": "Simplified calendars on the web and iPhone, made multi-day schedules and month changes flow more naturally, and strengthened account and attachment protection.",
+          "changes": [
+            "Introduced simpler calendars with clear duty colors, day boundaries, and more recognizable today and selected-date markers.",
+            "Show multi-day schedule titles and day counters on every day, with underlines that connect smoothly even when holidays or long titles change their height.",
+            "Added horizontal month swipes to team calendars and improved month loading in personal and team calendars so late responses do not replace the month being viewed.",
+            "Prepare neighboring months in other members’ and team calendars on iPhone for smoother month swipes.",
+            "Organized D-Days with upcoming dates nearest first and show every Todo due on a date.",
+            "Avoid unnecessary sign-outs for permission or input errors, and prevent account-security changes while accessing another member’s account.",
+            "Handle attachments more safely and strengthen privacy for schedule tags and protection for notification delivery."
+          ]
+        },
         "pr-433": {
           "title": "Month navigation redesign and quick saving",
           "summary": "Joined the month arrows and year-month into one easy-to-tap control on the web and iPhone, and added a keyboard shortcut for saving.",
@@ -4697,6 +4723,25 @@
     }
   },
   "items": [
+    {
+      "id": "pr-434",
+      "version": "2026.11.02",
+      "date": "2026-11-02",
+      "pr": 434,
+      "url": "https://github.com/ShanePark/dutypark/pull/434",
+      "category": "improvement",
+      "areas": [
+        "calendar",
+        "schedule",
+        "team",
+        "todo",
+        "auth",
+        "attachments",
+        "notifications",
+        "security",
+        "ui"
+      ]
+    },
     {
       "id": "pr-433",
       "version": "2026.10.25",

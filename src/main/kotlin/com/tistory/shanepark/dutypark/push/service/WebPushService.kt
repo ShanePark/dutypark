@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.push.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.logging.AuditActor
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
@@ -24,6 +25,7 @@ class WebPushService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val objectMapper: ObjectMapper,
     private val pushService: PushService?,
+    private val endpointValidator: WebPushEndpointValidator,
 ) {
     private val log = logger()
 
@@ -31,6 +33,11 @@ class WebPushService(
 
     fun subscribe(refreshToken: RefreshToken, request: PushSubscriptionRequest, actor: AuditActor? = null): Boolean {
         if (!isEnabled()) return false
+        when (endpointValidator.validate(request.endpoint)) {
+            WebPushEndpointValidator.Result.INVALID -> throw BadRequestException()
+            WebPushEndpointValidator.Result.UNRESOLVED -> return false
+            WebPushEndpointValidator.Result.VALID -> Unit
+        }
 
         val subscriptionChanged = refreshToken.pushEndpoint != request.endpoint ||
             refreshToken.pushP256dh != request.keys.p256dh || refreshToken.pushAuth != request.keys.auth
@@ -93,6 +100,19 @@ class WebPushService(
                         auditContext(pushContext("web_push_subscription_removed_incomplete", memberId, token, payload)),
                     )
                     return@forEach
+                }
+                when (endpointValidator.validate(requireNotNull(token.pushEndpoint))) {
+                    WebPushEndpointValidator.Result.INVALID -> {
+                        token.unsubscribePush()
+                        refreshTokenRepository.save(token)
+                        log.warn(
+                            "Invalid Web Push subscription removed: {}",
+                            auditContext(pushContext("web_push_subscription_removed_invalid", memberId, token, payload)),
+                        )
+                        return@forEach
+                    }
+                    WebPushEndpointValidator.Result.UNRESOLVED -> return@forEach
+                    WebPushEndpointValidator.Result.VALID -> Unit
                 }
                 val payloadJson = serializePayload(memberId, token, payload) ?: return@forEach
                 sendNotification(token, memberId, payload, payloadJson)

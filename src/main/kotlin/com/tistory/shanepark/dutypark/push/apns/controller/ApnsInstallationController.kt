@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.push.apns.controller
 
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.push.apns.dto.ApnsInstallationRequest
 import com.tistory.shanepark.dutypark.push.apns.service.ApnsInstallationService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -27,7 +27,7 @@ class ApnsInstallationController(
         servletRequest: HttpServletRequest,
     ): ResponseEntity<Map<String, Boolean>> {
         val refreshToken = cookieService.extractRefreshToken(servletRequest.cookies)
-            ?: throw AuthException("auth.refresh.invalid")
+            ?: throw ForbiddenException("auth.refresh.invalid")
         apnsInstallationService.register(loginMember, refreshToken, request.deviceToken, request.sandbox)
         return ResponseEntity.ok(mapOf("success" to true))
     }
@@ -42,7 +42,7 @@ class ApnsInstallationController(
             "success" to apnsInstallationService.unregister(
                 loginMember,
                 cookieService.extractRefreshToken(servletRequest.cookies)
-                    ?: throw AuthException("auth.refresh.invalid"),
+                    ?: throw ForbiddenException("auth.refresh.invalid"),
                 request.deviceToken,
             )
         )

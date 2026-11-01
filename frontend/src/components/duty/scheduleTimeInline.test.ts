@@ -12,21 +12,13 @@ describe('schedule time inline display', () => {
     )
   })
 
-  it('separates the monthly cell title and time with a space', () => {
+  it('leads the monthly cell title with its time and ends it with the multi-day counter', () => {
     expect(dutyCalendarContent).toMatch(
-      /<span v-if="formatScheduleTime\(schedule\)" class="calendar-schedule-time">\s+\{\{ formatScheduleTime\(schedule\) \}\}<\/span>/
+      /<span v-if="formatScheduleTime\(schedule\)" class="calendar-item__time">\{\{ formatScheduleTime\(schedule\) \}\}<\/span>\{\{ schedule\.contentWithoutTime \|\| schedule\.content \}\}/
     )
-    expect(dutyCalendarContent).toContain('> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template>')
-  })
-
-  it('styles the monthly cell time as a spaced, quieter secondary label', () => {
-    const rule = dutyCalendarContent.match(/\.calendar-schedule-time \{([^}]*)\}/)?.[1] ?? ''
-    expect(rule).toMatch(/margin-left:/)
-    expect(rule).toMatch(/opacity:/)
-    // Narrow mobile cells must still wrap ranges like (09:00~10:00) instead of clipping them.
-    expect(rule).not.toMatch(/white-space: nowrap/)
     expect(dutyCalendarContent).toMatch(
-      /@media \(min-width: 640px\) \{\s*\.calendar-schedule-time \{\s*font-size: 0\.8\d*em;/
+      /class="calendar-schedule-detail-icon"\s*\/><span v-if="schedule\.totalDays > 1" class="calendar-item__part"> \(\{\{ schedule\.daysFromStart \}\}\/\{\{ schedule\.totalDays \}\}\)<\/span><\/span>/
     )
+    expect(dutyCalendarContent).not.toContain('calendar-item__line--split')
   })
 })

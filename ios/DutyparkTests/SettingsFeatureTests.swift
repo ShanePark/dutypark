@@ -7,6 +7,45 @@ import UIKit
 @MainActor
 struct SettingsFeatureTests {
     @Test
+    func passwordInputAndPermissionRejectionsKeepTheSessionAndExistingErrorNotice() async throws {
+        defer { SettingsURLProtocolStub.handler = nil }
+        for impersonating in [false, true] {
+            for (status, code) in [(400, "auth.password.currentMismatch"), (403, "auth.password.changeUnauthorized")] {
+                let recorder = SettingsRequestRecorder()
+                SettingsURLProtocolStub.handler = { request in
+                    recorder.record(request)
+                    return (
+                        HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!,
+                        Data("{\"code\":\"\(code)\"}".utf8)
+                    )
+                }
+                let configuration = URLSessionConfiguration.ephemeral
+                configuration.protocolClasses = [SettingsURLProtocolStub.self]
+                configuration.httpCookieStorage = nil
+                let api = APIClient(baseURL: URL(string: "https://dutypark.test/api/")!,
+                                    session: URLSession(configuration: configuration))
+                let failures = SettingsAuthenticationFailureCounter()
+                await api.setImpersonating(impersonating)
+                await api.setAuthenticationFailureHandler { await failures.increment() }
+                let model = SettingsViewModel(service: SettingsService(client: api))
+
+                do {
+                    try await model.changePassword(memberID: 1, currentPassword: "incorrect", newPassword: "new-password")
+                    Issue.record("Expected password request rejection")
+                } catch {
+                    #expect(error as? APIError == .server(status: status, code: code))
+                }
+
+                #expect(await failures.value == 0)
+                #expect(recorder.requests.compactMap(\.url?.path) == ["/api/auth/password"])
+                #expect(model.noticeKey == "settings.password.failed")
+                #expect(model.noticeIsError)
+                #expect(!model.isWorking)
+            }
+        }
+    }
+
+    @Test
     func supportsKoreanAndEnglishLanguageChoices() {
         #expect(AppLanguage.allCases.map(\.rawValue) == ["ko", "en"])
         #expect(AppLanguage.allCases.map(\.nativeName) == ["한국어", "English"])
@@ -1266,6 +1305,11 @@ struct SettingsFeatureTests {
     private static func jsonBody(_ body: Data) -> [String: Any]? {
         return try? JSONSerialization.jsonObject(with: body) as? [String: Any]
     }
+}
+
+private actor SettingsAuthenticationFailureCounter {
+    private(set) var value = 0
+    func increment() { value += 1 }
 }
 
 private final class SettingsRequestRecorder: @unchecked Sendable {

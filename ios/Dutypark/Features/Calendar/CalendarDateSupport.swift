@@ -199,9 +199,9 @@ nonisolated enum CalendarVisualLogic {
         }
     }
 
-    static let compactCellMinimumHeight: CGFloat = 60
-    static let maximumSchedulesPerCell = 3
-    static let maximumTodosPerCell = 2
+    static let compactCellMinimumHeight: CGFloat = DPCalendarCellStyle.cellMinimumHeight
+    /// A to-do bubble in a narrow tile keeps this many characters, as on the mobile web.
+    static let cellTodoTitleLimit = 6
     /// A cell can show three faces beside a schedule before the row stops reading as
     /// names and starts reading as texture; the rest are counted, as on the mobile web.
     static let maximumTagsPerCellSchedule = 3
@@ -359,6 +359,12 @@ nonisolated enum CalendarVisualLogic {
         return difference > 0 ? "D-\(difference)" : "D+\(-difference)"
     }
 
+    static func cellTodoTitle(_ title: String) -> String {
+        let characters = Array(title)
+        guard characters.count > cellTodoTitleLimit else { return title }
+        return String(characters.prefix(cellTodoTitleLimit)) + "…"
+    }
+
     static func usesLightForeground(on hex: String?) -> Bool {
         DPCalendarCellStyle.usesLightForeground(on: hex)
     }
@@ -377,4 +383,41 @@ nonisolated enum CalendarTypography {
     static let cellMicro: CGFloat = 9
     static let detailTitle: CGFloat = 16
     static let detailMetadata: CGFloat = 14
+}
+
+/// The flat D-Day list: every row has the same geometry, and a D-Day's state only
+/// changes the colour of its counter.
+nonisolated enum DDayListPresentation {
+    enum State: Equatable {
+        case past
+        case urgent
+        case soon
+        case future
+    }
+
+    static let rowHeight: CGFloat = 58
+
+    static func state(calc: Int64) -> State {
+        if calc < 0 { return .past }
+        if calc <= 3 { return .urgent }
+        if calc <= 14 { return .soon }
+        return .future
+    }
+
+    static func label(calc: Int64) -> String {
+        if calc == 0 { return "D-Day" }
+        return calc < 0 ? "D+\(-calc)" : "D-\(calc)"
+    }
+
+    /// `2026.11.14 (토)`: the date the web list shows, with the weekday in the app language.
+    static func dateText(_ value: DateOnly, locale: Locale) -> String {
+        let parts = value.rawValue.split(separator: "-")
+        guard parts.count == 3, let date = CalendarDateSupport.date(from: value) else { return value.rawValue }
+        let formatter = DateFormatter()
+        formatter.calendar = CalendarDateSupport.calendar
+        formatter.timeZone = CalendarDateSupport.calendar.timeZone
+        formatter.locale = locale
+        formatter.dateFormat = "EEE"
+        return "\(parts[0]).\(parts[1]).\(parts[2]) (\(formatter.string(from: date)))"
+    }
 }

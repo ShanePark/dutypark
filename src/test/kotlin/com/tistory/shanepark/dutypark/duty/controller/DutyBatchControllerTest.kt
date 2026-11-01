@@ -49,7 +49,7 @@ class DutyBatchControllerTest : RestDocsTest() {
                 .param("month", "3")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("duty.edit.forbidden"))
     }
 

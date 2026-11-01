@@ -43,7 +43,7 @@ class AdminMemberSuspensionTest : DutyparkIntegrationTest() {
             post("/admin/api/members/{memberId}/suspension", TestData.member.id!!)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member2)}")
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
 
         assertThat(reloadMember().status).isEqualTo(MemberStatus.ACTIVE)
     }

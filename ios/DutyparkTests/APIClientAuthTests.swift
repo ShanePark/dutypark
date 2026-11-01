@@ -307,6 +307,43 @@ final class APIClientAuthTests: XCTestCase {
         }
     }
 
+    func testSecondaryCredentialRejectionIsNotGloballyExemptFromSessionFailureHandling() async throws {
+        let failures = LockedCounter()
+        let refreshes = LockedCounter()
+        URLProtocolStub.handler = { request in
+            if request.url?.path == "/api/auth/refresh" {
+                _ = refreshes.increment()
+                return Self.response(request, status: 200, body: "{}")
+            }
+            return Self.response(request, status: 401, body: #"{"code":"auth.apple.credential.invalid"}"#)
+        }
+        let client = makeClient()
+        await client.setAuthenticationFailureHandler { _ = failures.increment() }
+
+        do {
+            _ = try await client.data("protected")
+            XCTFail("Expected the original authentication rejection")
+        } catch APIError.server(status: 401, code: "auth.apple.credential.invalid") {}
+
+        XCTAssertEqual(refreshes.current, 1)
+        XCTAssertEqual(failures.current, 1)
+    }
+
+    func testMalformedUnauthorizedResponseStillEndsImpersonationWithAnExplicitCredentialException() async throws {
+        let failures = LockedCounter()
+        URLProtocolStub.handler = { Self.response($0, status: 401, body: "not-json") }
+        let client = makeClient()
+        await client.setImpersonating(true)
+        await client.setAuthenticationFailureHandler { _ = failures.increment() }
+
+        do {
+            _ = try await client.data("protected", preservingSessionOnUnauthorizedCodes: ["auth.apple.credential.invalid"])
+            XCTFail("Expected authentication rejection")
+        } catch APIError.server(status: 401, code: nil) {}
+
+        XCTAssertEqual(failures.current, 1)
+    }
+
     func testImpersonationDoesNotRefreshUnauthorizedRequest() async throws {
         let refreshCount = LockedCounter()
         URLProtocolStub.handler = { request in

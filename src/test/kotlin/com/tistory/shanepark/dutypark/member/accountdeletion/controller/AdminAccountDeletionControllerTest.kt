@@ -33,7 +33,7 @@ class AdminAccountDeletionControllerTest : DutyparkIntegrationTest() {
             post("/admin/api/account-deletions/{jobId}/retry", job.id)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
 
         assertThat(jobRepository.findById(job.id!!).orElseThrow().status)
             .isEqualTo(AccountDeletionJobStatus.FAILED)

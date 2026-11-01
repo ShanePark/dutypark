@@ -47,6 +47,24 @@ describe('team self-service creation', () => {
     expect(createModal).toContain('id="new-team-description"')
   })
 
+  it('shows every team schedule of a day in its calendar cell', () => {
+    const dayContent = teamView.slice(
+      teamView.indexOf('<template #day-content'),
+      teamView.indexOf('</CalendarGrid>'),
+    )
+
+    expect(dayContent).toContain('v-for="schedule in orderForCalendarCell(teamSchedules[index] ?? [])"')
+    expect(dayContent).not.toMatch(/teamSchedules\[index\]\.slice\(/)
+    expect(dayContent).not.toMatch(/\+\{\{ teamSchedules\[index\]\.length/)
+  })
+
+  it('ends a multi-day team schedule title with its day counter', () => {
+    expect(teamView).toContain(
+      '<span class="calendar-item__text">{{ schedule.content }}<span v-if="(schedule.totalDays ?? 0) > 1" class="calendar-item__part"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</span></span>',
+    )
+    expect(teamView).not.toContain('calendar-item__line--split')
+  })
+
   it('does not expose a join-request action', () => {
     expect(teamView).not.toContain("t('team.view.actions.requestJoin')")
   })

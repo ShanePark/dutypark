@@ -166,7 +166,7 @@ class MobileOAuthWebAccountDeletionControllerTest : DutyparkIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(authorizeBody("DELETE_ACCOUNT", WEB_CALLBACK, "i".repeat(43)))
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("auth.reauth.impersonationForbidden"))
     }
 

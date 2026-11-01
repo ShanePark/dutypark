@@ -283,7 +283,7 @@ class DutyControllerTest : RestDocsTest() {
                 .queryParam("date", today.toString())
                 .withAuth(TestData.member2)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("duty.edit.forbidden"))
 
         val override = dutyRepository.findByMemberAndDutyDate(TestData.member, today)
@@ -320,7 +320,7 @@ class DutyControllerTest : RestDocsTest() {
                 .content(json)
                 .withAuth(TestData.member2)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("duty.edit.forbidden"))
             .andDo(MockMvcResultHandlers.print())
     }

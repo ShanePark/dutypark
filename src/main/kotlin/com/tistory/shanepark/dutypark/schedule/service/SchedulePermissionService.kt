@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
@@ -20,7 +20,7 @@ class SchedulePermissionService(
         if (scheduleMember.isEquals(loginMember = loginMember)) return
         if (memberService.isManager(isManager = loginMember, target = scheduleMember)) return
 
-        throw AuthException("schedule.write.forbidden")
+        throw ForbiddenException("schedule.write.forbidden")
     }
 
     fun checkScheduleWriteAuthority(loginMember: LoginMember, schedule: Schedule) {
@@ -43,7 +43,7 @@ class SchedulePermissionService(
 
         val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, owner)
         if (schedule.visibility !in availableVisibilities) {
-            throw AuthException("schedule.visibility.forbidden")
+            throw ForbiddenException("schedule.visibility.forbidden")
         }
     }
 }

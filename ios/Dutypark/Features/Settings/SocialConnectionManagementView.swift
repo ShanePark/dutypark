@@ -12,18 +12,21 @@ nonisolated struct SettingsSocialManagementState: Equatable, Sendable {
     let connectedProviderCount: Int
     let linkingProvider: OAuthProvider?
     let unlinkingProvider: OAuthProvider?
+    var isImpersonating = false
 
     var isConnecting: Bool { linkingProvider == provider }
     var isDisconnecting: Bool { unlinkingProvider == provider }
     var isWorking: Bool { linkingProvider != nil || unlinkingProvider != nil }
-    var canConnect: Bool { !isConnected && !isWorking }
+    var canConnect: Bool { !isImpersonating && !isConnected && !isWorking }
     var canRequestUnlink: Bool {
-        isConnected
+        !isImpersonating
+            && isConnected
             && SettingsSocialUnlinkPolicy.canUnlink(connectedProviderCount: connectedProviderCount)
             && !isWorking
     }
     var showsLastProviderReason: Bool {
-        isConnected
+        !isImpersonating
+            && isConnected
             && !SettingsSocialUnlinkPolicy.canUnlink(connectedProviderCount: connectedProviderCount)
     }
     var statusKey: String {
@@ -111,6 +114,9 @@ struct SocialConnectionManagementView: View {
             .accessibilityIdentifier("settings.social.management.close")
         }
         .accessibilityIdentifier("settings.social.management.panel.\(providerID)")
+        .onChange(of: state.isImpersonating) { _, isImpersonating in
+            if isImpersonating { confirmsUnlink = false }
+        }
         .fullScreenCover(isPresented: $confirmsUnlink) {
             DPModalOverlay(
                 maximumContentWidth: DPConfirmationPanel.maximumWidth,
@@ -270,7 +276,8 @@ struct SocialConnectionManagementView: View {
     }
 
     private func performUnlink(confirmationDismiss: @escaping () -> Void) {
-        guard SettingsSocialUnlinkConfirmationPolicy.canSubmit(isWorking: isUnlinkWorking),
+        guard state.canRequestUnlink,
+              SettingsSocialUnlinkConfirmationPolicy.canSubmit(isWorking: isUnlinkWorking),
               !state.isWorking,
               unlinkAction.start()
         else { return }

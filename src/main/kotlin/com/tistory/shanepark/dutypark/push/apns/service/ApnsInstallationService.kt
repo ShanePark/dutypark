@@ -4,7 +4,7 @@ import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.push.apns.domain.entity.ApnsInstallation
 import com.tistory.shanepark.dutypark.push.apns.domain.repository.ApnsInstallationRepository
@@ -60,14 +60,14 @@ class ApnsInstallationService(
     private fun requireCurrentRefreshToken(loginMember: LoginMember, tokenValue: String): RefreshToken {
         val refreshToken = refreshTokenRepository.findByToken(tokenValue)
             ?.takeIf(RefreshToken::isValid)
-            ?: throw AuthException("auth.refresh.invalid")
+            ?: throw ForbiddenException("auth.refresh.invalid")
         val sessionOwnerId = if (loginMember.isImpersonating) {
             loginMember.originalMemberId
         } else {
             loginMember.id
         }
         if (sessionOwnerId == null || refreshToken.member.id != sessionOwnerId) {
-            throw AuthException("auth.refresh.invalid")
+            throw ForbiddenException("auth.refresh.invalid")
         }
         return refreshToken
     }

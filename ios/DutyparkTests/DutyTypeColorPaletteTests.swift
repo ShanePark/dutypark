@@ -64,15 +64,18 @@ final class DutyTypeColorPaletteTests: XCTestCase {
             }
             XCTAssertFalse(DPCalendarCellStyle.usesLightForeground(on: option.hex))
         }
-        XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: "#ABC123", weekdayIndex: 0, hasHoliday: false), DPColor.dangerHover)
-        XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: nil, weekdayIndex: 6, hasHoliday: false), DPColor.accentHover)
-        XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: "#F6D365", weekdayIndex: 0, hasHoliday: false), DutyTypeColorPalette.sundayColor)
-        XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: "#8FDCBD", weekdayIndex: 6, hasHoliday: false), DutyTypeColorPalette.saturdayColor)
-        XCTAssertEqual(DPCalendarCellStyle.holidayForeground(dutyColor: "#ABC123"), DPColor.dangerHover)
-        XCTAssertEqual(DPCalendarCellStyle.holidayForeground(dutyColor: nil), DPColor.dangerHover)
+        // Weekend and holiday ink follows the fill's tone: fixed dark inks on any light
+        // fill (palette or custom), the theme inks only on a tile without a duty.
+        XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: "#ABC123", weekdayIndex: 0, hasHoliday: false), DPCalendarCellStyle.sundayOnLightFill)
+        XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: nil, weekdayIndex: 6, hasHoliday: false), DPCalendarCellStyle.saturdayInk)
+        XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: "#F6D365", weekdayIndex: 0, hasHoliday: false), DPCalendarCellStyle.sundayOnLightFill)
+        XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: "#8FDCBD", weekdayIndex: 6, hasHoliday: false), DPCalendarCellStyle.saturdayOnLightFill)
+        XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: "#1E3A8A", weekdayIndex: 0, hasHoliday: false), DPCalendarCellStyle.sundayOnDarkFill)
+        XCTAssertEqual(DPCalendarCellStyle.holidayForeground(dutyColor: "#ABC123"), DPCalendarCellStyle.sundayOnLightFill)
+        XCTAssertEqual(DPCalendarCellStyle.holidayForeground(dutyColor: nil), DPCalendarCellStyle.sundayInk)
         for option in DutyTypeColorPalette.options {
-            XCTAssertEqual(DPCalendarCellStyle.holidayForeground(dutyColor: option.hex), DutyTypeColorPalette.sundayColor)
-            XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: option.hex, weekdayIndex: 2, hasHoliday: true), DutyTypeColorPalette.sundayColor)
+            XCTAssertEqual(DPCalendarCellStyle.holidayForeground(dutyColor: option.hex), DPCalendarCellStyle.sundayOnLightFill)
+            XCTAssertEqual(DPCalendarCellStyle.dayNumberColor(dutyColor: option.hex, weekdayIndex: 2, hasHoliday: true), DPCalendarCellStyle.sundayOnLightFill)
         }
     }
 
@@ -261,7 +264,6 @@ private struct DutyPaletteRenderFixture: View {
                             }
                             .frame(maxWidth: .infinity, minHeight: 54)
                             .background(DPCalendarCellStyle.cellBackground(dutyColor: option.hex, isCurrentMonth: true))
-                            .overlay { Rectangle().stroke(DPCalendarCellStyle.cellBorder(dutyColor: option.hex), lineWidth: 0.5) }
                         }
                     }
                 }

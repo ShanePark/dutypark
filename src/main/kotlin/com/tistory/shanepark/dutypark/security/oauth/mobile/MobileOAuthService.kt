@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.oauth.mobile
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
@@ -63,11 +64,15 @@ class MobileOAuthService(
         val purpose = parsePurpose(request.purpose)
         val authenticatedMemberId = when (purpose) {
             MobileOAuthPurpose.LOGIN -> null
-            MobileOAuthPurpose.LINK -> loginMember?.id ?: throw AuthException()
+            MobileOAuthPurpose.LINK -> {
+                val member = loginMember ?: throw AuthException()
+                if (member.isImpersonating) throw ForbiddenException("auth.reauth.impersonationForbidden")
+                member.id
+            }
             MobileOAuthPurpose.DELETE_ACCOUNT -> {
                 val member = loginMember ?: throw AuthException()
                 if (member.isImpersonating) {
-                    throw AuthException("auth.reauth.impersonationForbidden")
+                    throw ForbiddenException("auth.reauth.impersonationForbidden")
                 }
                 member.id
             }
@@ -85,6 +90,7 @@ class MobileOAuthService(
                 stateHash = sha256Hex(state),
                 stateExpiresAt = now.plus(STATE_TTL),
                 authenticatedMemberId = authenticatedMemberId,
+                linkAuthorized = purpose == MobileOAuthPurpose.LINK,
             )
         )
 
@@ -113,9 +119,10 @@ class MobileOAuthService(
         code: String?,
         state: String,
         error: String?,
+        loginMember: LoginMember? = null,
     ): URI {
         val provider = parseProvider(providerName)
-        val claim = claim(provider, state)
+        val claim = claim(provider, state, loginMember)
         if (error != null) {
             log.info("Mobile OAuth cancelled {}", auditContext(mapOf(
                 "event" to "auth.oauth.mobile.cancelled", "transactionId" to claim.transactionId,
@@ -202,7 +209,7 @@ class MobileOAuthService(
     private fun callbackUri(base: String, name: String, value: String): URI =
         UriComponentsBuilder.fromUriString(base).queryParam(name, value).build().encode().toUri()
 
-    private fun claim(provider: SsoType, state: String): MobileOAuthClaim {
+    private fun claim(provider: SsoType, state: String, loginMember: LoginMember?): MobileOAuthClaim {
         return requireNotNull(callbackTransaction.execute {
             val now = clock.instant()
             val transaction = transactionRepository.findByStateHashForUpdate(sha256Hex(state))
@@ -216,6 +223,16 @@ class MobileOAuthService(
             ) {
                 logDenied("state_invalid", provider, transaction.id)
                 throw AuthException("auth.oauth.mobile.state.invalid")
+            }
+            if (transaction.purpose == MobileOAuthPurpose.LINK) {
+                if (!transaction.linkAuthorized) {
+                    logDenied("link_not_authorized", provider, transaction.id)
+                    throw AuthException("auth.oauth.mobile.state.invalid")
+                }
+                if (loginMember?.isImpersonating == true) {
+                    logDenied("impersonation_forbidden", provider, transaction.id)
+                    throw ForbiddenException("auth.reauth.impersonationForbidden")
+                }
             }
             transaction.claim(now)
             MobileOAuthClaim(

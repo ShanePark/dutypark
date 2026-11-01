@@ -2,6 +2,8 @@ package com.tistory.shanepark.dutypark.security.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
@@ -99,6 +101,9 @@ class AuthService(
         byAdmin: Boolean = false,
         actor: LoginMember? = null,
     ) {
+        if (actor?.isImpersonating == true) {
+            throw ForbiddenException("auth.reauth.impersonationForbidden")
+        }
         val member = memberRepository.findById(param.memberId).orElseThrow {
             log.warn(
                 "Password change denied {}",
@@ -111,7 +116,7 @@ class AuthService(
                     )
                 ),
             )
-            throw AuthException("auth.password.memberNotFound")
+            throw NoSuchElementException("auth.password.memberNotFound")
         }
         val auditActor = actor?.toAuditActor()
         val target = mapOf("type" to "Member", "id" to member.id, "name" to member.name)
@@ -130,7 +135,7 @@ class AuthService(
                         )
                     ),
                 )
-                throw AuthException("auth.password.currentMismatch")
+                throw BadRequestException("auth.password.currentMismatch")
             }
         }
 

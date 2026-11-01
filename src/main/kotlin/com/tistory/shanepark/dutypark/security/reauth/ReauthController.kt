@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.security.reauth
 
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.AuthService
@@ -22,7 +22,7 @@ class ReauthController(
         @Valid @RequestBody request: PasswordReauthRequest,
     ): ReauthProofResponse {
         if (loginMember.isImpersonating) {
-            throw AuthException("auth.reauth.impersonationForbidden")
+            throw ForbiddenException("auth.reauth.impersonationForbidden")
         }
         authService.verifyPasswordForReauth(loginMember.id, request.password)
         return reauthService.issue(loginMember.id, request.purpose)

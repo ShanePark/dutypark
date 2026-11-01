@@ -1,7 +1,8 @@
 package com.tistory.shanepark.dutypark.duty.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
@@ -84,7 +85,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         memberRepository.save(member)
         memberRepository.save(member2)
 
-        assertThrows<AuthException> {
+        assertThrows<ForbiddenException> {
             dutyService.getDuties(member.id!!, 2023, 4, loginMember(member2))
         }
     }
@@ -130,7 +131,7 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         memberRepository.save(login)
         updateVisibility(target, Visibility.PRIVATE)
 
-        assertThrows<AuthException> {
+        assertThrows<ForbiddenException> {
             dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
         }
     }

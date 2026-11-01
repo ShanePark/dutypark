@@ -344,6 +344,7 @@ export default {
       yearLabel: '{year}',
       thisMonth: 'This month ({date})',
       goToThisMonth: 'This month',
+      today: 'Today',
     },
     datePicker: {
       placeholder: 'Select date',
@@ -1359,6 +1360,8 @@ export default {
       },
     },
     ddayList: {
+      title: 'D-Day',
+      addShort: 'Add',
       add: 'Add D-Day',
       pinToCalendar: 'Pin to calendar',
       unpin: 'Unpin',

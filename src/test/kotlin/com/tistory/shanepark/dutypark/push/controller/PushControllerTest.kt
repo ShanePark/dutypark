@@ -1,6 +1,11 @@
 package com.tistory.shanepark.dutypark.push.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
+import com.tistory.shanepark.dutypark.push.service.WebPushEndpointValidator
+import org.junit.jupiter.api.BeforeEach
+import org.mockito.kotlin.any
+import org.mockito.kotlin.whenever
+import java.net.InetAddress
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import nl.martijndwars.webpush.PushService
@@ -38,6 +43,15 @@ class PushControllerTest : RestDocsTest() {
 
     @MockitoBean
     lateinit var pushService: PushService
+
+    @MockitoBean
+    lateinit var endpointValidator: WebPushEndpointValidator
+
+    @BeforeEach
+    fun configurePushDns() {
+        val validator = WebPushEndpointValidator { arrayOf(InetAddress.getByAddress(byteArrayOf(8, 8, 8, 8))) }
+        whenever(endpointValidator.validate(any())).thenAnswer { validator.validate(it.getArgument(0)) }
+    }
 
     @Test
     fun `get push enabled`() {
@@ -87,7 +101,7 @@ class PushControllerTest : RestDocsTest() {
 
         val requestBody = """
             {
-              "endpoint": "https://example.com/endpoint",
+              "endpoint": "https://fcm.googleapis.com/endpoint",
               "keys": {
                 "p256dh": "test-p256dh",
                 "auth": "test-auth"
@@ -121,7 +135,7 @@ class PushControllerTest : RestDocsTest() {
             )
 
         val updatedToken = refreshTokenRepository.findByToken(refreshToken.token)
-        assertThat(updatedToken?.pushEndpoint).isEqualTo("https://example.com/endpoint")
+        assertThat(updatedToken?.pushEndpoint).isEqualTo("https://fcm.googleapis.com/endpoint")
         assertThat(updatedToken?.pushP256dh).isEqualTo("test-p256dh")
         assertThat(updatedToken?.pushAuth).isEqualTo("test-auth")
     }
@@ -134,7 +148,7 @@ class PushControllerTest : RestDocsTest() {
             userAgent = "test-agent"
         )
         refreshToken.subscribePush(
-            endpoint = "https://example.com/unsubscribe",
+            endpoint = "https://fcm.googleapis.com/unsubscribe",
             p256dh = "unsubscribe-p256dh",
             auth = "unsubscribe-auth"
         )
@@ -162,10 +176,10 @@ class PushControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `subscribe returns 401 when refresh token is missing`() {
+    fun `subscribe returns 403 when refresh token is missing`() {
         val requestBody = """
             {
-              "endpoint": "https://example.com/endpoint",
+              "endpoint": "https://fcm.googleapis.com/endpoint",
               "keys": {
                 "p256dh": "test-p256dh",
                 "auth": "test-auth"
@@ -179,8 +193,8 @@ class PushControllerTest : RestDocsTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody)
         )
-            .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.status").value(403))
             .andExpect(jsonPath("$.code").value("auth.unauthorized"))
             .andDo(
                 document(
@@ -197,7 +211,7 @@ class PushControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `unsubscribe returns 401 when refresh token belongs to another member`() {
+    fun `unsubscribe returns 403 when refresh token belongs to another member`() {
         val refreshToken = refreshTokenService.createRefreshToken(
             memberId = TestData.member2.id!!,
             remoteAddr = "127.0.0.1",
@@ -209,8 +223,8 @@ class PushControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
                 .cookie(Cookie("refresh_token", refreshToken.token))
         )
-            .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.status").value(403))
             .andExpect(jsonPath("$.code").value("auth.unauthorized"))
             .andDo(
                 document(
@@ -218,6 +232,28 @@ class PushControllerTest : RestDocsTest() {
                     standardErrorResponseFields("Machine-readable error code (`auth.unauthorized`)")
                 )
             )
+    }
+
+    @Test
+    fun `subscribe rejects internal endpoints without changing the existing subscription`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent",
+        )
+        refreshToken.subscribePush("https://fcm.googleapis.com/existing", "existing-key", "existing-auth")
+        refreshTokenRepository.saveAndFlush(refreshToken)
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/auth/push/subscribe")
+                .withAuth(TestData.member)
+                .cookie(Cookie("refresh_token", refreshToken.token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"endpoint":"https://127.0.0.1/internal","keys":{"p256dh":"key","auth":"auth"}}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("common.badRequest"))
+        assertThat(refreshTokenRepository.findById(refreshToken.id!!).orElseThrow().pushEndpoint)
+            .isEqualTo("https://fcm.googleapis.com/existing")
     }
 
     @Test
@@ -230,7 +266,7 @@ class PushControllerTest : RestDocsTest() {
 
         val requestBody = """
             {
-              "endpoint": "https://example.com/endpoint",
+              "endpoint": "https://fcm.googleapis.com/endpoint",
               "keys": {
                 "p256dh": "test-p256dh",
                 "auth": ""
@@ -251,7 +287,7 @@ class PushControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `subscribe returns 401 when refresh token is expired`() {
+    fun `subscribe returns 403 when refresh token is expired`() {
         val refreshToken = refreshTokenService.createRefreshToken(
             memberId = TestData.member.id!!,
             remoteAddr = "127.0.0.1",
@@ -262,7 +298,7 @@ class PushControllerTest : RestDocsTest() {
 
         val requestBody = """
             {
-              "endpoint": "https://example.com/endpoint",
+              "endpoint": "https://fcm.googleapis.com/endpoint",
               "keys": {
                 "p256dh": "test-p256dh",
                 "auth": "test-auth"
@@ -277,8 +313,8 @@ class PushControllerTest : RestDocsTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody)
         )
-            .andExpect(status().isUnauthorized)
-            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.status").value(403))
             .andExpect(jsonPath("$.code").value("auth.unauthorized"))
     }
 

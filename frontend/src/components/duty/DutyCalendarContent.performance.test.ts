@@ -6,10 +6,10 @@ import { getCalendarGridSlice } from '@/utils/calendarGrid'
 import type { CalendarDay, LocalDDay, Schedule } from '@/views/duty/dutyViewTypes'
 
 vi.mock('@/i18n', () => ({ getCurrentLocale: () => 'ko' }))
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'ko' } }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'ko' }, t: (key: string) => key }) }))
 vi.mock('@lucide/vue', () => {
   const icon = defineComponent({ setup: () => () => h('span') })
-  return { CalendarCheck: icon, MessageSquareText: icon, CheckSquare: icon }
+  return { Flag: icon, MessageSquareText: icon, CheckSquare: icon }
 })
 vi.mock('@/components/common/ProfileAvatar.vue', () => ({
   default: defineComponent({
@@ -83,11 +83,11 @@ function mountCalendar(props: CalendarProps) {
 }
 
 function ddayButtons(root: HostNode) {
-  return findHostNodes(root, node => node.type === 'button' && String(node.props.class).includes('calendar-action-bubble--dday'))
+  return findHostNodes(root, node => node.type === 'button' && String(node.props.class).includes('calendar-dday-marker'))
 }
 
 function calendarDayCells(root: HostNode) {
-  return findHostNodes(root, node => String(node.props.class).includes('min-h-[60px]'))
+  return findHostNodes(root, node => String(node.props.class ?? '').split(' ').includes('calendar-day'))
 }
 
 function batchDutyButtons(root: HostNode) {
@@ -122,6 +122,54 @@ beforeEach(() => {
 afterEach(() => {
   apps.splice(0).forEach(app => app.unmount())
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
+describe('calendar month transition layout', () => {
+  it('holds the calendar height through intermediate month responses and ignores empty measurements', async () => {
+    let notifyResize: () => void = () => {}
+    let measuredHeight = 600
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) { notifyResize = callback }
+      observe(target: HTMLElement) {
+        target.getBoundingClientRect = () => ({ height: measuredHeight }) as DOMRect
+      }
+      disconnect() {}
+    })
+    const props = reactive({ ...makeProps(0), isMonthLoading: false })
+    const root = mountCalendar(props)
+    const frame = () => findHostNode(root, node => String(node.props.class).split(' ').includes('calendar-month-swipe__frame'))!
+    notifyResize()
+    await nextTick()
+    expect(frame()?.props.style).toEqual({ height: '600px' })
+
+    props.isMonthLoading = true
+    await nextTick()
+    measuredHeight = 400
+    notifyResize()
+    await nextTick()
+    expect(frame()?.props.style).toEqual({ height: '600px' })
+    measuredHeight = 550
+    notifyResize()
+    props.isMonthLoading = false
+    await nextTick()
+    expect(frame()?.props.style).toEqual({ height: '550px' })
+
+    measuredHeight = 0
+    notifyResize()
+    await nextTick()
+    expect(frame()?.props.style).toEqual({ height: '550px' })
+  })
+
+  it('keeps the D-Day list in the sliding track from the start of a gesture', () => {
+    const mounted = mountHost(createHostWrapper(() => h(DutyCalendarContent, makeProps(0), {
+      default: () => h('div', { 'data-test': 'dday-list' }, 'D-Day'),
+    })))
+    apps.push(mounted.app)
+
+    const track = findHostNode(mounted.root, node => node.props.class === 'calendar-month-swipe__track')!
+    expect(findHostNode(track, node => node.props['data-test'] === 'dday-list')).not.toBeNull()
+  })
 })
 
 describe('calendar derived display data', () => {
@@ -164,16 +212,16 @@ describe('calendar derived display data', () => {
     expect(ddayButtons(root)[0]!.props.disabled).toBe(false)
   })
 
-  it('parses each D-Day once and builds tags only for visible schedules', () => {
+  it('parses each D-Day once and shows every schedule of a day', () => {
     const props = makeProps()
     const root = mountCalendar(props)
 
     expect(ddayButtons(root)).toHaveLength(visibleDDayCount(props))
     expect(props.dDays).toHaveLength(100)
     expect(parseDateOnly).toHaveBeenCalledTimes(props.dDays.length)
-    expect(buildDisplayTagMembers).toHaveBeenCalledTimes(42 * 3)
-    expect(hostText(root)).not.toContain('Schedule 0-3')
-    expect(hostText(root)).toContain('+1')
+    expect(buildDisplayTagMembers).toHaveBeenCalledTimes(42 * 4)
+    expect(hostText(root)).toContain('Schedule 0-3')
+    expect(hostText(root)).toContain('Schedule 34-3')
   })
 
   it('keeps derived data cached when highlighting another day', async () => {
@@ -218,6 +266,34 @@ describe('calendar derived display data', () => {
     props.dDays.splice(0, 1)
     await nextTick()
     expect(ddayButtons(root).map(node => node.props.title)).toEqual(['Second', 'Normalized'])
+  })
+
+  it('lists multi-day schedules before single-day ones in a calendar cell', () => {
+    const props = makeProps(0)
+    const single = { ...makeSchedule('single'), totalDays: 1 }
+    const startsToday = makeSchedule('starts-today', 1)
+    const startedEarlier = makeSchedule('started-earlier', 2)
+    props.schedulesByDays = [[single, startsToday, startedEarlier]]
+    const root = mountCalendar(props)
+    const titles = findHostNodes(calendarDayCells(root)[0]!, node =>
+      String(node.props.class ?? '').split(' ').includes('calendar-item__text'))
+    expect(titles.map(node => hostText(node).split('Schedule ')[1])).toEqual([
+      'started-earlier (2/3)', 'starts-today (1/3)', 'single',
+    ])
+  })
+
+  it('shows every due todo of a day without an overflow count', () => {
+    const props = makeProps(0)
+    props.schedulesByDays = []
+    props.todosDueByDays = []
+    props.todosDueByDays[2] = Array.from({ length: 4 }, (_, index) => ({
+      id: `todo-${index}`, title: `Todo ${index}`, status: 'TODO' as const,
+    }))
+    const root = mountCalendar(props)
+    const todoButtons = findHostNodes(root, node => node.type === 'button' && String(node.props.class).includes('calendar-action-bubble'))
+    expect(todoButtons.map(node => node.props.title)).toEqual(['Todo 0', 'Todo 1', 'Todo 2', 'Todo 3'])
+    expect(findHostNode(root, node => String(node.props.class ?? '').includes('calendar-todo-overflow'))).toBeNull()
+    expect(hostText(root)).not.toContain('+2')
   })
 
   it('refreshes nested tag data and the viewed member without mixing same-id schedule occurrences', async () => {
@@ -289,7 +365,7 @@ it.skipIf(!process.env.DUTYPARK_PERFORMANCE_BENCHMARK)('measures calendar mount 
   console.log(JSON.stringify({
     benchmark: 'calendar-rendering', days: 42, dDays: props.dDays.length,
     outputSha256: createHash('sha256').update(expectedText).digest('hex'),
-    schedulesPerDay: 4, visibleSchedulesPerDay: 3,
+    schedulesPerDay: 4, visibleSchedulesPerDay: 4,
     mountDateParses, mountTagBuilds, highlightDateParses, highlightTagBuilds,
     mountSamplesMs: mountSamples, mountMedianMs: mountSamples[4],
     highlightSamplesMs: highlightSamples, highlightMedianMs: highlightSamples[4],

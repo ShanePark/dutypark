@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.team.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
@@ -7,7 +9,6 @@ import com.tistory.shanepark.dutypark.duty.service.DutyPatternService
 import com.tistory.shanepark.dutypark.duty.service.DutyResolver
 import com.tistory.shanepark.dutypark.duty.service.ResolvedDuty
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -74,7 +75,7 @@ class TeamServiceTest {
         ReflectionTestUtils.setField(team, "id", 1L)
         `when`(teamRepository.findById(1L)).thenReturn(Optional.of(team))
 
-        val exception = assertThrows<AuthException> {
+        val exception = assertThrows<ForbiddenException> {
             service.checkCanManage(LoginMember(id = 10L, name = "viewer"), 1L)
         }
 
@@ -90,7 +91,7 @@ class TeamServiceTest {
         team.changeAdmin(admin)
         `when`(teamRepository.findById(1L)).thenReturn(Optional.of(team))
 
-        val exception = assertThrows<AuthException> {
+        val exception = assertThrows<ForbiddenException> {
             service.checkCanAdmin(LoginMember(id = 2L, name = "manager"), 1L)
         }
 
@@ -106,7 +107,7 @@ class TeamServiceTest {
         `when`(teamRepository.findById(1L)).thenReturn(Optional.of(team))
         `when`(memberRepository.findById(3L)).thenReturn(Optional.of(outsider))
 
-        val exception = assertThrows<AuthException> {
+        val exception = assertThrows<ForbiddenException> {
             service.checkCanRead(LoginMember(id = 3L, name = "outsider"), 1L)
         }
 

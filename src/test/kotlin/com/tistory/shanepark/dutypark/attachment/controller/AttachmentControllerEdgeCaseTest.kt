@@ -14,6 +14,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.NullSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
@@ -95,7 +99,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 .file(file)
                 .param("sessionId", session.id.toString())
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isUnauthorized)
+        ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("attachment.session.forbidden"))
             .andDo(MockMvcResultHandlers.print())
     }
@@ -165,7 +169,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
         mockMvc.perform(
             delete("/api/attachments/{id}", attachment.id)
                 .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isUnauthorized)
+        ).andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("attachment.session.forbidden"))
             .andDo(MockMvcResultHandlers.print())
     }
@@ -406,7 +410,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
     }
 
     @Test
-    fun `download supports inline disposition`() {
+    fun `download forces attachment disposition even when inline is requested`() {
         val member = TestData.member
         val jwt = getJwt(member)
 
@@ -443,7 +447,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 .param("inline", "true")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
         ).andExpect(status().isOk)
-            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.startsWith("inline;")))
+            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.startsWith("attachment;")))
             .andDo(MockMvcResultHandlers.print())
     }
 
@@ -487,14 +491,16 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
             .response
 
         val contentDisposition = response.getHeader(HttpHeaders.CONTENT_DISPOSITION)!!
-        assertThat(contentDisposition).contains("inline; filename=\"______.png\"")
+        assertThat(contentDisposition).contains("attachment; filename=\"______.png\"")
         assertThat(contentDisposition).doesNotContain(originalFilename)
         assertThat(contentDisposition.all { it.code < 128 }).isTrue()
         assertThat(ContentDisposition.parse(contentDisposition).filename).isEqualTo(originalFilename)
     }
 
-    @Test
-    fun `thumbnail returns thumbnail when present`() {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = ["image/png", "text/html"])
+    fun `generated thumbnail is always served as PNG`(storedContentType: String?) {
         val member = TestData.member
         val jwt = getJwt(member)
 
@@ -518,7 +524,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 size = 100,
                 storagePath = pathResolver.resolveTemporaryDirectory(session.id).toString(),
                 thumbnailFilename = "thumb.png",
-                thumbnailContentType = null,
+                thumbnailContentType = storedContentType,
                 createdBy = member.id!!,
                 orderIndex = 0
             )
@@ -536,7 +542,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
     }
 
     @Test
-    fun `thumbnail falls back to original when thumbnail missing`() {
+    fun `thumbnail returns 404 when generated thumbnail file is missing even if original exists`() {
         val member = TestData.member
         val jwt = getJwt(member)
 
@@ -573,8 +579,7 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
         mockMvc.perform(
             get("/api/attachments/{id}/thumbnail", attachment.id)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
-        ).andExpect(status().isOk)
-            .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.IMAGE_PNG_VALUE))
+        ).andExpect(status().isNotFound)
     }
 
     @Test
@@ -606,6 +611,59 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
                 orderIndex = 0
             )
         )
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/thumbnail", attachment.id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isNotFound)
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "payload.html, text/html",
+        "payload.svg, image/svg+xml",
+        "payload.png, image/png"
+    )
+    fun `active content originals are downloadable but never served as thumbnails`(
+        filename: String,
+        contentType: String
+    ) {
+        val member = TestData.member
+        val jwt = getJwt(member)
+        val session = sessionRepository.save(
+            AttachmentUploadSession(
+                contextType = AttachmentContextType.SCHEDULE,
+                targetContextId = null,
+                ownerId = member.id!!,
+                expiresAt = clock.instant().plusSeconds(86400)
+            )
+        )
+        val payload = "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(document.domain)</script></svg>".toByteArray()
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = session.id,
+                originalFilename = filename,
+                storedFilename = filename,
+                contentType = contentType,
+                size = payload.size.toLong(),
+                storagePath = pathResolver.resolveTemporaryDirectory(session.id).toString(),
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+        val tempDir = pathResolver.resolveTemporaryDirectory(session.id)
+        Files.createDirectories(tempDir)
+        Files.write(tempDir.resolve(filename), payload)
+
+        mockMvc.perform(
+            get("/api/attachments/{id}/download", attachment.id)
+                .param("inline", "true")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isOk)
+            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, Matchers.startsWith("attachment;")))
+            .andExpect(content().bytes(payload))
 
         mockMvc.perform(
             get("/api/attachments/{id}/thumbnail", attachment.id)

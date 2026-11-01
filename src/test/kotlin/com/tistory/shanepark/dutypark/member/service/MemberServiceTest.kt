@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.member.domain.dto.toMemberDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
@@ -81,6 +82,7 @@ class MemberServiceTest {
 
         assertThat(member.name).isEqualTo("shane")
         assertThat(member.password).isEqualTo("")
+        assertThat(member.toMemberDto().hasPassword).isFalse()
         verify(memberRepository).save(any<Member>())
         verify(memberSocialAccountService).link(member, SsoType.KAKAO, "kakao_id")
     }

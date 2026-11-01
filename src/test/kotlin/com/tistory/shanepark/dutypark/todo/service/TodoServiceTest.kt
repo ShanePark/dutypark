@@ -1,9 +1,10 @@
 package com.tistory.shanepark.dutypark.todo.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
+
 import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -2007,7 +2008,7 @@ class TodoServiceTest {
         `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
         `when`(friendService.isFriend(member, friend)).thenReturn(false)
 
-        val exception = assertThrows<AuthException> {
+        val exception = assertThrows<ForbiddenException> {
             todoService.tagFriend(loginMember, todoId, friend.id!!)
         }
 

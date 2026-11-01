@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.logging.AuditActor
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
@@ -84,7 +84,7 @@ class RefreshTokenService(
                     )
                 ),
             )
-            throw AuthException("auth.refreshToken.delete.forbidden")
+            throw ForbiddenException("auth.refreshToken.delete.forbidden")
         }
         val deletedCurrentToken = currentToken != null && refreshToken.token == currentToken
         refreshTokenRepository.delete(refreshToken)

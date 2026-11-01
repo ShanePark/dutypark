@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.OtherDutyResponse
@@ -72,7 +72,7 @@ class DutyController(
         loginMember: LoginMember, dutyMemberId: Long
     ) {
         if (!dutyService.canEdit(loginMember, dutyMemberId)) {
-            throw AuthException("duty.edit.forbidden")
+            throw ForbiddenException("duty.edit.forbidden")
         }
     }
 

@@ -46,8 +46,7 @@ class AttachmentController(
     @GetMapping("/{id}/download")
     fun downloadAttachment(
         @Login(required = false) loginMember: LoginMember?,
-        @PathVariable id: UUID,
-        @RequestParam(required = false, defaultValue = "false") inline: Boolean
+        @PathVariable id: UUID
     ): ResponseEntity<Resource> {
         val attachment = attachmentService.findById(loginMember, id)
 
@@ -68,8 +67,7 @@ class AttachmentController(
         val encodedFilename = URLEncoder.encode(sanitizedFilename, StandardCharsets.UTF_8)
             .replace("+", "%20")
 
-        val dispositionType = if (inline) "inline" else "attachment"
-        val contentDispositionValue = "$dispositionType; " +
+        val contentDispositionValue = "attachment; " +
                 "filename=\"$asciiFallbackFilename\"; " +
                 "filename*=UTF-8''$encodedFilename"
 
@@ -105,26 +103,12 @@ class AttachmentController(
             val resource = UrlResource(thumbnailPath.toUri())
             if (resource.exists()) {
                 return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(attachment.thumbnailContentType ?: "image/png"))
+                    .contentType(MediaType.IMAGE_PNG)
                     .body(resource)
             }
         }
 
-        val originalPath = pathResolver.resolveFilePath(
-            attachment.contextType,
-            attachment.contextId,
-            attachment.uploadSessionId,
-            attachment.storedFilename
-        )
-
-        val originalResource = UrlResource(originalPath.toUri())
-        if (!originalResource.exists()) {
-            return ResponseEntity.notFound().build()
-        }
-
-        return ResponseEntity.ok()
-            .contentType(MediaType.parseMediaType(attachment.contentType))
-            .body(originalResource)
+        return ResponseEntity.notFound().build()
     }
 
     @DeleteMapping("/{id}")

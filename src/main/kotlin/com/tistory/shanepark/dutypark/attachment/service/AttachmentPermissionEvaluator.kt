@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.entity.AttachmentUploadSession
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.schedule.service.SchedulePermissionService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -36,7 +37,7 @@ class AttachmentPermissionEvaluator(
 
     fun checkSessionOwnership(loginMember: LoginMember, session: AttachmentUploadSession) {
         if (session.ownerId != loginMember.id) {
-            throw AuthException("attachment.session.forbidden")
+            throw ForbiddenException("attachment.session.forbidden")
         }
     }
 
@@ -109,7 +110,7 @@ class AttachmentPermissionEvaluator(
         }
 
         if (!todoRepository.existsByIdAndMemberId(todoId, requester.id)) {
-            throw AuthException("attachment.todo.write.forbidden")
+            throw ForbiddenException("attachment.todo.write.forbidden")
         }
     }
 
@@ -120,7 +121,7 @@ class AttachmentPermissionEvaluator(
         }
 
         if (!todoRepository.existsAccessibleTodo(todoId, requester.id)) {
-            throw AuthException("attachment.todo.access.forbidden")
+            throw ForbiddenException("attachment.todo.access.forbidden")
         }
     }
 
@@ -129,7 +130,7 @@ class AttachmentPermissionEvaluator(
             ?: throw BadRequestException("attachment.context.missing")
 
         if (contextId != loginMember.id.toString()) {
-            throw AuthException("attachment.profile.forbidden")
+            throw ForbiddenException("attachment.profile.forbidden")
         }
     }
 
@@ -138,7 +139,7 @@ class AttachmentPermissionEvaluator(
             ?: throw BadRequestException("attachment.session.targetContext.missing")
 
         if (targetContextId != loginMember.id.toString()) {
-            throw AuthException("attachment.profile.forbidden")
+            throw ForbiddenException("attachment.profile.forbidden")
         }
     }
 

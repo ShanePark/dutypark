@@ -113,6 +113,16 @@ nonisolated struct DDayDTO: Codable, Equatable, Sendable {
     let daysLeft: Int64
 }
 
+extension DDayDTO {
+    /// Upcoming (calc >= 0) nearest first, then past most recent first.
+    nonisolated static func listOrder(_ lhs: DDayDTO, _ rhs: DDayDTO) -> Bool {
+        let lhsPast = lhs.calc < 0
+        let rhsPast = rhs.calc < 0
+        if lhsPast != rhsPast { return rhsPast }
+        return lhsPast ? lhs.date.rawValue > rhs.date.rawValue : lhs.date.rawValue < rhs.date.rawValue
+    }
+}
+
 nonisolated struct DDaySaveDTO: Codable, Equatable, Sendable {
     let id: Int64?
     let title: String

@@ -1,9 +1,25 @@
 import Foundation
+import Combine
+import SwiftUI
 import Testing
+import UIKit
 @testable import Dutypark
 
 @Suite(.serialized)
 struct TeamFeatureTests {
+    @Test
+    func teamMonthSwipeUsesLoadedNeighbourPagesInsteadOfEmptyDutyPlaceholders() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamView.swift"),
+            encoding: .utf8
+        )
+        #expect(source.contains(".task(id: viewModel.calendarPreviewRevision)"))
+        #expect(source.contains("viewModel.monthPreview(for: key)"))
+        #expect(source.contains("previewPages[key]"))
+    }
+
     @Test(arguments: [false, true])
     func scheduleDeleteConfirmationOnlyAllowsInteractionWhileIdle(isDeleting: Bool) {
         #expect(
@@ -134,10 +150,12 @@ struct TeamFeatureTests {
         let calendarEnd = try #require(source[calendarStart.lowerBound...].range(of: "private var selectedSchedules: some View"))
         let calendar = source[calendarStart.lowerBound..<calendarEnd.lowerBound]
 
-        #expect(dayCell.contains("DPCalendarDayNumber("))
-        #expect(dayCell.contains("DPCalendarCellStyle.cellBackground("))
-        #expect(dayCell.contains("DPCalendarCellStyle.cellBorder("))
+        // The shared flat tile draws the date number, the duty fill and today's ring.
+        #expect(dayCell.contains("DPCalendarDayTile("))
+        #expect(dayCell.contains("DPCalendarItemRow("))
+        #expect(!dayCell.contains("opacity("))
         #expect(calendar.contains("DPCalendarWeekdayHeaderCell("))
+        #expect(calendar.contains("DPCalendarCellStyle.todayWeekdayIndex("))
 
         // This gray sits between the old team cutoff (0.64) and the general calendar
         // cutoff (127.5/255), where the two calendars used to choose opposite text colors.
@@ -378,6 +396,79 @@ struct TeamFeatureTests {
     }
 
     @Test @MainActor
+    func neighbouringMonthPreviewIncludesDutyColorsWithoutChangingTheActiveCalendar() async throws {
+        TeamURLProtocolStub.handler = { request in
+            if request.url?.path == "/api/duty" {
+                return Self.response(request, status: 200, body: ##"[{"year":2026,"month":9,"day":12,"dutyType":"Day","dutyColor":"#445566","isOff":false,"dutyTypeId":11,"source":"MANUAL"}]"##)
+            }
+            return Self.fullMonthTeamLoadResponse(request)
+        }
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1))
+        )
+        await viewModel.load(memberID: 1)
+        let activeDays = viewModel.days
+        let selection = viewModel.selectedDay
+        let revision = viewModel.calendarPreviewRevision
+        let preview = try #require(await viewModel.monthPreview(for: OfflineMonthKey(year: 2026, month: 9)))
+        #expect(preview.key == OfflineMonthKey(year: 2026, month: 9))
+        #expect(preview.days.count == 42)
+        #expect(preview.duties.first?.dutyColor == "#445566")
+        #expect(preview.holidays.count == 42)
+        #expect(preview.schedules.count == 42)
+        #expect(viewModel.days == activeDays)
+        #expect(viewModel.selectedDay == selection)
+        #expect(viewModel.month == 8)
+        #expect(viewModel.isLoading == false)
+        #expect(viewModel.calendarPreviewRevision == revision)
+    }
+
+    @Test @MainActor
+    func cancelledNeighbourPreviewDoesNotReturnDataOrEmitOutcomeFeedback() async throws {
+        TeamURLProtocolStub.handler = { Self.fullMonthTeamLoadResponse($0) }
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1)),
+            haptics: haptics
+        )
+        await viewModel.load(memberID: 1)
+        let task = Task { await viewModel.monthPreview(for: OfflineMonthKey(year: 2026, month: 9)) }
+        task.cancel()
+        #expect(await task.value == nil)
+        #expect(viewModel.month == 8)
+        #expect(viewModel.showsError == false)
+        #expect(haptics.event == nil)
+    }
+
+    @Test @MainActor
+    func changedTeamInvalidatesAnInflightNeighbourPreview() async throws {
+        TeamURLProtocolStub.handler = { Self.fullMonthTeamLoadResponse($0) }
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1))
+        )
+        await viewModel.load(memberID: 1)
+        let gate = TeamRequestGate()
+        TeamURLProtocolStub.handler = { request in
+            if request.url?.path == "/api/duty" { gate.waitForRelease() }
+            return Self.fullMonthTeamLoadResponse(request)
+        }
+        let task = Task { await viewModel.monthPreview(for: OfflineMonthKey(year: 2026, month: 9)) }
+        defer { gate.release() }
+        for _ in 0..<1_000 {
+            if gate.hasStarted { break }
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        #expect(gate.hasStarted)
+        viewModel.applyManagedTeam(try #require(viewModel.team))
+        gate.release()
+        #expect(await task.value == nil)
+        #expect(viewModel.month == 8)
+    }
+
+    @Test @MainActor
     func repeatedLoadAndMonthNavigationPreserveTheSelectedDay() async throws {
         TeamURLProtocolStub.handler = { request in
             Self.successfulTeamLoadResponse(request)
@@ -401,6 +492,243 @@ struct TeamFeatureTests {
         #expect(viewModel.selectedDay?.month == 9)
         #expect(viewModel.selectedDay?.day == 13)
         TeamURLProtocolStub.handler = nil
+    }
+
+    @Test @MainActor
+    func monthNavigationKeepsTheLoadedCalendarRowsUntilReplacementArrives() async throws {
+        TeamURLProtocolStub.handler = { request in
+            Self.fullMonthTeamLoadResponse(request)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1))
+        )
+        await viewModel.load(memberID: 1)
+        let loadedRange = viewModel.calendarVisibleRange
+        #expect(loadedRange.count == 42)
+        var rangeWhileLoading: Range<Int>?
+        let observer = viewModel.$isLoading.sink { loading in
+            if loading { rangeWhileLoading = viewModel.calendarVisibleRange }
+        }
+
+        await viewModel.nextMonth()
+
+        #expect(rangeWhileLoading == loadedRange)
+        #expect(viewModel.calendarVisibleRange.count == 35)
+        #expect(viewModel.selectedDay?.month == 9)
+        withExtendedLifetime(observer) {}
+    }
+
+    @Test @MainActor
+    func failedMonthNavigationKeepsTheLoadedCalendarRowsAndStaysSilentExceptForTheError() async throws {
+        TeamURLProtocolStub.handler = { request in
+            Self.fullMonthTeamLoadResponse(request)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1)),
+            haptics: haptics
+        )
+        await viewModel.load(memberID: 1)
+        let loadedDays = viewModel.days
+        let loadedRange = viewModel.calendarVisibleRange
+        var rangeWhileLoading: Range<Int>?
+        let observer = viewModel.$isLoading.sink { loading in
+            if loading { rangeWhileLoading = viewModel.calendarVisibleRange }
+        }
+        TeamURLProtocolStub.handler = { request in Self.response(request, status: 503) }
+
+        await viewModel.nextMonth()
+
+        #expect(rangeWhileLoading == loadedRange)
+        #expect(viewModel.days == loadedDays)
+        #expect(viewModel.calendarVisibleRange == loadedRange)
+        #expect(viewModel.month == 8)
+        #expect(haptics.event?.kind == .error)
+        #expect(haptics.event?.id == 1)
+        withExtendedLifetime(observer) {}
+    }
+
+    @Test @MainActor
+    func cancelledMonthNavigationKeepsItsCalendarAndDoesNotEmitFeedback() async throws {
+        TeamURLProtocolStub.handler = { request in Self.fullMonthTeamLoadResponse(request) }
+        defer { TeamURLProtocolStub.handler = nil }
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1)),
+            haptics: haptics
+        )
+        await viewModel.load(memberID: 1)
+        let days = viewModel.days
+        let task = Task { await viewModel.nextMonth() }
+        task.cancel()
+        await task.value
+
+        #expect(viewModel.month == 8)
+        #expect(viewModel.calendarMonth == OfflineMonthKey(year: 2026, month: 8))
+        #expect(viewModel.days == days)
+        #expect(haptics.event == nil)
+    }
+
+    @Test @MainActor
+    func cancellingWhileTheNewShiftListLoadsKeepsTheEntirePreviousMonth() async throws {
+        let gate = TeamRequestGate()
+        TeamURLProtocolStub.handler = { request in
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            if request.url?.path == "/api/teams/shift",
+               components?.queryItems?.contains(where: { $0.name == "month" && $0.value == "9" }) == true {
+                gate.waitForRelease()
+            }
+            return Self.fullMonthTeamLoadResponse(request)
+        }
+        defer { gate.release(); TeamURLProtocolStub.handler = nil }
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1)),
+            haptics: haptics
+        )
+        await viewModel.load(memberID: 1)
+        let days = viewModel.days
+        let selectedDay = viewModel.selectedDay
+        let task = Task { await viewModel.nextMonth() }
+        for _ in 0..<100 where !gate.hasStarted {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(gate.hasStarted)
+        #expect(viewModel.days == days)
+        #expect(viewModel.calendarMonth == OfflineMonthKey(year: 2026, month: 8))
+        task.cancel()
+        gate.release()
+        await task.value
+
+        #expect(viewModel.month == 8)
+        #expect(viewModel.days == days)
+        #expect(viewModel.selectedDay == selectedDay)
+        #expect(viewModel.calendarMonth == OfflineMonthKey(year: 2026, month: 8))
+        #expect(haptics.event == nil)
+    }
+
+    @Test @MainActor
+    func teamCalendarPanPreservesScrollingAndSupportsCancelSuccessFailureAndRetry() async throws {
+        TeamURLProtocolStub.handler = { request in Self.fullMonthTeamLoadResponse(request) }
+        TeamURLProtocolStub.calendarRequestCount = 0
+        TeamURLProtocolStub.calendarRequestsByMonth = [:]
+        defer { TeamURLProtocolStub.handler = nil }
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1)),
+            haptics: haptics
+        )
+        await viewModel.load(memberID: 1)
+        let session = SessionStore(initialState: .guest)
+        let host = UIHostingController(rootView:
+            NavigationStack {
+                TeamView(viewModel: viewModel)
+                    .environmentObject(session)
+            }
+        )
+        host.view.frame = CGRect(x: 0, y: 0, width: 375, height: 800)
+        let window = UIWindow(frame: host.view.frame)
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+
+        func render() {
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.03))
+            host.view.layoutIfNeeded()
+        }
+        func pans(in view: UIView) -> [UIPanGestureRecognizer] {
+            (view.gestureRecognizers ?? []).compactMap {
+                guard let pan = $0 as? UIPanGestureRecognizer,
+                      pan.delegate is DPHorizontalPanCoordinator else { return nil }
+                return pan
+            } + view.subviews.flatMap { pans(in: $0) }
+        }
+        render()
+        let pan = try #require(pans(in: host.view).first)
+        let coordinator = try #require(pan.delegate as? DPHorizontalPanCoordinator)
+        let anchor = try #require(coordinator.anchor)
+        let anchorBeforeDrag = anchor.convert(anchor.bounds, to: host.view)
+        #expect(anchorBeforeDrag.minY > 0)
+        #expect(anchorBeforeDrag.height < host.view.bounds.height)
+        #expect(pan.cancelsTouchesInView == false)
+
+        coordinator.handlePan(state: .began, translation: CGPoint(x: 4, y: 80), velocity: .zero)
+        coordinator.handlePan(state: .ended, translation: CGPoint(x: -180, y: 190), velocity: .zero)
+        #expect(viewModel.month == 8)
+        #expect(haptics.event == nil)
+
+        coordinator.handlePan(state: .began, translation: CGPoint(x: -40, y: 4), velocity: .zero)
+        render()
+        #expect(pans(in: host.view).count == 1)
+        #expect(pans(in: host.view).first === pan)
+        #expect(coordinator.anchor === anchor)
+        #expect(abs(anchor.convert(anchor.bounds, to: host.view).height - anchorBeforeDrag.height) < 1)
+        coordinator.handlePan(state: .cancelled, translation: CGPoint(x: -40, y: 4), velocity: .zero)
+        try await Task.sleep(for: .milliseconds(350))
+        render()
+        #expect(viewModel.month == 8)
+        #expect(TeamURLProtocolStub.calendarRequestsByMonth[8] == 1)
+        #expect(haptics.event == nil)
+
+        coordinator.handlePan(state: .began, translation: CGPoint(x: -35, y: 4), velocity: .zero)
+        coordinator.handlePan(state: .ended, translation: CGPoint(x: -35, y: 4), velocity: .zero)
+        try await Task.sleep(for: .milliseconds(350))
+        #expect(viewModel.month == 8)
+        #expect(TeamURLProtocolStub.calendarRequestsByMonth[8] == 1)
+        #expect(haptics.event == nil)
+
+        coordinator.handlePan(state: .began, translation: CGPoint(x: -150, y: 4), velocity: .zero)
+        coordinator.handlePan(state: .ended, translation: CGPoint(x: -150, y: 4), velocity: .zero)
+        coordinator.handlePan(state: .ended, translation: CGPoint(x: -150, y: 4), velocity: .zero)
+        try await waitForTeamMonth(viewModel, month: 9)
+        render()
+        #expect(TeamURLProtocolStub.calendarRequestsByMonth[9] == 2)
+        #expect(haptics.event?.kind == .routine)
+        #expect(haptics.event?.id == 1)
+
+        let loadedDays = viewModel.days
+        TeamURLProtocolStub.handler = { request in Self.response(request, status: 503) }
+        coordinator.handlePan(state: .began, translation: CGPoint(x: -150, y: 4), velocity: .zero)
+        coordinator.handlePan(state: .ended, translation: CGPoint(x: -150, y: 4), velocity: .zero)
+        for _ in 0..<100 where haptics.event?.id != 2 {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try await Task.sleep(for: .milliseconds(300))
+        render()
+        #expect(viewModel.month == 9)
+        #expect(viewModel.calendarMonth == OfflineMonthKey(year: 2026, month: 9))
+        #expect(viewModel.days == loadedDays)
+        #expect(haptics.event?.kind == .error)
+        #expect(haptics.event?.id == 2)
+
+        TeamURLProtocolStub.handler = { request in Self.fullMonthTeamLoadResponse(request) }
+        coordinator.handlePan(state: .began, translation: CGPoint(x: 150, y: 4), velocity: .zero)
+        coordinator.handlePan(state: .ended, translation: CGPoint(x: 150, y: 4), velocity: .zero)
+        try await waitForTeamMonth(viewModel, month: 8)
+        #expect(haptics.event?.kind == .routine)
+        #expect(haptics.event?.id == 3)
+    }
+
+    @MainActor
+    private func waitForTeamMonth(_ viewModel: TeamViewModel, month: Int) async throws {
+        for _ in 0..<100 {
+            if viewModel.month == month, !viewModel.isLoading {
+                try await Task.sleep(for: .milliseconds(50))
+                return
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(viewModel.month == month)
+        #expect(viewModel.isLoading == false)
     }
 
     @Test @MainActor
@@ -1603,6 +1931,22 @@ struct TeamFeatureTests {
         }
     }
 
+    private static func fullMonthTeamLoadResponse(_ request: URLRequest) -> (HTTPURLResponse, Data) {
+        let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+        let month = Int(components?.queryItems?.first { $0.name == "month" }?.value ?? "8") ?? 8
+        let year = Int(components?.queryItems?.first { $0.name == "year" }?.value ?? "2026") ?? 2026
+        if request.url?.path == "/api/calendar" {
+            let days = CalendarDateSupport.placeholderCells(year: year, month: month).map {
+                TeamDayDTO(year: $0.year, month: $0.month, day: $0.day)
+            }
+            return response(request, status: 200, body: String(decoding: try! JSONEncoder().encode(days), as: UTF8.self))
+        }
+        if request.url?.path == "/api/teams/schedules" || request.url?.path == "/api/holidays" {
+            return response(request, status: 200, body: "[" + Array(repeating: "[]", count: 42).joined(separator: ",") + "]")
+        }
+        return successfulTeamLoadResponse(request)
+    }
+
     private static var managedTeamJSON: String {
         ##"{"id":7,"name":"Team","description":null,"dutyTypes":[{"id":null,"teamId":7,"name":"Off","position":-1,"color":"#112233","hidden":false},{"id":11,"teamId":7,"name":"Day","position":0,"color":"#445566","hidden":false}],"members":[{"id":1,"name":"Manager","email":"manager@example.com","isManager":true,"isAdmin":true,"hasProfilePhoto":false,"profilePhotoVersion":0},{"id":3,"name":"Member","email":"member@example.com","isManager":false,"isAdmin":false,"hasProfilePhoto":false,"profilePhotoVersion":0}],"createdDate":"2026-08-12T00:00:00","lastModifiedDate":"2026-08-12T00:00:00","adminId":1,"adminName":"Manager","dutyBatchTemplate":null}"##
     }
@@ -1614,10 +1958,27 @@ struct TeamFeatureTests {
     }
 }
 
+private final class TeamRequestGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private let semaphore = DispatchSemaphore(value: 0)
+    private var started = false
+
+    var hasStarted: Bool { lock.withLock { started } }
+
+    func waitForRelease() {
+        lock.withLock { started = true }
+        semaphore.wait()
+    }
+
+    func release() { semaphore.signal() }
+}
+
 private final class TeamURLProtocolStub: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
     nonisolated(unsafe) static var visibilityRequestCount = 0
     nonisolated(unsafe) static var requestCount = 0
+    nonisolated(unsafe) static var calendarRequestCount = 0
+    nonisolated(unsafe) static var calendarRequestsByMonth: [Int: Int] = [:]
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -1627,6 +1988,14 @@ private final class TeamURLProtocolStub: URLProtocol, @unchecked Sendable {
             fatalError("TeamURLProtocolStub handler is not set")
         }
         Self.requestCount += 1
+        if request.url?.path == "/api/calendar" {
+            Self.calendarRequestCount += 1
+            let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems
+            if let value = query?.first(where: { $0.name == "month" })?.value,
+               let month = Int(value) {
+                Self.calendarRequestsByMonth[month, default: 0] += 1
+            }
+        }
         let (response, data) = handler(request)
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: data)

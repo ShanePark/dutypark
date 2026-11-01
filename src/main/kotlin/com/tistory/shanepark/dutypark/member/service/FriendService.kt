@@ -4,7 +4,7 @@ import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
@@ -279,7 +279,7 @@ class FriendService(
     @Transactional(readOnly = true)
     fun checkVisibility(login: LoginMember?, target: Member, scheduleVisibilityCheck: Boolean = false) {
         if (!isVisible(login, target.id, scheduleVisibilityCheck = scheduleVisibilityCheck))
-            throw AuthException("member.visibility.forbidden")
+            throw ForbiddenException("member.visibility.forbidden")
     }
 
     @Transactional(readOnly = true)

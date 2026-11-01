@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { CalendarCheck, Lock, Plus, Star } from '@lucide/vue'
+import { Lock, Plus, Star } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
+import { parseDateOnly } from '@/utils/date'
 import type { LocalDDay } from '@/views/duty/dutyViewTypes'
 
-defineProps<{
+const props = defineProps<{
   dDays: LocalDDay[]
   pinnedDDayId: number | null
   isMyCalendar: boolean
@@ -15,87 +16,367 @@ const emit = defineEmits<{
   (e: 'add'): void
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
-function getDDayBadgeClass(calc: number): string {
-  if (calc === 0) {
-    return 'dday-badge-today'
-  } else if (calc < 0) {
-    return 'dday-badge-past'
-  } else if (calc === 1) {
-    return 'dday-badge-upcoming-1'
-  } else if (calc === 2) {
-    return 'dday-badge-upcoming-2'
-  } else if (calc === 3) {
-    return 'dday-badge-upcoming-3'
-  }
-  return 'dday-badge-future'
+// State only changes colour; every row keeps the same geometry.
+function stateClass(calc: number): string {
+  if (calc < 0) return 'dday-row--past'
+  if (calc <= 3) return 'dday-row--urgent'
+  if (calc <= 14) return 'dday-row--soon'
+  return 'dday-row--future'
+}
+
+function formatDate(dateStr: string): string {
+  const [year = '', month = '', day = ''] = dateStr.split('-')
+  const weekday = parseDateOnly(dateStr).toLocaleDateString(locale.value, { weekday: 'short' })
+  return `${year}.${month}.${day} (${weekday})`
+}
+
+function isPinned(dday: LocalDDay): boolean {
+  return props.pinnedDDayId === dday.id
 }
 </script>
 
 <template>
-  <div class="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-    <div
-      v-for="dday in dDays"
-      :key="dday.id"
-      class="relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border"
-      :class="[
-        pinnedDDayId === dday.id
-          ? 'ring-2 ring-dp-warning shadow-md'
-          : 'shadow-sm',
-        dday.calc <= 0
-          ? 'dday-card-past'
-          : 'dday-card-future'
-      ]"
-      @click="emit('open-detail', dday)"
-    >
-      <div class="p-2.5 sm:p-4">
-        <!-- D-Day badge and pin star -->
-        <div class="flex justify-between items-start mb-2 sm:mb-3">
-          <div
-            class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-sm"
-            :class="getDDayBadgeClass(dday.calc)"
-          >
-            {{ dday.dDayText }}
-          </div>
-          <!-- Pin star -->
-          <button
-            @click.stop="emit('toggle-pin', dday)"
-            class="p-1 sm:p-1.5 rounded-full transition hover:scale-110 cursor-pointer"
-            :class="pinnedDDayId === dday.id ? 'hover:bg-dp-warning-soft' : 'hover:bg-dp-bg-hover'"
-            :title="pinnedDDayId === dday.id ? t('duty.ddayList.unpin') : t('duty.ddayList.pinToCalendar')"
-          >
-            <Star
-              class="w-4 h-4 sm:w-5 sm:h-5 transition-colors"
-              :class="pinnedDDayId === dday.id ? 'text-dp-warning fill-dp-warning' : 'text-dp-text-muted hover:text-dp-warning'"
-            />
-          </button>
-        </div>
-
-        <!-- Title -->
-        <p class="text-sm sm:text-base font-medium mb-1 sm:mb-2 flex items-start gap-1 sm:gap-1.5 text-dp-text-primary">
-          <Lock v-if="dday.isPrivate" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 mt-0.5 text-dp-text-muted" />
-          <span class="line-clamp-2">{{ dday.title }}</span>
-        </p>
-
-        <!-- Date -->
-        <p class="text-xs sm:text-sm flex items-center gap-1 text-dp-text-muted">
-          <CalendarCheck class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          {{ dday.date }}
-        </p>
-      </div>
+  <section
+    v-if="dDays.length > 0 || isMyCalendar"
+    class="dday-section"
+    data-testid="dday-section"
+    aria-labelledby="dday-section-heading"
+  >
+    <div class="dday-section__header">
+      <h3 id="dday-section-heading" class="dday-section__title">
+        {{ t('duty.ddayList.title') }}
+        <span class="dday-section__count" data-testid="dday-count">{{ dDays.length }}</span>
+      </h3>
+      <button
+        v-if="isMyCalendar"
+        type="button"
+        class="dday-section__add"
+        data-testid="dday-add"
+        :title="t('duty.ddayList.add')"
+        :aria-label="t('duty.ddayList.add')"
+        @click="emit('add')"
+      >
+        <Plus class="dday-section__add-icon" aria-hidden="true" />
+        {{ t('duty.ddayList.addShort') }}
+      </button>
     </div>
 
-    <!-- Add D-Day Button (only for my calendar) -->
-    <div
-      v-if="isMyCalendar"
-      @click="emit('add')"
-      class="rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-dp-accent-border hover:bg-dp-accent-soft/50 transition-all duration-300 flex flex-col items-center justify-center min-h-[100px] sm:min-h-[120px] group border-dp-border-secondary"
-    >
-      <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full group-hover:bg-dp-accent-soft flex items-center justify-center mb-1.5 sm:mb-2 transition-colors bg-dp-bg-tertiary">
-        <Plus class="w-5 h-5 sm:w-6 sm:h-6 group-hover:text-dp-accent transition-colors text-dp-text-muted" />
-      </div>
-      <span class="text-xs sm:text-sm group-hover:text-dp-accent transition-colors font-medium text-dp-text-muted">{{ t('duty.ddayList.add') }}</span>
-    </div>
-  </div>
+    <ul v-if="dDays.length > 0" class="dday-list">
+      <li
+        v-for="dday in dDays"
+        :key="dday.id"
+        class="dday-row"
+        :class="[stateClass(dday.calc), { 'is-pinned': isPinned(dday) }]"
+        data-testid="dday-row"
+      >
+        <button
+          type="button"
+          class="dday-row__open"
+          data-testid="dday-open"
+          @click="emit('open-detail', dday)"
+        >
+          <span class="dday-row__value" data-testid="dday-value">{{ dday.dDayText }}</span>
+          <span class="dday-row__lock" data-testid="dday-lock-slot">
+            <Lock v-if="dday.isPrivate" class="dday-row__lock-icon" aria-hidden="true" />
+          </span>
+          <span class="dday-row__title" data-testid="dday-title" :title="dday.title">{{ dday.title }}</span>
+          <span class="dday-row__date" data-testid="dday-date">{{ formatDate(dday.date) }}</span>
+        </button>
+        <button
+          type="button"
+          class="dday-row__pin"
+          data-testid="dday-pin"
+          :aria-pressed="isPinned(dday)"
+          :title="isPinned(dday) ? t('duty.ddayList.unpin') : t('duty.ddayList.pinToCalendar')"
+          :aria-label="isPinned(dday) ? t('duty.ddayList.unpin') : t('duty.ddayList.pinToCalendar')"
+          @click.stop="emit('toggle-pin', dday)"
+        >
+          <Star class="dday-row__pin-icon" aria-hidden="true" />
+        </button>
+      </li>
+    </ul>
+  </section>
 </template>
+
+<style scoped>
+.dday-section {
+  margin-top: 1.25rem;
+}
+
+.dday-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 2px 0.625rem;
+}
+
+.dday-section__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--dp-text-primary);
+}
+
+.dday-section__count {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--dp-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dday-section__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: var(--dp-bg-tertiary);
+  color: var(--dp-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.dday-section__add:hover {
+  background: var(--dp-bg-hover);
+}
+
+.dday-section__add-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dday-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border: 1px solid var(--dp-border-primary);
+  border-radius: 6px;
+  background: var(--dp-bg-card);
+}
+
+/* Mobile (<640px): D-N | lock | title over date | star, fixed 58px row. */
+.dday-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 58px;
+  transition: background-color 0.15s ease;
+}
+
+.dday-row + .dday-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 14px;
+  right: 0;
+  height: 1px;
+  background: var(--dp-border-primary);
+}
+
+.dday-row.is-pinned::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--dp-warning);
+}
+
+.dday-row__open {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  grid-template-columns: 60px 13px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 3px;
+  padding: 0 0 0 14px;
+  text-align: left;
+  color: var(--dp-text-primary);
+  cursor: pointer;
+}
+
+.dday-row__value {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dday-row__lock {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  color: var(--dp-text-muted);
+}
+
+.dday-row__lock-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.dday-row__title {
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.dday-row__date {
+  grid-column: 3;
+  grid-row: 2;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--dp-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dday-row__pin {
+  display: flex;
+  flex: 0 0 44px;
+  align-items: center;
+  justify-content: center;
+  color: var(--dp-text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.dday-row__pin-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.dday-row.is-pinned .dday-row__pin {
+  color: var(--dp-warning);
+}
+
+.dday-row.is-pinned .dday-row__pin-icon {
+  fill: currentColor;
+}
+
+.dday-section__add:focus-visible,
+.dday-row__open:focus-visible,
+.dday-row__pin:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+/* State colours (colour only, never geometry). */
+.dday-row--urgent .dday-row__value {
+  color: var(--dp-danger-hover);
+}
+
+.dday-row--soon .dday-row__value {
+  color: var(--dp-warning-hover);
+}
+
+.dday-row--future .dday-row__value {
+  color: var(--dp-text-primary);
+}
+
+.dday-row--past .dday-row__value {
+  color: var(--dp-text-muted);
+  font-weight: 600;
+}
+
+.dday-row--past .dday-row__title {
+  color: var(--dp-text-secondary);
+}
+
+:global(.dark .dday-row--urgent .dday-row__value) {
+  color: color-mix(in srgb, var(--dp-danger) 70%, white);
+}
+
+:global(.dark .dday-row--soon .dday-row__value) {
+  color: color-mix(in srgb, var(--dp-warning) 85%, white);
+}
+
+@media (hover: hover) {
+  .dday-row:hover {
+    background: var(--dp-bg-tertiary);
+  }
+
+  .dday-row__pin:hover {
+    color: var(--dp-warning);
+  }
+}
+
+/* Desktop (>=640px): one line — D-N | lock | title | date | star, fixed 48px row. */
+@media (min-width: 640px) {
+  .dday-section {
+    margin-top: 1.75rem;
+  }
+
+  .dday-section__title {
+    font-size: 18px;
+  }
+
+  .dday-row {
+    height: 48px;
+  }
+
+  .dday-row + .dday-row::before {
+    left: 18px;
+  }
+
+  .dday-row.is-pinned::after {
+    top: 10px;
+    bottom: 10px;
+  }
+
+  .dday-row__open {
+    grid-template-columns: 76px 16px minmax(0, 1fr) 132px;
+    grid-template-rows: auto;
+    column-gap: 12px;
+    padding: 0 4px 0 18px;
+  }
+
+  .dday-row__value {
+    grid-row: 1;
+    font-size: 17px;
+  }
+
+  .dday-row__title {
+    font-size: 15px;
+  }
+
+  .dday-row__date {
+    grid-column: 4;
+    grid-row: 1;
+    text-align: right;
+    font-size: 13px;
+  }
+
+  .dday-row__pin {
+    flex-basis: 48px;
+  }
+}
+</style>

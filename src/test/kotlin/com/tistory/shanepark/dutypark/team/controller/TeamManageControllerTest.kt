@@ -55,7 +55,7 @@ class TeamManageControllerTest : RestDocsTest() {
             MockMvcRequestBuilders.get("/api/teams/manage/{teamId}", TestData.team.id!!)
                 .withAuth(TestData.member2)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
     }
 
@@ -348,7 +348,7 @@ class TeamManageControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
                 .withAuth(TestData.member2)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
             .andDo(
                 document(
@@ -489,7 +489,7 @@ class TeamManageControllerTest : RestDocsTest() {
                 .param("memberId", TestData.member2.id!!.toString())
                 .withAuth(TestData.member)
         )
-            .andExpect(status().isUnauthorized)
+            .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("team.admin.required"))
     }
 

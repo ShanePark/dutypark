@@ -164,6 +164,40 @@ class WebOAuthSecurityTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `impersonated sessions cannot initiate provider linking`() {
+        val transactionsBefore = webOAuthTransactionRepository.count()
+        listOf("KAKAO", "NAVER").forEach { provider ->
+            mockMvc.perform(
+                post("/api/auth/oauth2/authorize")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${getImpersonationJwt(TestData.member, TestData.admin)}")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"provider":"$provider","purpose":"LINK","referer":"/member"}""")
+            )
+                .andExpect(status().isForbidden)
+                .andExpect(jsonPath("$.code").value("auth.reauth.impersonationForbidden"))
+        }
+        assertThat(webOAuthTransactionRepository.count()).isEqualTo(transactionsBefore)
+    }
+
+    @Test
+    fun `provider link callback rejects impersonation of the initiating member`() {
+        listOf("KAKAO", "NAVER").forEach { provider ->
+            val flow = authorize(provider, "LINK", "/member", getJwt(TestData.member))
+            mockMvc.perform(
+                get("/api/auth/Oauth2ClientCallback/${provider.lowercase()}")
+                    .session(flow.session)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${getImpersonationJwt(TestData.member, TestData.admin)}")
+                    .param("code", "test-code")
+                    .param("state", flow.state)
+            )
+                .andExpect(status().isFound)
+                .andExpect(header().string(HttpHeaders.LOCATION, INVALID_STATE_LOCATION))
+        }
+        assertThat(socialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, KAKAO_ID)).isNull()
+        assertThat(socialAccountRepository.findByProviderAndSocialId(SsoType.NAVER, NAVER_ID)).isNull()
+    }
+
+    @Test
     fun `link purpose cannot be initiated anonymously`() {
         mockMvc.perform(
             post("/api/auth/oauth2/authorize")
