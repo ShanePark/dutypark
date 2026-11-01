@@ -193,7 +193,6 @@ function handleDayClick(day: CalendarDay, index: number) {
         clickable && isDayClickable(day, getSourceIndex(idx)) ? 'cursor-pointer calendar-day-hoverable' : '',
         {
           'calendar-day--outside': !isCurrentMonth(day),
-          'calendar-day--week-start': idx % 7 === 0,
           'calendar-day--today': isToday(day),
           'calendar-day--highlighted': !focusedDay && isHighlighted(day),
           'highlight-pulse-glow': !focusedDay && isHighlighted(day),
@@ -493,44 +492,15 @@ function handleDayClick(day: CalendarDay, index: number) {
   border-bottom-right-radius: 2px;
 }
 
-/* Narrow tiles name a multi-day schedule only on its first day and at the
-   start of each later week row; the other days show just the joined bar. The
-   bar sits above the title so a two-line title cannot push it out of line
-   with its neighbours. The joined bar already shows the run, so the day count
-   is dropped. */
+/* Narrow tiles keep a multi-day title to one line so the bar below it lines up
+   across neighbouring days. The joined bar already shows the run, so the day
+   count is dropped. */
 @media (max-width: 639.98px) {
-  :slotted(.calendar-item--span) {
-    padding-top: 6px;
-    padding-bottom: 2px;
-  }
-
-  :slotted(.calendar-item--span)::after {
-    top: 2px;
-    bottom: auto;
-  }
-
-  :slotted(.calendar-item--span:not(.calendar-item--span-start) .calendar-item__line) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
+  :slotted(.calendar-item--span .calendar-item__line) {
+    display: block;
     overflow: hidden;
-    clip-path: inset(50%);
-  }
-
-  :slotted(.calendar-item--span:not(.calendar-item--span-start) .calendar-item__tags) {
-    display: none;
-  }
-
-  .calendar-day--week-start :slotted(.calendar-item--span .calendar-item__line) {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: hidden;
-    clip-path: none;
-  }
-
-  .calendar-day--week-start :slotted(.calendar-item--span .calendar-item__tags) {
-    display: flex;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   :slotted(.calendar-item--span .calendar-item__part) {
@@ -627,6 +597,13 @@ function handleDayClick(day: CalendarDay, index: number) {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     line-clamp: 2;
+  }
+
+  :slotted(.calendar-item--span .calendar-item__text) {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   :slotted(.calendar-item__time) {

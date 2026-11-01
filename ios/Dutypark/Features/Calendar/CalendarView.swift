@@ -2109,7 +2109,7 @@ private struct CalendarDayCell: View {
                     dDayMarker(item)
                 }
             }
-            ForEach(Array(day.schedules.enumerated()), id: \.element.id) { index, schedule in
+            ForEach(Array(cellSchedules.enumerated()), id: \.element.id) { index, schedule in
                 DPCalendarItemRow(
                     showsRule: index + day.dDays.count > 0,
                     rule: ruleColor,
@@ -2132,6 +2132,17 @@ private struct CalendarDayCell: View {
 
     private var dutyColor: String? { day.duty?.dutyColor }
     private var isCurrentMonth: Bool { day.cell.isCurrentMonth }
+
+    private var cellSchedules: [ScheduleDTO] {
+        DPCalendarSpan.orderedForCell(day.schedules, daysFromStart: { $0.daysFromStart }, totalDays: { $0.totalDays })
+    }
+
+    private func titleLineLimit(_ schedule: ScheduleDTO) -> Int {
+        DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays) == nil
+            ? 2
+            : DPCalendarSpan.titleLineLimit
+    }
+
     private var isOnFill: Bool {
         DPCalendarCellStyle.tone(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth) != .theme
     }
@@ -2187,7 +2198,7 @@ private struct CalendarDayCell: View {
                     .tracking(-0.3)
                     .lineSpacing(1)
                     .foregroundStyle(primaryForeground)
-                    .lineLimit(2)
+                    .lineLimit(titleLineLimit(schedule))
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

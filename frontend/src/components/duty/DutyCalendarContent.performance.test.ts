@@ -268,6 +268,20 @@ describe('calendar derived display data', () => {
     expect(ddayButtons(root).map(node => node.props.title)).toEqual(['Second', 'Normalized'])
   })
 
+  it('lists multi-day schedules before single-day ones in a calendar cell', () => {
+    const props = makeProps(0)
+    const single = { ...makeSchedule('single'), totalDays: 1 }
+    const startsToday = makeSchedule('starts-today', 1)
+    const startedEarlier = makeSchedule('started-earlier', 2)
+    props.schedulesByDays = [[single, startsToday, startedEarlier]]
+    const root = mountCalendar(props)
+    const titles = findHostNodes(calendarDayCells(root)[0]!, node =>
+      String(node.props.class ?? '').split(' ').includes('calendar-item__text'))
+    expect(titles.map(node => hostText(node).split('Schedule ')[1])).toEqual([
+      'started-earlier', 'starts-today', 'single',
+    ])
+  })
+
   it('shows every due todo of a day without an overflow count', () => {
     const props = makeProps(0)
     props.schedulesByDays = []

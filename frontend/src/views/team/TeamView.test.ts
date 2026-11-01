@@ -53,7 +53,7 @@ describe('team self-service creation', () => {
       teamView.indexOf('</CalendarGrid>'),
     )
 
-    expect(dayContent).toContain('v-for="schedule in teamSchedules[index]"')
+    expect(dayContent).toContain('v-for="schedule in orderForCalendarCell(teamSchedules[index] ?? [])"')
     expect(dayContent).not.toMatch(/teamSchedules\[index\]\.slice\(/)
     expect(dayContent).not.toMatch(/\+\{\{ teamSchedules\[index\]\.length/)
   })

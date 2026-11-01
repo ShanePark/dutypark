@@ -1,5 +1,18 @@
 import SwiftUI
 
+private struct TeamTopScrollEdgeEffectModifier: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            // Same soft top edge as Calendar: only the bar controls float over the scrolled
+            // content instead of the default opaque band.
+            content.scrollEdgeEffectStyle(.soft, for: .top)
+        } else {
+            content
+        }
+    }
+}
+
 private struct TeamCalendarMonthPage: Identifiable {
     let key: OfflineMonthKey
     let days: [TeamDayDTO]
@@ -277,6 +290,7 @@ struct TeamView: View {
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isCurrentMonth)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .modifier(TeamTopScrollEdgeEffectModifier())
         .background(DPColor.backgroundPrimary)
         .toolbar { teamToolbar(team) }
     }
@@ -800,6 +814,13 @@ private struct TeamMemberAvatar: View {
     }
 }
 
+nonisolated enum TeamCalendarCellSchedules {
+    // Multi-day schedules lead the cell, matching the personal calendar.
+    static func ordered(_ schedules: [TeamScheduleDTO]) -> [TeamScheduleDTO] {
+        DPCalendarSpan.orderedForCell(schedules, daysFromStart: \.daysFromStart, totalDays: \.totalDays)
+    }
+}
+
 private struct TeamCalendarDayCell: View {
     let day: TeamDayDTO
     let currentMonth: Int
@@ -833,7 +854,7 @@ private struct TeamCalendarDayCell: View {
                             .lineLimit(1)
                     }
                     // Every schedule is drawn; the tile grows instead of hiding any behind a count.
-                    ForEach(Array(schedules.enumerated()), id: \.offset) { index, schedule in
+                    ForEach(Array(TeamCalendarCellSchedules.ordered(schedules).enumerated()), id: \.offset) { index, schedule in
                         let span = DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays)
                         DPCalendarItemRow(showsRule: index > 0, rule: rule, span: span, spanColor: ink) {
                             Text(verbatim: schedule.content)

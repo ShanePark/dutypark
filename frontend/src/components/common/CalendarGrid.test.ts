@@ -96,15 +96,6 @@ describe('CalendarGrid day states', () => {
     return findHostNodes(cell, node => node.type === 'span' && hasClass(node, 'calendar-day-today-border'))
   }
 
-  it('marks the first column of each week row so a multi-day schedule can repeat its title there', async () => {
-    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
-      days: novemberDays(null), currentYear: 2026, currentMonth: 11,
-    })))
-    await nextTick()
-    expect(dayCells(mounted.root).map((cell, index) => [index, hasClass(cell, 'calendar-day--week-start')]))
-      .toEqual(Array.from({ length: 35 }, (_, index) => [index, index % 7 === 0]))
-  })
-
   it('draws the selection border instead of the today border when today is selected', async () => {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
       days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,

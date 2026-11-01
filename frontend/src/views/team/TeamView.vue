@@ -22,6 +22,7 @@ import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import { isLightColor } from '@/utils/color'
+import { orderForCalendarCell } from '@/utils/calendarScheduleOrder'
 import { extractApiError } from '@/utils/resolveApiError'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
@@ -595,7 +596,7 @@ onMounted(() => {
         <template #day-content="{ index }">
           <div v-if="teamSchedules[index]?.length" class="calendar-items">
             <div
-              v-for="schedule in teamSchedules[index]"
+              v-for="schedule in orderForCalendarCell(teamSchedules[index] ?? [])"
               :key="schedule.id"
               class="calendar-item"
               :class="(schedule.totalDays ?? 0) > 1 ? ['calendar-item--span', {

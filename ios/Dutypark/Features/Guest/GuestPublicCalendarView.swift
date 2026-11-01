@@ -539,7 +539,7 @@ private struct GuestCalendarDayCell: View {
                         .lineLimit(2)
                 }
             }
-            ForEach(Array(day.schedules.enumerated()), id: \.element.id) { index, schedule in
+            ForEach(Array(cellSchedules.enumerated()), id: \.element.id) { index, schedule in
                 DPCalendarItemRow(
                     showsRule: index + day.dDays.count > 0,
                     rule: ruleColor,
@@ -551,7 +551,7 @@ private struct GuestCalendarDayCell: View {
                         .tracking(-0.3)
                         .lineSpacing(1)
                         .foregroundStyle(primaryForeground)
-                        .lineLimit(2)
+                        .lineLimit(titleLineLimit(schedule))
                         .truncationMode(.tail)
                 }
             }
@@ -560,6 +560,16 @@ private struct GuestCalendarDayCell: View {
 
     private var dutyColor: String? { day.duty?.dutyColor }
     private var isCurrentMonth: Bool { day.cell.isCurrentMonth }
+
+    private var cellSchedules: [ScheduleDTO] {
+        DPCalendarSpan.orderedForCell(day.schedules, daysFromStart: { $0.daysFromStart }, totalDays: { $0.totalDays })
+    }
+
+    private func titleLineLimit(_ schedule: ScheduleDTO) -> Int {
+        DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays) == nil
+            ? 2
+            : DPCalendarSpan.titleLineLimit
+    }
 
     private var primaryForeground: Color {
         DPCalendarCellStyle.primaryForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)

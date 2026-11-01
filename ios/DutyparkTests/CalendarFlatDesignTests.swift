@@ -120,18 +120,63 @@ struct CalendarFlatDesignTests {
     }
 
     @Test
-    func aMultiDayTitleIsDrawnOnlyWhereTheRunStartsOrReentersAWeekRow() throws {
-        let first = try #require(DPCalendarSpan(daysFromStart: 1, totalDays: 5))
-        let middle = try #require(DPCalendarSpan(daysFromStart: 3, totalDays: 5))
-        let last = try #require(DPCalendarSpan(daysFromStart: 5, totalDays: 5))
+    func aMultiDayTitleIsDrawnOnEveryDayOnOneLineAboveAnUnderline() throws {
+        #expect(DPCalendarSpan.titleLineLimit == 1)
+        let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
+        #expect(!style.contains("showsTitle"), "Every day of a run names the schedule")
+        #expect(!style.contains("dpCalendarWeekdayIndex"), "Tiles no longer pass their column to items")
+        let row = try declaration(named: "nonisolated struct DPCalendarItemRow<Content: View>: View", in: style)
+        let title = try #require(row.range(of: "content()")).lowerBound
+        let bar = try #require(row.range(of: "spanBar(span)")).lowerBound
+        #expect(title < bar, "The run's bar is drawn under the title")
 
-        #expect(first.showsTitle(weekdayIndex: 4))
-        #expect(!middle.showsTitle(weekdayIndex: 6))
-        #expect(!last.showsTitle(weekdayIndex: 1))
-        // A run that continues into the next week names itself again on Sunday.
-        #expect(middle.showsTitle(weekdayIndex: 0))
-        #expect(last.showsTitle(weekdayIndex: 0))
-        #expect(DPCalendarSpan.titleLineLimit == 2)
+        let cells = [
+            try declaration(
+                named: "private struct CalendarDayCell: View",
+                in: source("Dutypark/Features/Calendar/CalendarView.swift")
+            ),
+            try declaration(
+                named: "private struct GuestCalendarDayCell: View",
+                in: source("Dutypark/Features/Guest/GuestPublicCalendarView.swift")
+            ),
+        ]
+        for cell in cells {
+            #expect(cell.contains("DPCalendarSpan.orderedForCell("), "Multi-day schedules lead the cell")
+            #expect(cell.contains("DPCalendarSpan.titleLineLimit"), "A multi-day title keeps to one line")
+        }
+    }
+
+    @Test
+    func multiDaySchedulesLeadACellStartedEarlierThenEndingLater() {
+        struct Item: Equatable {
+            let name: String
+            let daysFromStart: Int?
+            let totalDays: Int?
+        }
+        let items = [
+            Item(name: "single-a", daysFromStart: 1, totalDays: 1),
+            Item(name: "run-today", daysFromStart: 1, totalDays: 3),
+            Item(name: "untyped", daysFromStart: nil, totalDays: nil),
+            Item(name: "run-earlier-short", daysFromStart: 3, totalDays: 3),
+            Item(name: "run-earlier-long", daysFromStart: 3, totalDays: 6),
+            Item(name: "single-b", daysFromStart: 1, totalDays: 1),
+            Item(name: "run-tie-1", daysFromStart: 2, totalDays: 4),
+            Item(name: "run-tie-2", daysFromStart: 2, totalDays: 4),
+        ]
+
+        let ordered = DPCalendarSpan.orderedForCell(items, daysFromStart: \.daysFromStart, totalDays: \.totalDays)
+
+        #expect(ordered.map(\.name) == [
+            "run-earlier-long",
+            "run-earlier-short",
+            "run-tie-1",
+            "run-tie-2",
+            "run-today",
+            "single-a",
+            "untyped",
+            "single-b",
+        ])
+        #expect(DPCalendarSpan.orderedForCell([Item](), daysFromStart: \.daysFromStart, totalDays: \.totalDays).isEmpty)
     }
 
     @Test

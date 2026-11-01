@@ -11,6 +11,7 @@ import type { HolidayDto } from '@/types'
 import type { CalendarDay, DutyType, Schedule, OtherDuty, LocalDDay, DutyDay, TodoDueItem } from '@/views/duty/dutyViewTypes'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
 import { canOpenCalendarDay } from '@/utils/calendarDayOpening'
+import { orderForCalendarCell } from '@/utils/calendarScheduleOrder'
 import { useCalendarMonthSwipe } from '@/composables/useCalendarMonthSwipe'
 
 const props = defineProps<{
@@ -158,6 +159,8 @@ function formatScheduleTime(schedule: Schedule) {
   }
   return ''
 }
+
+const cellSchedulesByDays = computed(() => props.schedulesByDays.map(orderForCalendarCell))
 
 function hasScheduleDetails(schedule: Schedule) {
   return !!(schedule.description || schedule.attachments?.length)
@@ -326,7 +329,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
             </button>
 
             <div
-              v-for="schedule in schedulesByDays[index]"
+              v-for="schedule in cellSchedulesByDays[index]"
               :key="schedule.id"
               class="calendar-item"
               :class="schedule.totalDays > 1 ? ['calendar-item--span', {

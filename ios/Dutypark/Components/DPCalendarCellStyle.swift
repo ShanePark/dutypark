@@ -317,7 +317,6 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
             .frame(minHeight: 18)
             .padding(.bottom, 2)
             content()
-                .environment(\.dpCalendarWeekdayIndex, weekdayIndex)
             Spacer(minLength: 0)
         }
         .padding(.top, 4)
@@ -359,18 +358,6 @@ nonisolated enum DPCalendarTileRing: Equatable {
     }
 }
 
-/// The weekday column (0 = Sunday) of the tile an item is drawn in.
-private nonisolated struct DPCalendarWeekdayIndexKey: EnvironmentKey {
-    static let defaultValue: Int? = nil
-}
-
-extension EnvironmentValues {
-    nonisolated var dpCalendarWeekdayIndex: Int? {
-        get { self[DPCalendarWeekdayIndexKey.self] }
-        set { self[DPCalendarWeekdayIndexKey.self] = newValue }
-    }
-}
-
 /// Today's marker on an unselected tile: a red ring over the gutter with a thin
 /// white inner line that keeps it legible on any fill.
 nonisolated struct DPCalendarTodayRing: View {
@@ -389,43 +376,33 @@ nonisolated struct DPCalendarTodayRing: View {
 }
 
 /// One item line inside a tile (a schedule or a D-Day marker). Items after the first
-/// are separated by a hairline. A multi-day schedule draws a bar at the top of the item
-/// that runs to the tile edges, so the days of one schedule join across the week at the
-/// same height; its title sits below the bar only where the run starts or enters a new
-/// week row, and the other days show the bar alone.
+/// are separated by a hairline. A multi-day schedule is named on every day and underlined
+/// by a bar that runs to the tile edges, so the days of one schedule join across the week.
+/// Its title keeps to one line (`DPCalendarSpan.titleLineLimit`), so the bar lands at the
+/// same height in neighbouring tiles.
 nonisolated struct DPCalendarItemRow<Content: View>: View {
     let showsRule: Bool
     let rule: Color
     var span: DPCalendarSpan?
     var spanColor: Color = .clear
     @ViewBuilder var content: () -> Content
-    @Environment(\.dpCalendarWeekdayIndex) private var weekdayIndex
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 2.5) {
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
             if let span {
                 spanBar(span)
             }
-            if showsTitle {
-                content()
-                    .transformEnvironment(\.lineLimit) { limit in
-                        if span != nil { limit = DPCalendarSpan.titleLineLimit }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 2)
+        .padding(.top, 2)
+        .padding(.bottom, span == nil ? 2 : 0)
         .overlay(alignment: .top) {
             if showsRule {
                 Rectangle().fill(rule).frame(height: 1)
             }
         }
-        .modifier(DPCalendarHiddenTitleAccessibility(isHidden: !showsTitle, title: content))
-    }
-
-    private var showsTitle: Bool {
-        span?.showsTitle(weekdayIndex: weekdayIndex) ?? true
     }
 
     private func spanBar(_ span: DPCalendarSpan) -> some View {
@@ -443,20 +420,6 @@ nonisolated struct DPCalendarItemRow<Content: View>: View {
     }
 }
 
-/// A continuation day draws only the bar, but VoiceOver still reads the schedule's title there.
-private nonisolated struct DPCalendarHiddenTitleAccessibility<Title: View>: ViewModifier {
-    let isHidden: Bool
-    let title: () -> Title
-
-    func body(content: Content) -> some View {
-        if isHidden {
-            content.accessibilityRepresentation { title() }
-        } else {
-            content
-        }
-    }
-}
-
 /// Where a day sits inside a multi-day schedule.
 nonisolated struct DPCalendarSpan: Equatable {
     let isStart: Bool
@@ -469,15 +432,34 @@ nonisolated struct DPCalendarSpan: Equatable {
         isEnd = daysFromStart == totalDays
     }
 
-    /// A title on every day of a run repeated itself across the week, so it is drawn where
-    /// the run starts and again on Sunday (column 0) when it continues into the next week
-    /// row. Outside a tile the column is unknown and the title is kept.
-    func showsTitle(weekdayIndex: Int?) -> Bool {
-        isStart || (weekdayIndex ?? 0) == 0
-    }
+    /// A multi-day title keeps to one line so it has the same height on every day and the
+    /// run's bar stays level across the week.
+    static let titleLineLimit = 1
 
-    /// Where a title is drawn it may wrap, since the neighbouring days no longer repeat it.
-    static let titleLineLimit = 2
+    /// Multi-day items lead a calendar cell so their bars sit in the top rows. Among them
+    /// the run that started earlier comes first, then the one that ends later; ties and
+    /// single-day items keep their incoming order.
+    static func orderedForCell<Item>(
+        _ items: [Item],
+        daysFromStart: (Item) -> Int?,
+        totalDays: (Item) -> Int?
+    ) -> [Item] {
+        items.enumerated().sorted { lhs, rhs in
+            let l = (from: daysFromStart(lhs.element) ?? 1, total: totalDays(lhs.element) ?? 1)
+            let r = (from: daysFromStart(rhs.element) ?? 1, total: totalDays(rhs.element) ?? 1)
+            let lSpan = l.total > 1
+            let rSpan = r.total > 1
+            if lSpan != rSpan { return lSpan }
+            if lSpan {
+                if l.from != r.from { return l.from > r.from }
+                let lRemaining = l.total - l.from
+                let rRemaining = r.total - r.from
+                if lRemaining != rRemaining { return lRemaining > rRemaining }
+            }
+            return lhs.offset < rhs.offset
+        }
+        .map(\.element)
+    }
 }
 
 /// The small private-schedule badge drawn before a title. On a duty fill its colours
