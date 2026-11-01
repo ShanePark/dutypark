@@ -40,20 +40,23 @@ describe('multi-day schedule styling', () => {
   })
 
   it('wraps a multi-day title to two lines like any other title', () => {
-    expectTwoLineClamp(ruleBody(mobileBlock, ':slotted(.calendar-item--span .calendar-item__text)'))
-    expectTwoLineClamp(ruleBody(desktopBlock, ':slotted(.calendar-item__line--split .calendar-item__text)'))
-    expect(desktopBlock).not.toContain(':slotted(.calendar-item--span .calendar-item__text)')
+    expectTwoLineClamp(ruleBody(baseBlock, ':slotted(.calendar-item__line)'))
+    expect(style).not.toContain('.calendar-item__line--split')
+    expect(style).not.toContain('.calendar-item--span .calendar-item__line')
+    expect(style).not.toContain('.calendar-item--span .calendar-item__text')
   })
 
-  it('shows the day counter at the end of the title line on narrow tiles', () => {
-    const line = ruleBody(mobileBlock, ':slotted(.calendar-item--span .calendar-item__line)')
-    expect(line).toContain('display: flex')
-    expect(ruleBody(mobileBlock, ':slotted(.calendar-item--span .calendar-item__text)')).toContain('min-width: 0')
+  it('flows the day counter inline as the end of the title', () => {
+    expect(style).not.toContain('.calendar-item--span .calendar-item__part')
+    expect(mobileBlock).not.toContain('.calendar-item__part')
+    expect(desktopBlock).not.toContain('.calendar-item__part')
 
-    const part = ruleBody(mobileBlock, ':slotted(.calendar-item--span .calendar-item__part)')
-    expect(part).not.toContain('display: none')
-    expect(part).toContain('flex: none')
-    expect(ruleBody(baseBlock, ':slotted(.calendar-item__part)')).toContain('color: var(--calendar-ink-muted)')
-    expect(ruleBody(baseBlock, ':slotted(.calendar-item__part)')).toContain('font-variant-numeric: tabular-nums')
+    const part = ruleBody(baseBlock, ':slotted(.calendar-item__part)')
+    expect(part).not.toContain('display')
+    expect(part).not.toContain('flex')
+    // A leading space separates it from the title instead, so a wrapped counter starts flush.
+    expect(part).not.toContain('margin-left')
+    expect(part).toContain('color: var(--calendar-ink-muted)')
+    expect(part).toContain('font-variant-numeric: tabular-nums')
   })
 })

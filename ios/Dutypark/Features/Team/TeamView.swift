@@ -857,17 +857,16 @@ private struct TeamCalendarDayCell: View {
                     ForEach(Array(TeamCalendarCellSchedules.ordered(schedules).enumerated()), id: \.offset) { index, schedule in
                         let span = DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays)
                         DPCalendarItemRow(showsRule: index > 0, rule: rule, span: span, spanColor: ink) {
-                            DPCalendarScheduleTitle(
+                            DPCalendarScheduleTitle.text(
+                                Text(verbatim: schedule.content),
                                 daysFromStart: schedule.daysFromStart,
                                 totalDays: schedule.totalDays,
                                 counterColor: mutedInk
-                            ) {
-                                Text(verbatim: schedule.content)
-                                    .font(DPFont.light(size: 10, relativeTo: .caption2))
-                                    .tracking(-0.3)
-                                    .foregroundStyle(ink)
-                                    .lineLimit(2)
-                            }
+                            )
+                            .font(DPFont.light(size: 10, relativeTo: .caption2))
+                            .tracking(-0.3)
+                            .foregroundStyle(ink)
+                            .lineLimit(2)
                         }
                     }
                 }

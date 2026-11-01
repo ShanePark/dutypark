@@ -326,7 +326,7 @@ final class CalendarFeatureTests: XCTestCase {
             in: calendarSource
         )
         // The narrow month tile shows the title without the time, as the mobile web does;
-        // a multi-day counter is drawn apart by DPCalendarScheduleTitle, not in the title text.
+        // a multi-day counter is appended by DPCalendarScheduleTitle, not in the title line itself.
         XCTAssertTrue(calendarDayCell.contains("var line = Text(verbatim: schedule.content)"))
         XCTAssertFalse(calendarDayCell.contains("dayCounter"))
 

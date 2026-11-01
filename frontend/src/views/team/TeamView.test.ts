@@ -58,6 +58,13 @@ describe('team self-service creation', () => {
     expect(dayContent).not.toMatch(/\+\{\{ teamSchedules\[index\]\.length/)
   })
 
+  it('ends a multi-day team schedule title with its day counter', () => {
+    expect(teamView).toContain(
+      '<span class="calendar-item__text">{{ schedule.content }}<span v-if="(schedule.totalDays ?? 0) > 1" class="calendar-item__part"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</span></span>',
+    )
+    expect(teamView).not.toContain('calendar-item__line--split')
+  })
+
   it('does not expose a join-request action', () => {
     expect(teamView).not.toContain("t('team.view.actions.requestJoin')")
   })

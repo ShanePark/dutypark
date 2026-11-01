@@ -604,9 +604,8 @@ onMounted(() => {
                 'calendar-item--span-end': schedule.daysFromStart === schedule.totalDays,
               }] : null"
             >
-              <div class="calendar-item__line calendar-item__line--split">
-                <span class="calendar-item__text">{{ schedule.content }}</span>
-                <span v-if="(schedule.totalDays ?? 0) > 1" class="calendar-item__part">{{ schedule.daysFromStart }}/{{ schedule.totalDays }}</span>
+              <div class="calendar-item__line">
+                <span class="calendar-item__text">{{ schedule.content }}<span v-if="(schedule.totalDays ?? 0) > 1" class="calendar-item__part"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</span></span>
               </div>
             </div>
           </div>

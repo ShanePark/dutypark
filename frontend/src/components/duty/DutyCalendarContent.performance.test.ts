@@ -278,7 +278,7 @@ describe('calendar derived display data', () => {
     const titles = findHostNodes(calendarDayCells(root)[0]!, node =>
       String(node.props.class ?? '').split(' ').includes('calendar-item__text'))
     expect(titles.map(node => hostText(node).split('Schedule ')[1])).toEqual([
-      'started-earlier', 'starts-today', 'single',
+      'started-earlier (2/3)', 'starts-today (1/3)', 'single',
     ])
   })
 
@@ -306,7 +306,7 @@ describe('calendar derived display data', () => {
     expect(buildDisplayTagMembers).toHaveBeenCalledTimes(2)
     expect(tagNames(root)).toContain('Different')
     expect(tagNames(root)).not.toContain('Viewer')
-    expect(hostText(root)).toContain('2/3')
+    expect(hostText(root)).toContain('(2/3)')
 
     props.schedulesByDays[0]![0]!.tags![1]!.name = 'Renamed'
     props.schedulesByDays[0]![0]!.taggedByMember!.profilePhotoVersion = 2

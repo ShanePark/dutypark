@@ -546,19 +546,18 @@ private struct GuestCalendarDayCell: View {
                     span: DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays),
                     spanColor: primaryForeground
                 ) {
-                    DPCalendarScheduleTitle(
+                    DPCalendarScheduleTitle.text(
+                        scheduleTitleLine(schedule),
                         daysFromStart: schedule.daysFromStart,
                         totalDays: schedule.totalDays,
                         counterColor: secondaryForeground
-                    ) {
-                        scheduleTitleLine(schedule)
-                            .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
-                            .tracking(-0.3)
-                            .lineSpacing(1)
-                            .foregroundStyle(primaryForeground)
-                            .lineLimit(2)
-                            .truncationMode(.tail)
-                    }
+                    )
+                    .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
+                    .tracking(-0.3)
+                    .lineSpacing(1)
+                    .foregroundStyle(primaryForeground)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
                 }
             }
         }
@@ -589,7 +588,7 @@ private struct GuestCalendarDayCell: View {
     }
 
     /// A narrow tile shows the title without the time, as the member calendar does; a
-    /// multi-day run's day counter is drawn after it by `DPCalendarScheduleTitle`.
+    /// multi-day run's day counter is appended by `DPCalendarScheduleTitle`.
     private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
         var line = Text(verbatim: schedule.content)
         if !schedule.description.isEmpty || !schedule.attachments.isEmpty {

@@ -457,7 +457,6 @@ function handleDayClick(day: CalendarDay, index: number) {
 }
 
 :slotted(.calendar-item__part) {
-  margin-left: 3px;
   color: var(--calendar-ink-muted);
   font-size: 0.9em;
   font-weight: 700;
@@ -490,34 +489,6 @@ function handleDayClick(day: CalendarDay, index: number) {
   right: 0;
   border-top-right-radius: 2px;
   border-bottom-right-radius: 2px;
-}
-
-/* On narrow tiles the day counter ends a multi-day title's first line and never
-   truncates. The title wraps to two lines like any other: the same title wraps the
-   same way in every equal-width tile, so the bar below it still lines up. */
-@media (max-width: 639.98px) {
-  :slotted(.calendar-item--span .calendar-item__line) {
-    display: flex;
-    align-items: baseline;
-    gap: 1px;
-  }
-
-  :slotted(.calendar-item--span .calendar-item__text) {
-    display: -webkit-box;
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-  }
-
-  :slotted(.calendar-item--span .calendar-item__part) {
-    flex: none;
-    margin-left: 0;
-    font-size: 9px;
-    letter-spacing: -0.04em;
-  }
 }
 
 @media (min-width: 640px) {
@@ -594,34 +565,12 @@ function handleDayClick(day: CalendarDay, index: number) {
     background: var(--calendar-ink-muted);
   }
 
-  :slotted(.calendar-item__line--split) {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 4px;
-  }
-
-  :slotted(.calendar-item__line--split .calendar-item__text) {
-    display: -webkit-box;
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-  }
-
   :slotted(.calendar-item__time) {
     display: inline;
     margin-right: 4px;
     color: var(--calendar-ink-muted);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-  }
-
-  :slotted(.calendar-item__part) {
-    flex: none;
-    font-size: 11px;
   }
 
   :slotted(.calendar-item--span) {

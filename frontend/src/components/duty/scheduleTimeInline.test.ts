@@ -12,10 +12,13 @@ describe('schedule time inline display', () => {
     )
   })
 
-  it('leads the monthly cell title with its time and keeps the multi-day part beside it', () => {
+  it('leads the monthly cell title with its time and ends it with the multi-day counter', () => {
     expect(dutyCalendarContent).toMatch(
       /<span v-if="formatScheduleTime\(schedule\)" class="calendar-item__time">\{\{ formatScheduleTime\(schedule\) \}\}<\/span>\{\{ schedule\.contentWithoutTime \|\| schedule\.content \}\}/
     )
-    expect(dutyCalendarContent).toContain('class="calendar-item__part">{{ schedule.daysFromStart }}/{{ schedule.totalDays }}</span>')
+    expect(dutyCalendarContent).toMatch(
+      /class="calendar-schedule-detail-icon"\s*\/><span v-if="schedule\.totalDays > 1" class="calendar-item__part"> \(\{\{ schedule\.daysFromStart \}\}\/\{\{ schedule\.totalDays \}\}\)<\/span><\/span>/
+    )
+    expect(dutyCalendarContent).not.toContain('calendar-item__line--split')
   })
 })

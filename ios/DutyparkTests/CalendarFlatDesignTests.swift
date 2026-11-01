@@ -151,19 +151,30 @@ struct CalendarFlatDesignTests {
         #expect(teamCell.contains(".lineLimit(2)"), "Team multi-day titles wrap to two lines too")
     }
 
-    @Test
+    @Test @MainActor
     func aMultiDayTitleEndsWithItsDayCounterInEveryMonthCell() throws {
-        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 2, totalDays: 6) == "2/6")
-        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 6, totalDays: 6) == "6/6")
+        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 2, totalDays: 6) == "(2/6)")
+        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 6, totalDays: 6) == "(6/6)")
         #expect(DPCalendarSpan.dayCounterText(daysFromStart: 1, totalDays: 1) == nil)
         #expect(DPCalendarSpan.dayCounterText(daysFromStart: nil, totalDays: 3) == nil)
         #expect(DPCalendarSpan.dayCounterText(daysFromStart: 1, totalDays: nil) == nil)
 
+        // The counter flows after the whole title as part of one Text, so it ends the
+        // title's last line instead of being pinned beside its first.
+        let line: Text = DPCalendarScheduleTitle.text(
+            Text(verbatim: "엄마 대전"),
+            daysFromStart: 1,
+            totalDays: 3,
+            counterColor: .gray
+        )
+        _ = line
+
         let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
-        let title = try declaration(named: "nonisolated struct DPCalendarScheduleTitle<Title: View>: View", in: style)
+        let title = try declaration(named: "enum DPCalendarScheduleTitle", in: style)
         #expect(title.contains("DPCalendarSpan.dayCounterText("))
-        #expect(title.contains(".fixedSize()"), "The counter never truncates; the title gives way")
         #expect(title.contains(".monospacedDigit()"))
+        #expect(!title.contains("HStack"), "The counter is not laid out beside the title")
+        #expect(!title.contains(".fixedSize()"))
 
         let cells = [
             try declaration(
@@ -180,7 +191,7 @@ struct CalendarFlatDesignTests {
             ),
         ]
         for cell in cells {
-            #expect(cell.contains("DPCalendarScheduleTitle("), "Every month cell ends a multi-day title with n/m")
+            #expect(cell.contains("DPCalendarScheduleTitle.text("), "Every month cell ends a multi-day title with (n/m)")
         }
     }
 

@@ -316,7 +316,11 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
             }
             .frame(minHeight: 18)
             .padding(.bottom, 2)
+            // The tallest tile of a row is placed at exactly its measured height, and the
+            // stack could then propose less than two lines to the first of several wrapping
+            // titles, which collapses it to one truncated line. Content keeps its full height.
             content()
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
         .padding(.top, 4)
@@ -432,10 +436,10 @@ nonisolated struct DPCalendarSpan: Equatable {
         isEnd = daysFromStart == totalDays
     }
 
-    /// The "n/m" counter that ends a multi-day title; `nil` for a single-day schedule.
+    /// The "(n/m)" counter that ends a multi-day title; `nil` for a single-day schedule.
     static func dayCounterText(daysFromStart: Int?, totalDays: Int?) -> String? {
         guard let daysFromStart, let totalDays, totalDays > 1 else { return nil }
-        return "\(daysFromStart)/\(totalDays)"
+        return "(\(daysFromStart)/\(totalDays))"
     }
 
     /// Multi-day items lead a calendar cell so their bars sit in the top rows. Among them
@@ -464,27 +468,18 @@ nonisolated struct DPCalendarSpan: Equatable {
     }
 }
 
-/// A schedule title in a month tile. A multi-day run ends the line with a muted "n/m"
-/// day counter that never truncates, so a long title gives way to it instead.
-nonisolated struct DPCalendarScheduleTitle<Title: View>: View {
-    let daysFromStart: Int?
-    let totalDays: Int?
-    let counterColor: Color
-    @ViewBuilder var title: () -> Title
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 1) {
-            title()
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if let counter = DPCalendarSpan.dayCounterText(daysFromStart: daysFromStart, totalDays: totalDays) {
-                Text(verbatim: counter)
-                    .font(DPFont.bold(size: CalendarTypography.cellMicro, relativeTo: .caption2).monospacedDigit())
-                    .tracking(-0.36)
-                    .foregroundStyle(counterColor)
-                    .lineLimit(1)
-                    .fixedSize()
-            }
+/// A schedule title in a month tile. A multi-day run's muted "(n/m)" day counter follows
+/// the whole title in the same flow of text, so it ends the title's last line; a title too
+/// long for two lines may truncate it.
+enum DPCalendarScheduleTitle {
+    static func text(_ title: Text, daysFromStart: Int?, totalDays: Int?, counterColor: Color) -> Text {
+        guard let counter = DPCalendarSpan.dayCounterText(daysFromStart: daysFromStart, totalDays: totalDays) else {
+            return title
         }
+        return title + Text(verbatim: " \(counter)")
+            .font(DPFont.bold(size: CalendarTypography.cellMicro, relativeTo: .caption2).monospacedDigit())
+            .tracking(-0.36)
+            .foregroundStyle(counterColor)
     }
 }
 

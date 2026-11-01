@@ -337,7 +337,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                 'calendar-item--span-end': schedule.daysFromStart === schedule.totalDays,
               }] : null"
             >
-              <div class="calendar-item__line calendar-item__line--split">
+              <div class="calendar-item__line">
                 <span class="calendar-item__text"><VisibilityHintIcon
                   v-if="shouldShowPrivateVisibility(schedule)"
                   :visibility="schedule.visibility"
@@ -346,8 +346,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                 /><span v-if="formatScheduleTime(schedule)" class="calendar-item__time">{{ formatScheduleTime(schedule) }}</span>{{ schedule.contentWithoutTime || schedule.content }}<MessageSquareText
                   v-if="hasScheduleDetails(schedule)"
                   class="calendar-schedule-detail-icon"
-                /></span>
-                <span v-if="schedule.totalDays > 1" class="calendar-item__part">{{ schedule.daysFromStart }}/{{ schedule.totalDays }}</span>
+                /><span v-if="schedule.totalDays > 1" class="calendar-item__part"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</span></span>
               </div>
               <div
                 v-if="getDisplayTagMembers(schedule).length"
