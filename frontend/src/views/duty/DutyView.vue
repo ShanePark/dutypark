@@ -49,6 +49,7 @@ const { t } = useI18n()
 const today = new Date()
 const currentYear = ref(today.getFullYear())
 const currentMonth = ref(today.getMonth() + 1)
+const isMonthLoading = ref(false)
 const memberName = ref('')
 const memberHasProfilePhoto = ref(false)
 const memberProfilePhotoVersion = ref(0)
@@ -398,6 +399,7 @@ const rawCalendarDays = ref<Array<{ year: number; month: number; day: number }>>
 const calendarDataYear = ref(currentYear.value)
 const calendarDataMonth = ref(currentMonth.value)
 const isCalendarMonthLoaded = computed(() =>
+  !isMonthLoading.value &&
   calendarDataYear.value === currentYear.value &&
   calendarDataMonth.value === currentMonth.value &&
   rawCalendarDays.value.length > 0,
@@ -419,6 +421,13 @@ async function loadCalendar(): Promise<boolean> {
     const days = await dutyApi.getCalendar(year, month)
     if (!context.isCurrent()) return false
 
+    if (calendarDataYear.value !== year || calendarDataMonth.value !== month) {
+      // Daily arrays belong to the displayed grid until its replacement arrives.
+      schedulesByDays.value = []
+      rawDuties.value = []
+      holidaysByDays.value = []
+      otherDuties.value = []
+    }
     rawCalendarDays.value = days
     calendarDataYear.value = year
     calendarDataMonth.value = month
@@ -696,7 +705,6 @@ onUnmounted(() => {
   window.removeEventListener('duty-go-to-date', handleGoToDate)
 })
 
-const isMonthLoading = ref(false)
 let monthLoadSequence = 0
 
 watch([memberId, currentYear, currentMonth], () => {

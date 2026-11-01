@@ -205,9 +205,10 @@ const scheduleData = {
 }
 vi.mock('@/components/duty/DayDetailModal.vue', () => ({
   default: defineComponent({
+    props: { isOpen: Boolean },
     emits: ['create-schedule', 'edit-schedule'],
-    setup(_props, { emit }) {
-      return () => h('div', [
+    setup(props, { emit }) {
+      return () => h('div', { 'data-test': 'day-detail', 'data-open': props.isOpen }, [
         h('button', { 'data-test': 'create-schedule', onClick: () => emit('create-schedule', scheduleData) }),
         h('button', { 'data-test': 'edit-schedule', onClick: () => emit('edit-schedule', { ...scheduleData, id: 'existing-id' }) }),
       ])
@@ -294,7 +295,8 @@ vi.mock('@/components/duty/DutyCalendarContent.vue', () => ({
       holidays: Array,
       otherDuties: Array,
     },
-    setup(props, { slots }) {
+    emits: ['day-click', 'batch-duty-change'],
+    setup(props, { slots, emit }) {
       return () => h('div', {
         'data-test': 'duty-calendar-content',
         'data-current-month': `${props.currentYear}-${props.currentMonth}`,
@@ -306,7 +308,17 @@ vi.mock('@/components/duty/DutyCalendarContent.vue', () => ({
         'data-duties': JSON.stringify(props.duties),
         'data-holidays': JSON.stringify(props.holidays),
         'data-comparison': JSON.stringify(props.otherDuties),
-      }, slots.default?.())
+      }, [
+        h('button', { 'data-test': 'open-calendar-day', onClick: () => {
+          const day = (props.days as Array<{ year: number; month: number; day: number }>)
+            .find(day => day.year === props.calendarDataYear && day.month === props.calendarDataMonth)!
+          emit('day-click', day, 0)
+        } }),
+        h('button', { 'data-test': 'change-calendar-duty', onClick: () => {
+          emit('batch-duty-change', { year: props.calendarDataYear, month: props.calendarDataMonth, day: 1 }, null)
+        } }),
+        ...(slots.default?.() ?? []),
+      ])
     },
   }),
 }))
@@ -594,6 +606,69 @@ function deferred<T>() {
 }
 
 describe('DutyView calendar response ordering', () => {
+  it.each(['display', 'actions'] as const)('waits for current monthly payloads at the %s boundary', async boundary => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = today.getMonth() + 1
+    function schedule(label: string, y: number, m: number) {
+      return [[{ id: label, content: label, year: y, month: m, dayOfMonth: 1,
+        startDateTime: `${y}-${String(m).padStart(2, '0')}-01T00:00`, endDateTime: `${y}-${String(m).padStart(2, '0')}-01T00:00`,
+        totalDays: 1, daysFromStart: 1, tags: [], attachments: [] }]]
+    }
+    mocks.dutyApi.getCalendar.mockImplementation((y: number, m: number) => Promise.resolve(makeCalendarDays(y, m)))
+    mocks.memberApi.getMyInfo.mockResolvedValue({ data: { id: 1, name: 'Tester', teamId: 5 } })
+    mocks.dutyApi.getTeam.mockResolvedValue({ dutyTypes: [] })
+    mocks.scheduleApi.getSchedules.mockResolvedValue(schedule('old schedule', year, month))
+    mocks.dutyApi.getDuties.mockResolvedValue([{ year, month, day: 1, dutyType: 'old duty', dutyColor: '#123456' }])
+    mocks.dutyApi.getHolidays.mockResolvedValue([[{ dateName: 'old holiday' }]])
+    const mounted = await mountDutyView()
+    mocks.dutyApi.getOtherDuties.mockResolvedValue([{ memberId: 2, name: 'old comparison', duties: [] }])
+    triggerHost(nodeByDataTest(mounted.root, 'toggle-comparison'), 'onClick')
+    await flush()
+    const pending = {
+      schedules: deferred<unknown[]>(), duties: deferred<unknown[]>(),
+      holidays: deferred<unknown[]>(), comparison: deferred<unknown[]>(),
+    }
+    mocks.scheduleApi.getSchedules.mockReturnValueOnce(pending.schedules.promise)
+    mocks.dutyApi.getDuties.mockReturnValueOnce(pending.duties.promise)
+    mocks.dutyApi.getHolidays.mockReturnValueOnce(pending.holidays.promise)
+    mocks.dutyApi.getOtherDuties.mockReturnValueOnce(pending.comparison.promise)
+    triggerHost(nodeByDataTest(mounted.root, 'next-month'), 'onClick')
+    await flush()
+    const calendar = () => nodeByDataTest(mounted.root, 'duty-calendar-content')
+    const [nextYear, nextMonth] = String(calendar().props['data-current-month']).split('-').map(Number)
+    expect(calendar().props['data-calendar-month']).toBe(`${nextYear}-${nextMonth}`)
+    expect(calendar().props['data-month-loading']).toBe(true)
+    if (boundary === 'display') {
+      for (const field of ['schedules', 'duties', 'holidays', 'comparison']) {
+        expect(String(calendar().props[`data-${field}`])).not.toContain('old ')
+      }
+    } else {
+      expect(calendar().props['data-calendar-loaded']).toBe(false)
+      triggerHost(nodeByDataTest(mounted.root, 'open-calendar-day'), 'onClick')
+      expect(nodeByDataTest(mounted.root, 'day-detail').props['data-open']).toBe(false)
+      triggerHost(nodeByDataTest(mounted.root, 'toggle-batch-edit'), 'onClick')
+      await flush()
+      triggerHost(nodeByDataTest(mounted.root, 'change-calendar-duty'), 'onClick')
+      triggerHost(nodeByDataTest(mounted.root, 'quick-duty-change'), 'onClick')
+      expect(mocks.dutyApi.updateDuty).not.toHaveBeenCalled()
+      triggerHost(nodeByDataTest(mounted.root, 'toggle-batch-edit'), 'onClick')
+      await flush()
+    }
+    pending.schedules.resolve(schedule('new schedule', nextYear!, nextMonth!))
+    pending.duties.resolve([])
+    pending.holidays.resolve([])
+    pending.comparison.resolve([])
+    await flush()
+    expect(calendar().props['data-month-loading']).toBe(false)
+    expect(calendar().props['data-calendar-loaded']).toBe(true)
+    expect(String(calendar().props['data-schedules'])).toContain('new schedule')
+    triggerHost(nodeByDataTest(mounted.root, 'open-calendar-day'), 'onClick')
+    await flush()
+    expect(nodeByDataTest(mounted.root, 'day-detail').props['data-open']).toBe(true)
+    closeMounted(mounted)
+  })
+
   it('clears obsolete duty loading when the replacement calendar fails', async () => {
     mocks.dutyApi.getCalendar.mockImplementation((year: number, month: number) => Promise.resolve(makeCalendarDays(year, month)))
     const mounted = await mountDutyView()
@@ -731,12 +806,13 @@ describe('DutyView quick duty month changes', () => {
 
     triggerHost(nodeByDataTest(mounted.root, 'next-month'), 'onClick')
     await flush()
-    expect(calendar().props['data-calendar-loaded']).toBe(true)
+    expect(calendar().props['data-calendar-loaded']).toBe(false)
     expect(calendar().props['data-month-loading']).toBe(true)
 
     resolveSchedules([])
     await flush()
     expect(calendar().props['data-month-loading']).toBe(false)
+    expect(calendar().props['data-calendar-loaded']).toBe(true)
     closeMounted(mounted)
   })
 
