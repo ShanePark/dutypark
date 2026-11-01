@@ -1,9 +1,35 @@
 import SwiftUI
 
+private struct TeamCalendarMonthPage: Identifiable {
+    let key: OfflineMonthKey
+    let days: [TeamDayDTO]
+    let duties: [DutyDTO]
+    let holidays: [[HolidayDTO]]
+    let schedules: [[TeamScheduleDTO]]
+    let selectedDay: TeamDayDTO?
+    let visibleIndices: Range<Int>
+
+    var id: OfflineMonthKey { key }
+}
+
+private struct TeamCalendarMonthTransition: Identifiable {
+    let id = UUID()
+    let pages: [TeamCalendarMonthPage]
+    let viewport: CalendarMonthBodyViewport
+}
+
+private struct TeamCalendarMonthHeights: PreferenceKey {
+    static let defaultValue: [OfflineMonthKey: CGFloat] = [:]
+
+    static func reduce(value: inout [OfflineMonthKey: CGFloat], nextValue: () -> [OfflineMonthKey: CGFloat]) {
+        value.merge(nextValue(), uniquingKeysWith: { max($0, $1) })
+    }
+}
+
 struct TeamView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @StateObject private var viewModel = TeamViewModel()
+    @StateObject private var viewModel: TeamViewModel
     @StateObject private var teamCreationViewModel = TeamCreationViewModel()
     @State private var monthPickerPresented = false
     @State private var teamCreationPresented = false
@@ -12,9 +38,20 @@ struct TeamView: View {
     @State private var pendingTeamManagementDestination: TeamID?
     @State private var scheduleDeletionCandidate: TeamScheduleDTO?
     @State private var scheduleDeletionIsWorking = false
+    @State private var monthTransition: TeamCalendarMonthTransition?
+    @State private var monthTrackOffset: CGFloat = 0
+    @State private var calendarWidth: CGFloat = 0
+    @State private var calendarBodyHeight: CGFloat = 0
+    @State private var isSwipingMonth = false
+    @State private var isSlidingMonth = false
+    @State private var monthSlideTask: Task<Void, Never>?
     private let onOpenCalendar: (MemberID) -> Void
 
-    init(onOpenCalendar: @escaping (MemberID) -> Void = { _ in }) {
+    init(
+        viewModel: TeamViewModel = TeamViewModel(),
+        onOpenCalendar: @escaping (MemberID) -> Void = { _ in }
+    ) {
+        _viewModel = StateObject(wrappedValue: viewModel)
         self.onOpenCalendar = onOpenCalendar
     }
 
@@ -72,6 +109,10 @@ struct TeamView: View {
             }
         }
         .task { await viewModel.loadIfNeeded(memberID: memberID) }
+        .onDisappear {
+            monthSlideTask?.cancel()
+            resetMonthTransition()
+        }
         .navigationDestination(item: $teamManagementDestination) { teamID in
             teamManagementView(teamID: teamID)
         }
@@ -253,7 +294,7 @@ struct TeamView: View {
             DPThisMonthCallout(label: teamLocalized("team.view.calendar.thisMonth")) {
                 Task { await viewModel.goToToday() }
             }
-            .disabled(viewModel.isLoading)
+            .disabled(viewModel.isLoading || isSlidingMonth)
             .transition(.offset(y: -4).combined(with: .opacity))
         }
     }
@@ -349,7 +390,7 @@ struct TeamView: View {
         ) {
             monthPickerPresented = true
         }
-        .disabled(viewModel.isLoading)
+        .disabled(viewModel.isLoading || isSlidingMonth)
     }
 
     private var isCurrentMonth: Bool {
@@ -357,11 +398,15 @@ struct TeamView: View {
         return now.year == viewModel.year && now.month == viewModel.month
     }
 
-    private var visibleCalendarIndices: Range<Int> {
-        CalendarDateSupport.visibleCellRange(
-            year: viewModel.year,
-            month: viewModel.month,
-            serverDays: viewModel.days
+    private var currentMonthPage: TeamCalendarMonthPage {
+        TeamCalendarMonthPage(
+            key: viewModel.calendarMonth,
+            days: viewModel.days,
+            duties: viewModel.duties,
+            holidays: viewModel.holidays,
+            schedules: viewModel.schedules,
+            selectedDay: viewModel.selectedDay,
+            visibleIndices: viewModel.calendarVisibleRange
         )
     }
 
@@ -376,25 +421,7 @@ struct TeamView: View {
                     DPCalendarWeekdayHeaderCell(label: weekday, weekdayIndex: index)
                 }
             }
-            LazyVGrid(columns: columns, spacing: 0) {
-                ForEach(Array(visibleCalendarIndices), id: \.self) { index in
-                    TeamCalendarDayCell(
-                        day: viewModel.days[index],
-                        currentMonth: viewModel.month,
-                        duty: viewModel.duty(for: viewModel.days[index]),
-                        holidays: viewModel.holidays.indices.contains(index)
-                            ? viewModel.holidays[index]
-                            : [],
-                        schedules: viewModel.schedules.indices.contains(index)
-                            ? viewModel.schedules[index]
-                            : [],
-                        weekdayIndex: index % 7,
-                        isSelected: index == viewModel.selectedIndex
-                    ) {
-                        Task { await viewModel.selectDay(at: index) }
-                    }
-                }
-            }
+            monthBodyPager
         }
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
@@ -403,6 +430,169 @@ struct TeamView: View {
                 .stroke(DPColor.borderSecondary)
         }
         .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
+    }
+
+    private var monthBodyPager: some View {
+        Group {
+            if let transition = monthTransition {
+                CalendarMonthPageTrack(
+                    pages: transition.pages,
+                    width: calendarWidth,
+                    height: transition.viewport.height,
+                    offset: monthTrackOffset
+                ) { page, index in
+                    calendarMonthBody(page, isInteractive: index == 1)
+                }
+            } else {
+                calendarMonthBody(currentMonthPage, isInteractive: true)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .onPreferenceChange(TeamCalendarMonthHeights.self) { heights in
+            if monthTransition == nil, let height = heights[viewModel.calendarMonth], height > 0 {
+                calendarBodyHeight = height
+            }
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { calendarWidth = proxy.size.width }
+                    .onChange(of: proxy.size.width) { _, width in calendarWidth = width }
+            }
+        }
+        .background(DPColor.backgroundCard)
+        .clipped()
+        .dpHorizontalPan(
+            onChanged: followMonthSwipe,
+            onEnded: finishMonthSwipe,
+            onCancelled: cancelMonthSwipe
+        )
+    }
+
+    private func calendarMonthBody(_ page: TeamCalendarMonthPage, isInteractive: Bool) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
+                ForEach(Array(page.visibleIndices), id: \.self) { index in
+                    let day = page.days[index]
+                    TeamCalendarDayCell(
+                        day: day,
+                        currentMonth: page.key.month,
+                        duty: page.duties.first { $0.year == day.year && $0.month == day.month && $0.day == day.day },
+                        holidays: page.holidays.indices.contains(index)
+                            ? page.holidays[index]
+                            : [],
+                        schedules: page.schedules.indices.contains(index)
+                            ? page.schedules[index]
+                            : [],
+                        weekdayIndex: index % 7,
+                        isSelected: day == page.selectedDay
+                    ) {
+                        guard !isSwipingMonth, !isSlidingMonth, !viewModel.isLoading else { return }
+                        Task { await viewModel.selectDay(at: index) }
+                    }
+                }
+        }
+        .background(DPColor.backgroundCard)
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: TeamCalendarMonthHeights.self, value: [page.key: proxy.size.height])
+            }
+        }
+        .allowsHitTesting(isInteractive && !viewModel.isLoading && !isSlidingMonth)
+        .accessibilityHidden(!isInteractive)
+    }
+
+    private func placeholderMonthPage(_ key: OfflineMonthKey) -> TeamCalendarMonthPage {
+        let cells = CalendarDateSupport.placeholderCells(year: key.year, month: key.month)
+        return TeamCalendarMonthPage(
+            key: key,
+            days: cells.map {
+                TeamDayDTO(year: $0.year, month: $0.month, day: $0.day)
+            },
+            duties: [], holidays: [], schedules: [], selectedDay: nil,
+            visibleIndices: CalendarDateSupport.displayedCellRange(in: cells)
+        )
+    }
+
+    private func followMonthSwipe(_ translation: CGSize) {
+        guard !isSlidingMonth, !viewModel.isLoading, calendarWidth > 0 else { return }
+        if monthTransition == nil {
+            let page = currentMonthPage
+            guard page.days.count == 42,
+                  page.key == OfflineMonthKey(year: viewModel.year, month: viewModel.month)
+            else { return }
+            let transition = TeamCalendarMonthTransition(
+                pages: [placeholderMonthPage(page.key.offsetByMonths(-1)), page, placeholderMonthPage(page.key.offsetByMonths(1))],
+                viewport: CalendarMonthBodyViewport(sourceHeight: max(
+                    calendarBodyHeight, CGFloat(page.visibleIndices.count / 7) * 60
+                ))
+            )
+            withTransaction(Transaction(animation: nil)) {
+                monthTransition = transition
+                monthTrackOffset = CalendarMonthSwipe.trackOffset(width: calendarWidth, drag: 0)
+            }
+        }
+        let drag = CalendarMonthSwipe.followOffset(translation: translation, viewportWidth: calendarWidth)
+        monthTrackOffset = CalendarMonthSwipe.trackOffset(width: calendarWidth, drag: drag)
+        if drag != 0 { isSwipingMonth = true }
+    }
+
+    private func finishMonthSwipe(_ translation: CGSize, velocity: CGSize) {
+        guard !isSlidingMonth else { return }
+        let offset = CalendarMonthSwipe.monthOffset(translation: translation, velocity: velocity, viewportWidth: calendarWidth)
+        guard offset != 0, let transition = monthTransition else {
+            settleMonthSwipe()
+            return
+        }
+        isSlidingMonth = true
+        let width = calendarWidth
+        withAnimation(reduceMotion ? nil : .easeOut(duration: CalendarMonthSwipe.slideOutDuration)) {
+            monthTrackOffset = CalendarMonthSwipe.settledTrackOffset(width: width, monthOffset: offset)
+        }
+        monthSlideTask?.cancel()
+        monthSlideTask = Task {
+            if !reduceMotion { try? await Task.sleep(for: .seconds(CalendarMonthSwipe.slideOutDuration)) }
+            guard !Task.isCancelled, monthTransition?.id == transition.id else { return }
+            if offset > 0 { await viewModel.nextMonth() }
+            else { await viewModel.previousMonth() }
+            guard !Task.isCancelled, monthTransition?.id == transition.id else { return }
+            let destination = transition.pages[1].key.offsetByMonths(offset)
+            if !viewModel.loadFailed, viewModel.calendarMonth == destination {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: CalendarMonthSwipe.slideInDuration)) {
+                    resetMonthTransition()
+                }
+            } else {
+                await returnMonthSwipeToCenter(width: width)
+            }
+        }
+    }
+
+    private func cancelMonthSwipe(_ translation: CGSize) {
+        guard !isSlidingMonth else { return }
+        settleMonthSwipe()
+    }
+
+    private func settleMonthSwipe() {
+        guard monthTransition != nil else { isSwipingMonth = false; return }
+        isSlidingMonth = true
+        monthSlideTask?.cancel()
+        monthSlideTask = Task { await returnMonthSwipeToCenter(width: calendarWidth) }
+    }
+
+    private func returnMonthSwipeToCenter(width: CGFloat) async {
+        withAnimation(reduceMotion ? nil : .easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
+            monthTrackOffset = CalendarMonthSwipe.trackOffset(width: width, drag: 0)
+        }
+        if !reduceMotion { try? await Task.sleep(for: .seconds(CalendarMonthSwipe.slideInDuration)) }
+        guard !Task.isCancelled else { return }
+        withTransaction(Transaction(animation: nil)) { resetMonthTransition() }
+    }
+
+    private func resetMonthTransition() {
+        monthTransition = nil
+        monthTrackOffset = 0
+        isSwipingMonth = false
+        isSlidingMonth = false
     }
 
     private var selectedSchedules: some View {

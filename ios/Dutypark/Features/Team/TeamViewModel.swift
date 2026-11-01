@@ -24,6 +24,8 @@ final class TeamViewModel: ObservableObject {
     private let contentFilter: ContentFilterStore
     private let haptics: DPHapticCenter
     private var memberID: MemberID?
+    // Month requests leave the last complete calendar visible until replacement data arrives.
+    private var loadedCalendarMonth: OfflineMonthKey?
     private(set) var hasLoaded = false
 
     var year: Int
@@ -51,6 +53,18 @@ final class TeamViewModel: ObservableObject {
         schedules.indices.contains(selectedIndex) ? schedules[selectedIndex] : []
     }
 
+    var calendarMonth: OfflineMonthKey {
+        loadedCalendarMonth ?? OfflineMonthKey(year: year, month: month)
+    }
+
+    var calendarVisibleRange: Range<Int> {
+        CalendarDateSupport.visibleCellRange(
+            year: calendarMonth.year,
+            month: calendarMonth.month,
+            serverDays: days
+        )
+    }
+
     func load(memberID: MemberID?, emitErrorFeedback: Bool = false) async {
         guard !isLoading else { return }
         let selectedDayBeforeLoad = selectedDay
@@ -69,6 +83,7 @@ final class TeamViewModel: ObservableObject {
             team = fixture.team
             isTeamManager = true
             days = fixture.days
+            loadedCalendarMonth = OfflineMonthKey(year: requestedYear, month: requestedMonth)
             schedules = fixture.schedules
             duties = fixture.duties
             holidays = fixture.holidays
@@ -83,6 +98,7 @@ final class TeamViewModel: ObservableObject {
             self.memberID = memberID
             team = nil
             days = []
+            loadedCalendarMonth = nil
             schedules = []
             duties = []
             holidays = []
@@ -101,17 +117,20 @@ final class TeamViewModel: ObservableObject {
             async let calendarDays = repository.calendar(year: requestedYear, month: requestedMonth)
             async let summary = repository.summary(year: requestedYear, month: requestedMonth)
             let (loadedDays, loadedSummary) = try await (calendarDays, summary)
+            try Task.checkCancellation()
 
             guard let loadedTeam = loadedSummary.team else {
                 days = loadedDays
+                loadedCalendarMonth = OfflineMonthKey(year: requestedYear, month: requestedMonth)
                 team = nil
                 isTeamManager = loadedSummary.isTeamManager
                 schedules = []
                 duties = []
                 holidays = []
                 shifts = []
-                restoreSelection(
+                selectedIndex = restoredSelectionIndex(
                     selectedDayBeforeLoad,
+                    in: loadedDays,
                     targetYear: requestedYear,
                     targetMonth: requestedMonth
                 )
@@ -146,21 +165,39 @@ final class TeamViewModel: ObservableObject {
                 loadedHolidayValue = try await loadedHolidays
                 loadedDutyValue = []
             }
+            let restoredIndex = restoredSelectionIndex(
+                selectedDayBeforeLoad,
+                in: loadedDays,
+                targetYear: requestedYear,
+                targetMonth: requestedMonth
+            )
+            let loadedShifts: [DutyByShiftDTO]
+            if loadedDays.indices.contains(restoredIndex) {
+                let day = loadedDays[restoredIndex]
+                do {
+                    loadedShifts = try await repository.shifts(year: day.year, month: day.month, day: day.day)
+                } catch {
+                    try Task.checkCancellation()
+                    loadedShifts = []
+                    presentError(emitHaptic: emitErrorFeedback)
+                }
+            } else {
+                loadedShifts = []
+            }
+            try Task.checkCancellation()
             days = loadedDays
+            loadedCalendarMonth = OfflineMonthKey(year: requestedYear, month: requestedMonth)
             team = loadedTeam
             isTeamManager = loadedSummary.isTeamManager
             schedules = loadedScheduleValue
             holidays = loadedHolidayValue
             duties = loadedDutyValue
-            restoreSelection(
-                selectedDayBeforeLoad,
-                targetYear: requestedYear,
-                targetMonth: requestedMonth
-            )
-            await loadShifts(emitErrorFeedback: emitErrorFeedback)
+            selectedIndex = restoredIndex
+            shifts = loadedShifts
             hasLoaded = true
         } catch {
             loadFailed = true
+            guard !Task.isCancelled else { return }
             presentError(emitHaptic: emitErrorFeedback)
         }
     }
@@ -185,7 +222,8 @@ final class TeamViewModel: ObservableObject {
         if loadFailed {
             year = previousYear
             month = previousMonth
-        } else if (year != previousYear || month != previousMonth),
+        } else if !Task.isCancelled,
+                  (year != previousYear || month != previousMonth),
                   haptics.event?.id == eventIDBeforeReload {
             haptics.emit(.routine)
         }
@@ -206,7 +244,8 @@ final class TeamViewModel: ObservableObject {
         if loadFailed {
             year = previousYear
             month = previousMonth
-        } else if (year != previousYear || month != previousMonth),
+        } else if !Task.isCancelled,
+                  (year != previousYear || month != previousMonth),
                   haptics.event?.id == eventIDBeforeReload {
             haptics.emit(.routine)
         }
@@ -224,7 +263,8 @@ final class TeamViewModel: ObservableObject {
         if loadFailed {
             year = previousYear
             month = previousMonth
-        } else if (year != previousYear || month != previousMonth),
+        } else if !Task.isCancelled,
+                  (year != previousYear || month != previousMonth),
                   haptics.event?.id == eventIDBeforeReload {
             haptics.emit(.routine)
         }
@@ -241,7 +281,8 @@ final class TeamViewModel: ObservableObject {
         if loadFailed {
             self.year = previousYear
             self.month = previousMonth
-        } else if (year != previousYear || month != previousMonth),
+        } else if !Task.isCancelled,
+                  (year != previousYear || month != previousMonth),
                   haptics.event?.id == eventIDBeforeReload {
             haptics.emit(.routine)
         }
@@ -390,24 +431,24 @@ final class TeamViewModel: ObservableObject {
         }
     }
 
-    private func restoreSelection(
+    private func restoredSelectionIndex(
         _ previousDay: TeamDayDTO?,
+        in days: [TeamDayDTO],
         targetYear: Int,
         targetMonth: Int
-    ) {
+    ) -> Int {
         if let previousDay {
             let targetDay = min(previousDay.day, Self.dayCount(year: targetYear, month: targetMonth))
             if let matchingIndex = days.firstIndex(where: {
                 $0.year == targetYear && $0.month == targetMonth && $0.day == targetDay
             }) {
-                selectedIndex = matchingIndex
-                return
+                return matchingIndex
             }
         }
         let today = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        selectedIndex = days.firstIndex {
+        return days.firstIndex {
             $0.year == today.year && $0.month == today.month && $0.day == today.day
-        } ?? days.firstIndex { $0.year == year && $0.month == month && $0.day == 1 } ?? 0
+        } ?? days.firstIndex { $0.year == targetYear && $0.month == targetMonth && $0.day == 1 } ?? 0
     }
 
     private func applySavedSchedule(_ savedSchedule: TeamScheduleDTO) {

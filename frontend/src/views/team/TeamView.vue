@@ -46,6 +46,9 @@ const { showError, confirmDelete, toastSuccess } = useSwal()
 const contentFilterStore = useContentFilterStore()
 
 const loading = ref(false)
+const isMonthLoading = ref(false)
+let monthLoadSequence = 0
+let shiftLoadSequence = 0
 const shiftLoading = ref(false)
 const saving = ref(false)
 const showCreateTeamModal = ref(false)
@@ -109,6 +112,8 @@ const myDuties = ref<DutyCalendarDay[]>([])
 const holidaysByDays = ref<HolidayDto[][]>([])
 
 const rawCalendarDays = ref<Array<{ year: number; month: number; day: number }>>([])
+const calendarDataYear = ref(currentYear.value)
+const calendarDataMonth = ref(currentMonth.value)
 
 const showScheduleModal = ref(false)
 const scheduleForm = ref({
@@ -128,108 +133,133 @@ const isTeamScheduleSaveDisabled = computed(() =>
   saving.value || isTeamScheduleTitleMissing.value || isTeamScheduleDateRangeInvalid.value
 )
 
-async function loadCalendar() {
-  try {
-    rawCalendarDays.value = await dutyApi.getCalendar(currentYear.value, currentMonth.value)
-  } catch (error) {
-    console.error('Failed to load calendar:', error)
-    rawCalendarDays.value = []
-  }
-}
-
 const teamDays = computed(() => {
   return rawCalendarDays.value.map((raw) => ({
     year: raw.year,
     month: raw.month,
     day: raw.day,
-    isCurrentMonth: raw.year === currentYear.value && raw.month === currentMonth.value,
+    isCurrentMonth: raw.year === calendarDataYear.value && raw.month === calendarDataMonth.value,
   }))
 })
 
-async function fetchTeamSummary() {
-  loading.value = true
+async function fetchTeamSummary(day = selectedDay.value.day) {
+  const year = currentYear.value
+  const month = currentMonth.value
+  const sequence = ++monthLoadSequence
+  const initialLoad = !team.value
+  loading.value = initialLoad
+  isMonthLoading.value = true
   try {
-    // Load calendar first to ensure index alignment with holidays
-    await loadCalendar()
-
-    const response = await teamApi.getMyTeamSummary(currentYear.value, currentMonth.value)
+    const [calendarDays, response] = await Promise.all([
+      dutyApi.getCalendar(year, month).catch(error => {
+        if (!initialLoad) throw error
+        console.error('Failed to load calendar:', error)
+        return []
+      }),
+      teamApi.getMyTeamSummary(year, month),
+    ])
+    if (sequence !== monthLoadSequence) return
     const data = response.data
 
     if (data.team) {
+      const selectedDate = { year, month, day: Math.min(day, getLastDayOfMonth(year, month)) }
+      const [duties, schedules, holidays, shiftResponse] = await Promise.all([
+        loginMemberId.value ? dutyApi.getDuties(loginMemberId.value, year, month).catch(error => {
+          console.error('Failed to fetch my duties:', error)
+          return []
+        }) : Promise.resolve([]),
+        teamApi.getTeamSchedules(data.team.id, year, month).catch(error => {
+          console.error('Failed to fetch team schedules:', error)
+          return { data: [] }
+        }),
+        dutyApi.getHolidays(year, month).catch(error => {
+          console.error('Failed to load holidays:', error)
+          return []
+        }),
+        teamApi.getShift(year, month, selectedDate.day).catch(error => {
+          console.error('Failed to fetch shift:', error)
+          return { data: [] }
+        }),
+      ])
+      if (sequence !== monthLoadSequence) return
+
+      // Keep the loaded month intact until its replacement and lower sections are ready.
       hasTeam.value = true
       team.value = data.team
       isTeamManager.value = data.isTeamManager
-
-      await Promise.all([
-        fetchMyDuties(),
-        fetchTeamSchedules(),
-        loadHolidays(),
-      ])
+      rawCalendarDays.value = calendarDays
+      calendarDataYear.value = year
+      calendarDataMonth.value = month
+      myDuties.value = duties
+      teamSchedules.value = schedules.data
+      holidaysByDays.value = holidays
+      selectedDay.value = { ...selectedDate, index: -1 }
+      findSelectedDayIndex()
+      ++shiftLoadSequence
+      shiftLoading.value = false
+      shift.value = shiftResponse.data.map(group => ({
+        ...group,
+        isMyGroup: group.members.some((member: MemberPreviewDto) => member.id === loginMemberId.value),
+      }))
     } else {
       hasTeam.value = false
       team.value = null
       isTeamManager.value = false
       teamSchedules.value = []
+      shift.value = []
     }
   } catch (error) {
+    if (sequence !== monthLoadSequence) return
     console.error('Failed to fetch team summary:', error)
-    hasTeam.value = false
+    if (initialLoad) {
+      hasTeam.value = false
+    } else {
+      currentYear.value = calendarDataYear.value
+      currentMonth.value = calendarDataMonth.value
+    }
   } finally {
-    loading.value = false
+    if (sequence === monthLoadSequence) {
+      loading.value = false
+      isMonthLoading.value = false
+    }
   }
 }
 
 async function fetchTeamSchedules() {
   if (!team.value) return
+  const teamId = team.value.id
+  const year = calendarDataYear.value
+  const month = calendarDataMonth.value
 
   try {
-    const response = await teamApi.getTeamSchedules(
-      team.value.id,
-      currentYear.value,
-      currentMonth.value
-    )
-    teamSchedules.value = response.data
+    const response = await teamApi.getTeamSchedules(teamId, year, month)
+    if (team.value?.id === teamId && calendarDataYear.value === year && calendarDataMonth.value === month) {
+      teamSchedules.value = response.data
+    }
   } catch (error) {
     console.error('Failed to fetch team schedules:', error)
-    teamSchedules.value = []
+    if (calendarDataYear.value === year && calendarDataMonth.value === month) teamSchedules.value = []
   }
 }
 
 async function fetchShift() {
-  if (!hasTeam.value) return
-
+  if (!hasTeam.value || isMonthLoading.value) return
+  const { year, month, day } = selectedDay.value
+  const sequence = ++shiftLoadSequence
   shiftLoading.value = true
   try {
-    const response = await teamApi.getShift(
-      selectedDay.value.year,
-      selectedDay.value.month,
-      selectedDay.value.day
-    )
-
+    const response = await teamApi.getShift(year, month, day)
+    if (sequence !== shiftLoadSequence) return
     shift.value = response.data.map(group => ({
       ...group,
-      isMyGroup: group.members.some((m: MemberPreviewDto) => m.id === loginMemberId.value),
+      isMyGroup: group.members.some((member: MemberPreviewDto) => member.id === loginMemberId.value),
     }))
   } catch (error) {
+    if (sequence !== shiftLoadSequence) return
     console.error('Failed to fetch shift:', error)
     shift.value = []
   } finally {
-    shiftLoading.value = false
-  }
-}
-
-async function fetchMyDuties() {
-  if (!loginMemberId.value) return
-
-  try {
-    myDuties.value = await dutyApi.getDuties(
-      loginMemberId.value,
-      currentYear.value,
-      currentMonth.value
-    )
-  } catch (error) {
-    console.error('Failed to fetch my duties:', error)
-    myDuties.value = []
+    if (sequence === shiftLoadSequence) shiftLoading.value = false
   }
 }
 
@@ -245,18 +275,6 @@ function getDutyTypeHeaderTextColor(color: string | null | undefined): string {
   return isLightColor(color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
 }
 
-async function loadHolidays() {
-  try {
-    holidaysByDays.value = await dutyApi.getHolidays(
-      currentYear.value,
-      currentMonth.value
-    )
-  } catch (error) {
-    console.error('Failed to load holidays:', error)
-    holidaysByDays.value = []
-  }
-}
-
 function findSelectedDayIndex() {
   const index = teamDays.value.findIndex(day =>
     day.year === selectedDay.value.year &&
@@ -267,26 +285,15 @@ function findSelectedDayIndex() {
 }
 
 function selectDay(day: { year: number; month: number; day: number }, index: number) {
+  if (isMonthLoading.value) return
   selectedDay.value = { ...day, index }
   fetchShift()
-}
-
-function syncSelectedDayToMonth(year: number, month: number, day = 1) {
-  selectedDay.value = {
-    year,
-    month,
-    day: Math.min(day, getLastDayOfMonth(year, month)),
-    index: -1,
-  }
 }
 
 async function updateCurrentMonth(year: number, month: number, day = 1) {
   currentYear.value = year
   currentMonth.value = month
-  syncSelectedDayToMonth(year, month, day)
-  await fetchTeamSummary()
-  findSelectedDayIndex()
-  await fetchShift()
+  await fetchTeamSummary(day)
 }
 
 function prevMonth() {
@@ -434,6 +441,7 @@ function getShiftMemberKey(group: DutyByShift, member: MemberPreviewDto) {
 }
 
 function openNewScheduleModal() {
+  if (isMonthLoading.value) return
   const dateStr = `${selectedDay.value.year}-${String(selectedDay.value.month).padStart(2, '0')}-${String(selectedDay.value.day).padStart(2, '0')}`
   scheduleForm.value = {
     id: null,
@@ -446,6 +454,7 @@ function openNewScheduleModal() {
 }
 
 function openEditScheduleModal(schedule: TeamScheduleDto) {
+  if (isMonthLoading.value) return
   scheduleForm.value = {
     id: schedule.id,
     content: schedule.content,
@@ -496,6 +505,7 @@ async function saveSchedule() {
 }
 
 async function deleteSchedule(schedule: TeamScheduleDto) {
+  if (isMonthLoading.value) return
   if (!await confirmDelete(t('team.view.schedule.deleteConfirm', { title: schedule.content }))) return
 
   try {
@@ -509,10 +519,7 @@ async function deleteSchedule(schedule: TeamScheduleDto) {
 }
 
 onMounted(() => {
-  fetchTeamSummary().then(() => {
-    findSelectedDayIndex()
-    fetchShift()
-  })
+  void fetchTeamSummary()
 })
 </script>
 
@@ -576,8 +583,10 @@ onMounted(() => {
 
       <CalendarGrid
         :days="teamDays"
-        :current-year="currentYear"
-        :current-month="currentMonth"
+        :current-year="calendarDataYear"
+        :current-month="calendarDataMonth"
+        :clickable="!isMonthLoading"
+        :aria-busy="isMonthLoading"
         :holidays="holidaysByDays"
         :get-duty-color="getDutyColor"
         :selected-day="selectedDay"
@@ -622,6 +631,7 @@ onMounted(() => {
           </h3>
           <button
             v-if="isTeamManager"
+            :disabled="isMonthLoading"
             @click="openNewScheduleModal"
             class="px-3 py-1.5 bg-dp-success text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-success-hover transition flex items-center gap-1 w-full sm:w-auto justify-center cursor-pointer"
           >
@@ -653,6 +663,7 @@ onMounted(() => {
               </div>
               <div v-if="isTeamManager" class="flex gap-1 ml-2 flex-shrink-0">
                 <button
+                  :disabled="isMonthLoading"
                   @click="openEditScheduleModal(schedule)"
                   class="p-1.5 text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
                   :title="t('team.view.actions.editSchedule')"
@@ -660,6 +671,7 @@ onMounted(() => {
                   <Pencil class="w-4 h-4" />
                 </button>
                 <button
+                  :disabled="isMonthLoading"
                   @click="deleteSchedule(schedule)"
                   class="p-1.5 text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
                   :title="t('team.view.actions.deleteSchedule')"
