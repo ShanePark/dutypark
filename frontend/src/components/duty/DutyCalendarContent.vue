@@ -378,7 +378,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               </div>
               <div
                 v-if="getDisplayTagMembers(schedule).length"
-                class="mt-px hidden flex-wrap justify-end gap-px sm:mt-0.5 sm:flex sm:gap-0.5"
+                class="calendar-item__tags mt-px hidden flex-wrap justify-end gap-px sm:mt-0.5 sm:flex sm:gap-0.5"
               >
                 <span
                   v-for="tag in getDisplayTagMembers(schedule)"

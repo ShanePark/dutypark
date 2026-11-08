@@ -1,22 +1,28 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { DisplayTagMember } from '@/utils/tagMembers'
 
 type ChipDensity = 'regular' | 'compact'
 type ChipAlign = 'start' | 'end'
+type ChipTone = 'accent' | 'neutral'
+
+const { t } = useI18n()
 
 const props = withDefaults(defineProps<{
   members: DisplayTagMember[]
   interactive?: boolean
   buttonTitle?: string
   density?: ChipDensity
+  tone?: ChipTone
   align?: ChipAlign
   maxVisible?: number | null
 }>(), {
   interactive: false,
   buttonTitle: undefined,
   density: 'compact',
+  tone: 'accent',
   align: 'start',
   maxVisible: null,
 })
@@ -60,11 +66,13 @@ function handleChipClick(member: DisplayTagMember) {
       :type="interactive ? 'button' : undefined"
       class="member-tag-chip"
       :class="[
-        'member-tag-chip--accent',
+        `member-tag-chip--${tone}`,
         `member-tag-chip--${density}`,
         interactive ? 'member-tag-chip--interactive' : 'member-tag-chip--static',
+        { 'member-tag-chip--owner': member.isOwner },
       ]"
-      :title="interactive ? buttonTitle : undefined"
+      :title="interactive ? buttonTitle : member.isOwner ? t('duty.schedule.ownerLabel') : undefined"
+      :aria-label="member.isOwner ? `${member.name}, ${t('duty.schedule.ownerLabel')}` : undefined"
       @click="handleChipClick(member)"
     >
       <ProfileAvatar
@@ -85,8 +93,8 @@ function handleChipClick(member: DisplayTagMember) {
 
     <span
       v-if="hiddenCount > 0"
-      class="member-tag-chip member-tag-chip--accent member-tag-chip--count"
-      :class="`member-tag-chip--${density}`"
+      class="member-tag-chip member-tag-chip--count"
+      :class="[`member-tag-chip--${density}`, `member-tag-chip--${tone}`]"
     >
       +{{ hiddenCount }}
     </span>
@@ -137,6 +145,12 @@ function handleChipClick(member: DisplayTagMember) {
   color: var(--dp-text-primary);
 }
 
+.member-tag-chip--neutral {
+  border-color: var(--dp-border-primary);
+  background-color: var(--dp-bg-card);
+  color: var(--dp-text-secondary);
+}
+
 .member-tag-chip--interactive {
   cursor: pointer;
   appearance: none;
@@ -144,7 +158,14 @@ function handleChipClick(member: DisplayTagMember) {
 
 .member-tag-chip--interactive:hover {
   background-color: var(--dp-accent-bg-hover);
-  border-color: var(--dp-accent-border);
+}
+
+.member-tag-chip--neutral.member-tag-chip--interactive:hover {
+  background-color: var(--dp-bg-hover);
+}
+
+.member-tag-chip.member-tag-chip--owner {
+  border-color: color-mix(in srgb, var(--dp-accent-border) 70%, var(--dp-text-secondary));
 }
 
 .member-tag-chip--interactive:focus-visible {
