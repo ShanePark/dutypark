@@ -248,6 +248,10 @@ final class CalendarViewModel: ObservableObject {
             ?? targetMember?.profilePhotoVersion
             ?? 0
     }
+    var dutySummaryDuties: [DutyDTO] {
+        days.filter(\.cell.isCurrentMonth).compactMap(\.duty)
+    }
+
     var visibleDutyTypes: [DutyTypeDTO] { team?.dutyTypes.filter { !$0.hidden } ?? [] }
 
     /// The API and the month cache both support at most three comparison members.

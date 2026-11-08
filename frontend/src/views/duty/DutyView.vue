@@ -367,14 +367,19 @@ const dutyTypes = ref<DutyType[]>([])
 const teamHasDutyBatchTemplate = computed(() => !!team.value?.dutyBatchTemplate)
 
 const rawDuties = ref<DutyCalendarDay[]>([])
+const countedDuties = ref({
+  year: currentYear.value,
+  month: currentMonth.value,
+  duties: rawDuties.value,
+})
 
-// Computed duty types with count - reactive to both dutyTypes and rawDuties
+// Keep the last loaded month's counts while its replacement is in flight.
 const dutyTypesWithCount = computed<DutyTypeWithCount[]>(() => {
   return buildDutyTypeCounts(
     dutyTypes.value,
-    rawDuties.value,
-    currentYear.value,
-    currentMonth.value,
+    countedDuties.value.duties,
+    countedDuties.value.year,
+    countedDuties.value.month,
   )
 })
 
@@ -569,6 +574,7 @@ async function loadDuties() {
     )
     if (!isCurrent()) return
     rawDuties.value = duties
+    countedDuties.value = { year: context.year, month: context.month, duties: rawDuties.value }
     loadError.value = null
   } catch (error) {
     if (!isCurrent()) return
@@ -767,6 +773,7 @@ watch(
     todos.value = []
     dDays.value = []
     rawDuties.value = []
+    countedDuties.value = { year: currentYear.value, month: currentMonth.value, duties: rawDuties.value }
     schedulesByDays.value = []
     holidaysByDays.value = []
     rawCalendarDays.value = []
