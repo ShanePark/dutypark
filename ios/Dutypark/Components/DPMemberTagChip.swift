@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// One person, drawn as a tag: their photo and their name.
 ///
@@ -11,6 +12,7 @@ nonisolated struct DPMemberTagItem: Identifiable, Equatable, Sendable {
     let name: String
     let hasProfilePhoto: Bool
     let profilePhotoVersion: Int64
+    let isAuthor: Bool
 
     /// Tags can arrive without a member id — a schedule remembers who tagged it by
     /// name once that account is gone — so identity falls back to the name.
@@ -20,12 +22,14 @@ nonisolated struct DPMemberTagItem: Identifiable, Equatable, Sendable {
         memberID: MemberID?,
         name: String,
         hasProfilePhoto: Bool = false,
-        profilePhotoVersion: Int64 = 0
+        profilePhotoVersion: Int64 = 0,
+        isAuthor: Bool = false
     ) {
         self.memberID = memberID
         self.name = name
         self.hasProfilePhoto = hasProfilePhoto
         self.profilePhotoVersion = profilePhotoVersion
+        self.isAuthor = isAuthor
     }
 
     init(_ member: MemberDTO) {
@@ -124,6 +128,13 @@ nonisolated enum DPMemberTagPresentation {
         return String(characters.prefix(limit)) + "…"
     }
 
+    static func accessibilityLabel(for item: DPMemberTagItem, locale: Locale? = nil) -> String {
+        guard item.isAuthor else { return item.name }
+        return AppLocalization.format(
+            "memberTag.author", table: "Localizable", arguments: [item.name], locale: locale
+        )
+    }
+
     /// The photo the tag draws, versioned so a changed photo defeats the year-long
     /// cache the endpoint asks for.
     static func profilePhotoURL(memberID: MemberID, version: Int64) -> URL {
@@ -147,8 +158,25 @@ nonisolated enum DPMemberTagPalette {
         onCalendarFill ? fillBackground : DPColor.backgroundCard
     }
 
-    static func border(onCalendarFill: Bool) -> Color {
-        onCalendarFill ? fillBorder : DPColor.borderPrimary
+    private static let authorBorder = Color(uiColor: UIColor { traits in
+        let accent = UIColor(DPColor.accentBorder).resolvedColor(with: traits)
+        let text = UIColor(DPColor.textSecondary).resolvedColor(with: traits)
+        var accentRed: CGFloat = 0, accentGreen: CGFloat = 0, accentBlue: CGFloat = 0
+        var textRed: CGFloat = 0, textGreen: CGFloat = 0, textBlue: CGFloat = 0
+        accent.getRed(&accentRed, green: &accentGreen, blue: &accentBlue, alpha: nil)
+        text.getRed(&textRed, green: &textGreen, blue: &textBlue, alpha: nil)
+        // Match the web's 70/30 accent-border/text-secondary mix, including theme changes.
+        return UIColor(
+            red: accentRed * 0.7 + textRed * 0.3,
+            green: accentGreen * 0.7 + textGreen * 0.3,
+            blue: accentBlue * 0.7 + textBlue * 0.3,
+            alpha: 1
+        )
+    })
+
+    static func border(onCalendarFill: Bool, isAuthor: Bool = false) -> Color {
+        if isAuthor { return authorBorder }
+        return onCalendarFill ? fillBorder : DPColor.borderPrimary
     }
 
     static func foreground(onCalendarFill: Bool) -> Color {
@@ -192,9 +220,14 @@ struct DPMemberTagChip: View {
         .padding(.trailing, size.horizontalPadding)
         .padding(.vertical, size.verticalPadding)
         .background(DPMemberTagPalette.background(onCalendarFill: onCalendarFill), in: Capsule())
-        .overlay { Capsule().stroke(DPMemberTagPalette.border(onCalendarFill: onCalendarFill), lineWidth: DPChrome.borderWidth) }
+        .overlay {
+            Capsule().stroke(
+                DPMemberTagPalette.border(onCalendarFill: onCalendarFill, isAuthor: item.isAuthor && size == .regular),
+                lineWidth: DPChrome.borderWidth
+            )
+        }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(item.name)
+        .accessibilityLabel(DPMemberTagPresentation.accessibilityLabel(for: item))
     }
 }
 

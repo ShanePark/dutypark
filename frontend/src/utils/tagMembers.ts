@@ -7,6 +7,7 @@ export interface TagMemberLike {
 
 export interface DisplayTagMember extends TagMemberLike {
   key: string
+  isOwner?: boolean
 }
 
 interface BuildDisplayTagMembersOptions {
@@ -42,10 +43,9 @@ export function buildDisplayTagMembers(options: BuildDisplayTagMembersOptions): 
         options.taggedByMember,
         `tagged-by-${options.taggedByMember.id ?? options.itemKey}`
       )
-
-      if (!visibleTags.some((tag) => tag.id === ownerTag.id && tag.id != null)) {
-        visibleTags.unshift(ownerTag)
-      }
+      const existingOwnerIndex = visibleTags.findIndex((tag) => tag.id === ownerTag.id && tag.id != null)
+      if (existingOwnerIndex >= 0) visibleTags.splice(existingOwnerIndex, 1)
+      visibleTags.unshift({ ...ownerTag, isOwner: true })
     } else {
       const fallbackName = options.taggedBy || options.owner
       if (fallbackName) {
@@ -55,6 +55,7 @@ export function buildDisplayTagMembers(options: BuildDisplayTagMembersOptions): 
           name: fallbackName,
           hasProfilePhoto: false,
           profilePhotoVersion: 0,
+          isOwner: true,
         })
       }
     }
