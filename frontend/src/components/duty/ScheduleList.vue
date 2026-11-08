@@ -351,6 +351,7 @@ function handleTagClick(schedule: Schedule) {
             >
               <MemberTagChips
                 :members="getDisplayTagMembers(schedule)"
+                tone="neutral"
                 :interactive="canEditSchedule(schedule)"
                 :button-title="t('duty.schedule.list.editTag')"
                 :density="canEditSchedule(schedule) ? 'regular' : 'compact'"

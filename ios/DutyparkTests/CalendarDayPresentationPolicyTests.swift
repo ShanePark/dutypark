@@ -73,6 +73,7 @@ final class CalendarDayPresentationPolicyTests: XCTestCase {
         XCTAssertEqual(tags.map(\.name), ["Tagger", "Friend"])
         XCTAssertTrue(tags[0].hasProfilePhoto)
         XCTAssertEqual(tags[0].profilePhotoVersion, 4)
+        XCTAssertEqual(tags.map(\.isAuthor), [true, false])
     }
 
     func testATaggerAlreadyAmongTheTagsIsNotNamedTwice() {
@@ -80,12 +81,13 @@ final class CalendarDayPresentationPolicyTests: XCTestCase {
             for: schedule(
                 isTagged: true,
                 taggedByMember: preview(id: 9, name: "Tagger"),
-                tags: [member(id: 9, name: "Tagger"), member(id: 2, name: "Friend")]
+                tags: [member(id: 2, name: "Friend"), member(id: 9, name: "Tagger")]
             ),
             calendarMemberID: 1
         )
 
         XCTAssertEqual(tags.map(\.name), ["Tagger", "Friend"])
+        XCTAssertEqual(tags.map(\.isAuthor), [true, false])
     }
 
     /// A tagger whose account is gone is remembered by name alone.
@@ -98,6 +100,7 @@ final class CalendarDayPresentationPolicyTests: XCTestCase {
         XCTAssertEqual(tags.map(\.name), ["Gone"])
         XCTAssertNil(tags[0].memberID)
         XCTAssertFalse(tags[0].hasProfilePhoto)
+        XCTAssertTrue(tags[0].isAuthor)
     }
 
     func testAnUntaggedScheduleNeverNamesItsOwner() {
@@ -107,6 +110,7 @@ final class CalendarDayPresentationPolicyTests: XCTestCase {
         )
 
         XCTAssertEqual(tags.map(\.name), ["Friend"])
+        XCTAssertFalse(tags[0].isAuthor)
     }
 
     func testAScheduleWithNothingToNameYieldsNoTags() {

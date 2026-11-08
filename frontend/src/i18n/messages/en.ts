@@ -1396,6 +1396,7 @@ export default {
       edit: 'Edit',
     },
     schedule: {
+      ownerLabel: 'Author',
       actions: {
         save: 'Save',
         edit: 'Edit',

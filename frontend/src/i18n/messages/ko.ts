@@ -1301,6 +1301,7 @@ export default {
       edit: '수정',
     },
     schedule: {
+      ownerLabel: '작성자',
       actions: {
         save: '저장',
         edit: '수정',

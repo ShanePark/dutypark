@@ -160,13 +160,19 @@ nonisolated enum ScheduleTagDisplayPolicy {
         guard schedule.isTagged else { return items }
 
         if let taggedBy = schedule.taggedByMember, !taggedBy.name.isEmpty {
-            let owner = DPMemberTagItem(taggedBy)
-            let alreadyListed = owner.memberID != nil && items.contains { $0.memberID == owner.memberID }
-            if !alreadyListed { items.insert(owner, at: 0) }
+            let owner = DPMemberTagItem(
+                memberID: taggedBy.id,
+                name: taggedBy.name,
+                hasProfilePhoto: taggedBy.hasProfilePhoto,
+                profilePhotoVersion: taggedBy.profilePhotoVersion,
+                isAuthor: true
+            )
+            if let ownerID = owner.memberID { items.removeAll { $0.memberID == ownerID } }
+            items.insert(owner, at: 0)
         } else if !schedule.owner.isEmpty {
             // A tagger whose account is gone is remembered by name alone, so the tag
             // carries the name without a photo rather than disappearing.
-            items.insert(DPMemberTagItem(memberID: nil, name: schedule.owner), at: 0)
+            items.insert(DPMemberTagItem(memberID: nil, name: schedule.owner, isAuthor: true), at: 0)
         }
 
         return items
@@ -1021,7 +1027,7 @@ struct CalendarView: View {
     }
 
     private var dutySummary: some View {
-        let counts = Dictionary(grouping: model.days.compactMap(\.duty).filter { $0.month == model.month }, by: { $0.dutyType ?? CalendarLocalization.text("calendar.off") })
+        let counts = Dictionary(grouping: model.dutySummaryDuties, by: { $0.dutyType ?? CalendarLocalization.text("calendar.off") })
         return AnyView(ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DPSpacing.small) {
                 ForEach(counts.keys.sorted(), id: \.self) { name in

@@ -173,6 +173,17 @@ describe('calendar month transition layout', () => {
 })
 
 describe('calendar derived display data', () => {
+  it('keeps the owner first without rendering author markers in mobile or desktop calendar cells', () => {
+    const props = makeProps(0)
+    props.schedulesByDays = [[makeSchedule('tagged')]]
+    props.schedulesByDays[0]![0]!.tags!.push({ id: 8, name: 'Owner' })
+    const root = mountCalendar(props)
+    const markers = findHostNodes(root, node => String(node.props.class).includes('schedule-owner-icon'))
+    expect(markers).toHaveLength(0)
+    const tagGroups = findHostNodes(root, node => String(node.props.class).includes('calendar-item__tags'))
+    expect(tagGroups).toHaveLength(2)
+    expect(tagGroups.every(group => findHostNodes(group, node => node.props['data-avatar-id'] != null)[0]?.props['data-avatar-id'] === 8)).toBe(true)
+  })
   it('keeps the loaded month rows until the new month calendar data arrives', async () => {
     const props = reactive(makeProps(0))
     props.dDays = [{
