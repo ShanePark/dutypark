@@ -7,6 +7,46 @@ import Testing
 /// date-only cells and the duty colours appear only after the committed load.
 @MainActor
 struct CalendarMemberMonthPreviewTests {
+    @Test func dutySummaryKeepsTheLoadedMonthUntilTheNewResponseArrives() async throws {
+        let model = Self.model(repository: MemberMonthPreviewRepository(), memberID: 2)
+        await model.load()
+        let original = model.dutySummaryDuties
+        #expect(original.count == 1)
+        #expect(original.first?.month == 8)
+
+        model.month = 9
+        #expect(model.dutySummaryDuties == original)
+
+        try await model.loadMonth()
+        #expect(model.dutySummaryDuties.count == 1)
+        #expect(model.dutySummaryDuties.first?.month == 9)
+
+        model.year = 2027
+        model.month = 1
+        #expect(model.dutySummaryDuties.first?.year == 2026)
+        #expect(model.dutySummaryDuties.first?.month == 9)
+        try await model.loadMonth()
+        #expect(model.dutySummaryDuties.first?.year == 2027)
+        #expect(model.dutySummaryDuties.first?.month == 1)
+    }
+
+    @Test func dutySummaryExcludesAdjacentMonthDutiesAndAcceptsAnEmptyLoadedMonth() async throws {
+        let repository = MemberMonthPreviewRepository(
+            emptyMonths: [OfflineMonthKey(year: 2026, month: 9)],
+            includesAdjacentMonthDuties: true
+        )
+        let model = Self.model(repository: repository, memberID: 2)
+        await model.load()
+        #expect(model.days.compactMap(\.duty).count == 2)
+        #expect(model.dutySummaryDuties.count == 1)
+
+        model.month = 9
+        #expect(model.dutySummaryDuties.count == 1)
+        try await model.loadMonth()
+        #expect(model.days.compactMap(\.duty).count == 1)
+        #expect(model.dutySummaryDuties.isEmpty)
+    }
+
     @Test func anotherMembersNeighbouringMonthsCarryTheirRealDutiesAfterTheMonthLoads() async {
         let repository = MemberMonthPreviewRepository()
         let model = Self.model(repository: repository, memberID: 2)
@@ -115,10 +155,18 @@ struct CalendarMemberMonthPreviewTests {
 
 private actor MemberMonthPreviewRepository: CalendarRepositoryProtocol {
     private let failingMonths: Set<OfflineMonthKey>
+    private let emptyMonths: Set<OfflineMonthKey>
+    private let includesAdjacentMonthDuties: Bool
     private var dutyRequests: [OfflineMonthKey: Int] = [:]
 
-    init(failingMonths: Set<OfflineMonthKey> = []) {
+    init(
+        failingMonths: Set<OfflineMonthKey> = [],
+        emptyMonths: Set<OfflineMonthKey> = [],
+        includesAdjacentMonthDuties: Bool = false
+    ) {
         self.failingMonths = failingMonths
+        self.emptyMonths = emptyMonths
+        self.includesAdjacentMonthDuties = includesAdjacentMonthDuties
     }
 
     nonisolated static func color(member: MemberID, month: Int) -> String {
@@ -173,7 +221,15 @@ private actor MemberMonthPreviewRepository: CalendarRepositoryProtocol {
         let key = OfflineMonthKey(year: year, month: month)
         dutyRequests[key, default: 0] += 1
         if failingMonths.contains(key) { throw APIError.transport }
-        return [Self.duty(member: memberID, year: year, month: month)]
+        var duties = emptyMonths.contains(key) ? [] : [Self.duty(member: memberID, year: year, month: month)]
+        if includesAdjacentMonthDuties,
+           let cell = CalendarDateSupport.placeholderCells(year: year, month: month).first(where: { !$0.isCurrentMonth }) {
+            duties.append(DutyDTO(
+                year: cell.year, month: cell.month, day: cell.day, dutyType: "Day", dutyColor: "#000000",
+                isOff: false, dutyTypeId: 7, source: .override
+            ))
+        }
+        return duties
     }
     func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] {
         memberIDs.map {

@@ -257,10 +257,11 @@ vi.mock('@/components/duty/DutyTypesBar.vue', () => ({
       focusedDay: Number,
       isCalendarMonthLoaded: Boolean,
       isLoadingDuties: Boolean,
+      dutyTypesWithCount: Array,
     },
     emits: ['toggle-batch-edit', 'update:focusedDay', 'quick-duty-change'],
     setup(props, { emit }) {
-      return () => h('div', { 'data-test': 'duty-loading', 'data-loading': props.isLoadingDuties }, [
+      return () => h('div', { 'data-test': 'duty-loading', 'data-loading': props.isLoadingDuties, 'data-counts': JSON.stringify(props.dutyTypesWithCount) }, [
         h('button', {
           'data-test': 'toggle-batch-edit',
           onClick: () => emit('toggle-batch-edit', !props.batchEditMode),
@@ -606,6 +607,63 @@ function deferred<T>() {
 }
 
 describe('DutyView calendar response ordering', () => {
+  it.each([21, 0])('keeps the previous duty counts until the new month returns %i working days', async workingDays => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = today.getMonth() + 1
+    const next = new Date(year, month, 1)
+    const nextYear = next.getFullYear()
+    const nextMonth = next.getMonth() + 1
+    const makeDuties = (y: number, m: number, count: number) => Array.from({ length: count }, (_, index) => ({
+      year: y, month: m, day: index + 1, dutyTypeId: 1, dutyType: 'Day', dutyColor: '#123456', isOff: false,
+    }))
+    mocks.memberApi.getMyInfo.mockResolvedValue({ data: { id: 1, name: 'Tester', teamId: 5 } })
+    mocks.dutyApi.getTeam.mockResolvedValue({ dutyTypes: [
+      { id: 1, name: 'Day', color: '#123456' },
+      { id: null, name: 'Off', color: null },
+    ] })
+    mocks.dutyApi.getCalendar.mockImplementation((y: number, m: number) => Promise.resolve(makeCalendarDays(y, m)))
+    mocks.dutyApi.getDuties.mockResolvedValue(makeDuties(year, month, 20))
+    const mounted = await mountDutyView()
+    const counts = () => JSON.parse(String(nodeByDataTest(mounted.root, 'duty-loading').props['data-counts']))
+      .map((type: { cnt: number }) => type.cnt)
+    const oldCounts = [20, new Date(year, month, 0).getDate() - 20]
+    expect(counts()).toEqual(oldCounts)
+
+    const calendar = deferred<ReturnType<typeof makeCalendarDays>>()
+    const duties = deferred<ReturnType<typeof makeDuties>>()
+    mocks.dutyApi.getCalendar.mockReturnValueOnce(calendar.promise)
+    mocks.dutyApi.getDuties.mockReturnValueOnce(duties.promise)
+    triggerHost(nodeByDataTest(mounted.root, 'next-month'), 'onClick')
+    await flush()
+    expect(counts()).toEqual(oldCounts)
+    calendar.resolve(makeCalendarDays(nextYear, nextMonth))
+    await flush()
+    expect(counts()).toEqual(oldCounts)
+    duties.resolve(makeDuties(nextYear, nextMonth, workingDays))
+    await flush()
+    expect(counts()).toEqual([workingDays, new Date(nextYear, nextMonth, 0).getDate() - workingDays])
+    if (workingDays > 0) {
+      const update = deferred<void>()
+      const refreshedDuties = deferred<ReturnType<typeof makeDuties>>()
+      mocks.dutyApi.updateDuty.mockReturnValueOnce(update.promise)
+      mocks.dutyApi.getDuties.mockReturnValueOnce(refreshedDuties.promise)
+      triggerHost(nodeByDataTest(mounted.root, 'toggle-batch-edit'), 'onClick')
+      await flush()
+      triggerHost(nodeByDataTest(mounted.root, 'quick-duty-change'), 'onClick')
+      await flush()
+      expect(counts()).toEqual([workingDays - 1, new Date(nextYear, nextMonth, 0).getDate() - workingDays + 1])
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+      update.reject(new Error('update failed'))
+      await flush()
+      expect(counts()).toEqual([workingDays, new Date(nextYear, nextMonth, 0).getDate() - workingDays])
+      refreshedDuties.resolve(makeDuties(nextYear, nextMonth, workingDays))
+      await flush()
+      consoleError.mockRestore()
+    }
+    closeMounted(mounted)
+  })
+
   it.each(['display', 'actions'] as const)('waits for current monthly payloads at the %s boundary', async boundary => {
     const today = new Date()
     const year = today.getFullYear()
@@ -727,6 +785,8 @@ describe('DutyView calendar response ordering', () => {
 
   it.each(['schedules', 'duties', 'holidays'] as const)('ignores late %s after returning to the original month', async loader => {
     mocks.dutyApi.getCalendar.mockImplementation((year: number, month: number) => Promise.resolve(makeCalendarDays(year, month)))
+    mocks.memberApi.getMyInfo.mockResolvedValue({ data: { id: 1, name: 'Tester', teamId: 5 } })
+    mocks.dutyApi.getTeam.mockResolvedValue({ dutyTypes: [{ id: 1, name: 'Day', color: '#123456' }] })
     const mounted = await mountDutyView()
     const calendar = () => nodeByDataTest(mounted.root, 'duty-calendar-content')
     const originalMonth = calendar().props['data-current-month']
@@ -740,16 +800,18 @@ describe('DutyView calendar response ordering', () => {
     await flush()
     expect(calendar().props['data-current-month']).toBe(originalMonth)
     const before = calendar().props[`data-${loader}`]
+    const countsBefore = nodeByDataTest(mounted.root, 'duty-loading').props['data-counts']
     const late = {
       schedules: [[{ id: 'stale', content: 'stale', year, month, dayOfMonth: 1,
         startDateTime: `${year}-${String(month).padStart(2, '0')}-01T00:00`, endDateTime: `${year}-${String(month).padStart(2, '0')}-01T00:00`,
         daysFromStart: 1, totalDays: 1, visibility: 'PUBLIC', tags: [], attachments: [] }]],
-      duties: [{ year, month, day: 1, dutyType: 'stale', dutyColor: '#123456' }],
+      duties: [{ year, month, day: 1, dutyTypeId: 1, dutyType: 'stale', dutyColor: '#123456' }],
       holidays: [[{ localDate: `${year}${String(month).padStart(2, '0')}01`, dateName: 'stale', isHoliday: true }]],
     }[loader]
     pending.resolve(late)
     await flush()
     expect(calendar().props[`data-${loader}`]).toBe(before)
+    expect(nodeByDataTest(mounted.root, 'duty-loading').props['data-counts']).toBe(countsBefore)
     expect(calendar().props['data-month-loading']).toBe(false)
     closeMounted(mounted)
   })

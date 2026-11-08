@@ -1021,7 +1021,7 @@ struct CalendarView: View {
     }
 
     private var dutySummary: some View {
-        let counts = Dictionary(grouping: model.days.compactMap(\.duty).filter { $0.month == model.month }, by: { $0.dutyType ?? CalendarLocalization.text("calendar.off") })
+        let counts = Dictionary(grouping: model.dutySummaryDuties, by: { $0.dutyType ?? CalendarLocalization.text("calendar.off") })
         return AnyView(ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DPSpacing.small) {
                 ForEach(counts.keys.sorted(), id: \.self) { name in
