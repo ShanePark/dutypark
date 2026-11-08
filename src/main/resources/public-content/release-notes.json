@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-437": {
+          "title": "월 이동 집계 안정화·일정 작성자 구분",
+          "summary": "웹과 iPhone에서 월 이동 중 근무 개수가 잠깐 바뀌는 문제를 수정하고, 일정 상세에서 작성자를 더 쉽게 구분할 수 있습니다.",
+          "changes": [
+            "달력에서 월을 넘길 때 이전 근무 개수를 유지하다 새 데이터가 준비되면 한 번에 바꿉니다.",
+            "일정 작성자를 태그 목록 맨 앞에 중복 없이 표시하고, 상세 화면에서 테두리 색으로 구분합니다.",
+            "웹 일정 상세의 일반 태그를 iPhone과 같은 중립적인 색으로 정리하고, 달력 칸에는 별도 작성자 표시를 추가하지 않습니다."
+          ]
+        },
         "pr-434": {
           "title": "한눈에 보는 달력과 더 안전한 계정 이용",
           "summary": "웹과 iPhone의 달력을 간결하게 정리하고, 여러 날 일정의 연결과 월 이동을 자연스럽게 개선했습니다. 계정과 첨부파일의 보호도 강화했습니다.",
@@ -2400,6 +2409,15 @@
         }
       },
       "entries": {
+        "pr-437": {
+          "title": "Stable month totals and clearer schedule authors",
+          "summary": "Fix transient duty totals during month changes on web and iPhone, and make schedule authors easier to identify in day details.",
+          "changes": [
+            "Keep the previous duty totals while changing months and replace them once the new data is ready.",
+            "Place each schedule author first without duplicates and distinguish their tag with a different border in detail views.",
+            "Use neutral participant tags in web schedule details to match iPhone, while keeping calendar cells free of extra author markers."
+          ]
+        },
         "pr-434": {
           "title": "Clearer calendars and safer account access",
           "summary": "Simplified calendars on the web and iPhone, made multi-day schedules and month changes flow more naturally, and strengthened account and attachment protection.",
@@ -4723,6 +4741,20 @@
     }
   },
   "items": [
+    {
+      "id": "pr-437",
+      "version": "2026.11.08",
+      "date": "2026-11-08",
+      "pr": 437,
+      "url": "https://github.com/ShanePark/dutypark/pull/437",
+      "category": "fix",
+      "areas": [
+        "calendar",
+        "duty",
+        "schedule",
+        "ui"
+      ]
+    },
     {
       "id": "pr-434",
       "version": "2026.11.02",
