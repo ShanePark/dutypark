@@ -1,12 +1,15 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.dto.toMemberDto
+import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.ManagerRole
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
+import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
@@ -44,6 +47,12 @@ class MemberServiceTest {
     @Mock
     private lateinit var memberDtoAssembler: MemberDtoAssembler
 
+    @Mock
+    private lateinit var friendRelationRepository: FriendRelationRepository
+
+    @Mock
+    private lateinit var blockService: BlockService
+
     private lateinit var memberService: MemberService
 
     @BeforeEach
@@ -53,7 +62,9 @@ class MemberServiceTest {
             memberSsoRegisterRepository,
             memberManagerRepository,
             memberSocialAccountService,
-            memberDtoAssembler
+            memberDtoAssembler,
+            friendRelationRepository,
+            blockService,
         )
     }
 
@@ -123,6 +134,8 @@ class MemberServiceTest {
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(manager))
         whenever(memberRepository.findById(2L)).thenReturn(Optional.of(managed))
         whenever(memberManagerRepository.findAllByManagerAndManaged(manager, managed)).thenReturn(emptyList())
+        whenever(friendRelationRepository.findByMemberAndFriend(managed, manager))
+            .thenReturn(FriendRelation(managed, manager).apply { isFamily = true })
         whenever(memberManagerRepository.save(any<MemberManager>())).thenAnswer { it.arguments[0] }
 
         memberService.assignManager(1L, 2L)
@@ -182,7 +195,6 @@ class MemberServiceTest {
 
         whenever(memberRepository.findById(2L)).thenReturn(Optional.of(managed))
         whenever(memberManagerRepository.findAllByManaged(managed)).thenReturn(listOf(relation))
-        whenever(memberDtoAssembler.toDtos(listOf(manager))).thenReturn(listOf(memberDtoOf(manager)))
 
         val loginMember = createLoginMember(managed)
         val managers = memberService.findAllManagers(loginMember)

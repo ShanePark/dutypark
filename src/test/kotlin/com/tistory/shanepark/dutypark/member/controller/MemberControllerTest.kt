@@ -2,6 +2,10 @@ package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
+import com.tistory.shanepark.dutypark.member.block.domain.entity.MemberBlock
+import com.tistory.shanepark.dutypark.member.block.repository.MemberBlockRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSocialAccount
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
@@ -34,6 +38,9 @@ class MemberControllerTest : RestDocsTest() {
 
     @Autowired
     lateinit var memberSocialAccountRepository: MemberSocialAccountRepository
+
+    @Autowired
+    lateinit var memberBlockRepository: MemberBlockRepository
 
     private val createdDirectories = mutableListOf<Path>()
 
@@ -275,6 +282,104 @@ class MemberControllerTest : RestDocsTest() {
             RestDocumentationRequestBuilders.get("/api/members/${member.id}/profile-photo")
         )
             .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `assignManager rejects a member who is not family`() {
+        val managed = TestData.member
+        val candidate = TestData.member2
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/members/manager/${candidate.id}")
+                .withAuth(managed)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.family.notFamily"))
+
+        assertThat(memberManagerRepository.findAllByManagerAndManaged(candidate, managed)).isEmpty()
+    }
+
+    @Test
+    fun `assignManager rejects a family member when either side has blocked the other`() {
+        val managed = TestData.member
+        val candidate = TestData.member2
+        makeThemFamily(managed, candidate)
+        memberBlockRepository.save(MemberBlock(blocker = candidate, blocked = managed))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/members/manager/${candidate.id}")
+                .withAuth(managed)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("friend.request.blocked"))
+
+        assertThat(memberManagerRepository.findAllByManagerAndManaged(candidate, managed)).isEmpty()
+    }
+
+    @Test
+    fun `assignManager succeeds for a family member`() {
+        val managed = TestData.member
+        val candidate = TestData.member2
+        makeThemFamily(managed, candidate)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/members/manager/${candidate.id}")
+                .withAuth(managed)
+        )
+            .andExpect(status().isOk)
+
+        assertThat(memberManagerRepository.findAllByManagerAndManaged(candidate, managed)).hasSize(1)
+    }
+
+    @Test
+    fun `managers response does not expose sensitive account fields`() {
+        val managed = TestData.member
+        val manager = TestData.member2
+        makeThemFamily(managed, manager)
+        makeManagerRelation(manager = manager, managed = managed)
+        memberSocialAccountRepository.save(MemberSocialAccount(manager, SsoType.KAKAO, "kakao-manager"))
+        memberSocialAccountRepository.save(MemberSocialAccount(manager, SsoType.NAVER, "naver-manager"))
+        memberSocialAccountRepository.save(MemberSocialAccount(manager, SsoType.APPLE, "apple-manager"))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/members/managers")
+                .withAuth(managed)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].id").value(manager.id))
+            .andExpect(jsonPath("$[0].name").value(manager.name))
+            .andExpect(jsonPath("$[0].email").doesNotExist())
+            .andExpect(jsonPath("$[0].kakaoId").doesNotExist())
+            .andExpect(jsonPath("$[0].naverId").doesNotExist())
+            .andExpect(jsonPath("$[0].appleId").doesNotExist())
+    }
+
+    @Test
+    fun `managed response does not expose sensitive account fields`() {
+        val manager = TestData.member
+        val managed = TestData.member2
+        makeThemFamily(manager, managed)
+        makeManagerRelation(manager = manager, managed = managed)
+        memberSocialAccountRepository.save(MemberSocialAccount(managed, SsoType.KAKAO, "kakao-managed"))
+        memberSocialAccountRepository.save(MemberSocialAccount(managed, SsoType.NAVER, "naver-managed"))
+        memberSocialAccountRepository.save(MemberSocialAccount(managed, SsoType.APPLE, "apple-managed"))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/members/managed")
+                .withAuth(manager)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].id").value(managed.id))
+            .andExpect(jsonPath("$[0].name").value(managed.name))
+            .andExpect(jsonPath("$[0].email").doesNotExist())
+            .andExpect(jsonPath("$[0].kakaoId").doesNotExist())
+            .andExpect(jsonPath("$[0].naverId").doesNotExist())
+            .andExpect(jsonPath("$[0].appleId").doesNotExist())
+    }
+
+    private fun makeThemFamily(member1: Member, member2: Member) {
+        friendRelationRepository.save(FriendRelation(member1, member2).apply { isFamily = true })
+        friendRelationRepository.save(FriendRelation(member2, member1).apply { isFamily = true })
     }
 
     private fun createTestPngImage(path: Path) {

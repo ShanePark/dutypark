@@ -5,16 +5,21 @@ import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
+import com.tistory.shanepark.dutypark.member.domain.dto.ManagerMemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberInviteCandidateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toManagerMemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.toMemberInviteCandidateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
 import com.tistory.shanepark.dutypark.member.domain.enums.ManagerRole
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
+import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
@@ -33,6 +38,8 @@ class MemberService(
     private val memberManagerRepository: MemberManagerRepository,
     private val memberSocialAccountService: MemberSocialAccountService,
     private val memberDtoAssembler: MemberDtoAssembler,
+    private val friendRelationRepository: FriendRelationRepository,
+    private val blockService: BlockService,
 ) {
 
     private val log = logger()
@@ -102,6 +109,13 @@ class MemberService(
         if (isManager(manager, managed)) {
             throw IllegalArgumentException("Already assigned as manager, managerId: $managerId, managedId: $managedId")
         }
+        if (blockService.isBlockedEitherWay(managerId, managedId)) {
+            throw BadRequestException("friend.request.blocked")
+        }
+        // Reads the relation directly: FriendService depends on MemberService, so injecting it here would be circular.
+        if (friendRelationRepository.findByMemberAndFriend(managed, manager)?.isFamily != true) {
+            throw BadRequestException("friend.family.notFamily")
+        }
 
         val entity = MemberManager(manager = manager, managed = managed, role = ManagerRole.MANAGER)
         memberManagerRepository.save(entity)
@@ -154,9 +168,9 @@ class MemberService(
             .map { it.manager }
     }
 
-    fun findAllManagers(loginMember: LoginMember): List<MemberDto> {
+    fun findAllManagers(loginMember: LoginMember): List<ManagerMemberDto> {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
-        return memberDtoAssembler.toDtos(findAllManagers(member))
+        return findAllManagers(member).map { it.toManagerMemberDto() }
     }
 
     fun isManager(isManager: LoginMember, targetMemberId: Long): Boolean {
@@ -173,10 +187,9 @@ class MemberService(
     }
 
     @Transactional(readOnly = true)
-    fun findManagedMembers(loginMember: LoginMember): List<MemberDto> {
+    fun findManagedMembers(loginMember: LoginMember): List<ManagerMemberDto> {
         val manager = memberRepository.findById(loginMember.id).orElseThrow()
-        val managedMembers = memberManagerRepository.findAllByManager(manager).map { it.managed }
-        return memberDtoAssembler.toDtos(managedMembers)
+        return memberManagerRepository.findAllByManager(manager).map { it.managed.toManagerMemberDto() }
     }
 
     fun createAuxiliaryAccount(loginMember: LoginMember, name: String): MemberDto {
