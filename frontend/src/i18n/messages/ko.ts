@@ -128,6 +128,7 @@ const apiErrors = {
       required: '팀 관리자만 이 작업을 할 수 있습니다.',
     },
     member: {
+      adminTransferRequired: '팀 관리자는 다른 구성원에게 관리자 권한을 넘긴 뒤 팀에서 제외할 수 있습니다.',
       alreadyAssigned: '이 사용자는 이미 다른 팀에 속해 있습니다.',
       notInTeam: '이 사용자는 이 팀에 속해 있지 않습니다.',
       required: '이 팀에 속한 사용자만 접근할 수 있습니다.',

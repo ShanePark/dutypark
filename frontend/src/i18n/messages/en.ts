@@ -126,6 +126,7 @@ const apiErrors = {
       required: 'Only team admins can perform this action.',
     },
     member: {
+      adminTransferRequired: 'Transfer the team admin role to another member before removing the team admin from the team.',
       alreadyAssigned: 'This member already belongs to a team.',
       notInTeam: 'This member does not belong to this team.',
       required: 'You must belong to this team to access it.',

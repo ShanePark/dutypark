@@ -144,14 +144,7 @@ class MemberService(
         if (team == null) {
             return false
         }
-        if (isTeamAdmin(loginMember = loginMember, team = team)) {
-            return true
-        }
         return team.isManager(loginMember)
-    }
-
-    private fun isTeamAdmin(loginMember: LoginMember, team: Team): Boolean {
-        return team.admin?.id == loginMember.id
     }
 
     fun isManager(isManager: LoginMember, target: Member): Boolean {

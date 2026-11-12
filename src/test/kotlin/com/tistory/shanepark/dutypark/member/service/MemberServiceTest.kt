@@ -219,6 +219,7 @@ class MemberServiceTest {
         val member = createMember(1L, "shane", "shane@email.com")
         val team = Team("testTeam")
         ReflectionTestUtils.setField(team, "id", 1L)
+        member.team = team
         team.changeAdmin(member)
 
         val loginMember = createLoginMember(member)
@@ -226,6 +227,21 @@ class MemberServiceTest {
         val result = memberService.canManageTeam(loginMember, team)
 
         assertThat(result).isTrue
+    }
+
+    @Test
+    fun `canManageTeam returns false for stale admin or manager outside team`() {
+        val staleAdmin = createMember(1L, "former admin", "former-admin@email.com")
+        val staleManager = createMember(2L, "former manager", "former-manager@email.com")
+        val team = Team("testTeam")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        staleManager.team = team
+        team.addManager(staleManager)
+        team.changeAdmin(staleAdmin)
+        staleManager.team = null
+
+        assertThat(memberService.canManageTeam(createLoginMember(staleAdmin), team)).isFalse
+        assertThat(memberService.canManageTeam(createLoginMember(staleManager), team)).isFalse
     }
 
     @Test

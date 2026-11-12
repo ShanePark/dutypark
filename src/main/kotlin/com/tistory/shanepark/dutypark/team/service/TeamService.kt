@@ -161,6 +161,9 @@ class TeamService(
         if (member.team != team) {
             throw BadRequestException("team.member.notInTeam")
         }
+        if (team.isAdmin(memberId)) {
+            throw BadRequestException("team.member.adminTransferRequired")
+        }
         dutyPatternService.terminateActivePattern(member, actor = actor)
         team.removeMember(member)
         log.auditEventAfterCommit("team.member_removed", actor?.toAuditActor(), teamAuditTarget(team),

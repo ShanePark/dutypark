@@ -99,6 +99,34 @@ class TeamServiceTest {
     }
 
     @Test
+    fun `stale manager and admin rows for a member outside the team grant no team rights`() {
+        val team = Team("Test Team")
+        val staleAdmin = Member(name = "Former Admin")
+        val staleManager = Member(name = "Former Manager")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(staleAdmin, "id", 2L)
+        ReflectionTestUtils.setField(staleManager, "id", 3L)
+        staleManager.team = team
+        team.addManager(staleManager)
+        team.changeAdmin(staleAdmin)
+        staleManager.team = null
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+
+        assertThat(team.isManager(staleManager.id)).isFalse
+        assertThat(team.isManager(staleAdmin.id)).isFalse
+        assertThat(team.isAdmin(staleAdmin.id)).isFalse
+        assertThrows<ForbiddenException> {
+            service.checkCanManage(LoginMember(id = 3L, name = "Former Manager"), 1L)
+        }
+        assertThrows<ForbiddenException> {
+            service.checkCanManage(LoginMember(id = 2L, name = "Former Admin"), 1L)
+        }
+        assertThrows<ForbiddenException> {
+            service.checkCanAdmin(LoginMember(id = 2L, name = "Former Admin"), 1L)
+        }
+    }
+
+    @Test
     fun `checkCanRead returns code-first auth exception for outsider`() {
         val team = Team("Test Team")
         val outsider = Member(name = "outsider")

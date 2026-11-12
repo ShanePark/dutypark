@@ -60,7 +60,7 @@ class TeamManageControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `manager can change team admin`() {
+    fun `team admin can change team admin`() {
         setTeamAdmin(TestData.member.id!!)
 
         mockMvc.perform(
@@ -491,6 +491,120 @@ class TeamManageControllerTest : RestDocsTest() {
         )
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.code").value("team.admin.required"))
+    }
+
+    @Test
+    fun `plain team manager cannot change or clear team admin`() {
+        setTeamAdmin(TestData.member2.id!!)
+        addTeamManager(TestData.member.id!!)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.put("/api/teams/manage/{teamId}/admin", TestData.team.id!!)
+                .param("memberId", TestData.member.id!!.toString())
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("team.admin.required"))
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.put("/api/teams/manage/{teamId}/admin", TestData.team.id!!)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("team.admin.required"))
+
+        em.flush()
+        em.clear()
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(team.admin?.id).isEqualTo(TestData.member2.id)
+    }
+
+    @Test
+    fun `removing a manager from the team deletes the manager role and revokes manage rights`() {
+        setTeamAdmin(TestData.member.id!!)
+        addTeamManager(TestData.member2.id!!)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.delete("/api/teams/manage/{teamId}/members", TestData.team.id!!)
+                .param("memberId", TestData.member2.id!!.toString())
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+
+        em.flush()
+        em.clear()
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(team.managers.map { it.member.id }).doesNotContain(TestData.member2.id)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/teams/manage/{teamId}", TestData.team.id!!)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
+    }
+
+    @Test
+    fun `team admin cannot be removed from the team before transferring admin`() {
+        setTeamAdmin(TestData.member.id!!)
+        addTeamManager(TestData.member2.id!!)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.delete("/api/teams/manage/{teamId}/members", TestData.team.id!!)
+                .param("memberId", TestData.member.id!!.toString())
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("team.member.adminTransferRequired"))
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.delete("/api/teams/manage/{teamId}/members", TestData.team.id!!)
+                .param("memberId", TestData.member.id!!.toString())
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("team.member.adminTransferRequired"))
+
+        em.flush()
+        em.clear()
+        assertThat(memberRepository.findById(TestData.member.id!!).orElseThrow().team?.id)
+            .isEqualTo(TestData.team.id)
+    }
+
+    @Test
+    fun `stale admin and manager rows for members outside the team grant no team rights`() {
+        setTeamAdmin(TestData.member.id!!)
+        addTeamManager(TestData.member2.id!!)
+        // Simulates rows left behind before removal cleaned them up.
+        memberRepository.findById(TestData.member.id!!).orElseThrow().team = null
+        memberRepository.findById(TestData.member2.id!!).orElseThrow().team = null
+        em.flush()
+        em.clear()
+
+        for (staleMember in listOf(TestData.member, TestData.member2)) {
+            mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/teams/manage/{teamId}", TestData.team.id!!)
+                    .withAuth(staleMember)
+            )
+                .andExpect(status().isForbidden)
+                .andExpect(jsonPath("$.code").value("team.manage.forbidden"))
+        }
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/teams/manage/{teamId}/manager", TestData.team.id!!)
+                .param("memberId", TestData.member2.id!!.toString())
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("team.admin.required"))
+    }
+
+    private fun addTeamManager(memberId: Long) {
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        val member = memberRepository.findById(memberId).orElseThrow()
+        team.addManager(member)
+        em.flush()
+        em.clear()
     }
 
     private fun setTeamAdmin(memberId: Long) {

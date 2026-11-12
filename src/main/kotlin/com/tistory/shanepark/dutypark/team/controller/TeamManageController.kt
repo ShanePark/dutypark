@@ -49,7 +49,7 @@ class TeamManageController(
         @PathVariable teamId: Long,
         @RequestParam memberId: Long?
     ) {
-        checkCanManage(login = loginMember, teamId = teamId)
+        checkCanAdmin(login = loginMember, teamId = teamId)
         teamService.changeTeamAdmin(teamId = teamId, memberId = memberId, actor = loginMember)
     }
 
