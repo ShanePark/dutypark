@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.dashboard.domain.DashboardFriendDetail
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
 import com.tistory.shanepark.dutypark.duty.service.DutyResolver
 import com.tistory.shanepark.dutypark.duty.service.ResolvedDuty
+import com.tistory.shanepark.dutypark.member.domain.dto.VisibleFriendIds
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -25,6 +26,8 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Clock
 import java.time.Instant
@@ -202,6 +205,7 @@ class DashboardServiceTest {
         assertThat(result.friends.map(DashboardFriendDetail::displayOrder)).containsExactly(1, 2)
         assertThat(result.pendingRequestsFrom.first().id).isEqualTo(10L)
         assertThat(result.pendingRequestsTo.first().id).isEqualTo(11L)
+        verify(friendService, times(1)).findVisibleFriendIds(eq(loginMember), any())
     }
 
     @Test
@@ -266,8 +270,9 @@ class DashboardServiceTest {
     }
 
     private fun allFriendsVisible(loginMember: LoginMember) {
-        whenever(friendService.findVisibleFriendIds(eq(loginMember), any(), any())).thenAnswer { invocation ->
-            invocation.getArgument<List<FriendRelation>>(1).mapNotNull { it.friend.id }.toSet()
+        whenever(friendService.findVisibleFriendIds(eq(loginMember), any())).thenAnswer { invocation ->
+            val ids = invocation.getArgument<List<FriendRelation>>(1).mapNotNull { it.friend.id }.toSet()
+            VisibleFriendIds(duty = ids, schedule = ids)
         }
     }
 

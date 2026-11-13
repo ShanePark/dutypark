@@ -100,16 +100,14 @@ class DashboardService(
         val pendingRequestsFrom = friendService.getPendingRequestsFrom(member)
 
         // Mirror the calendar endpoints: duty follows /api/duty, schedules follow /api/schedules.
-        val dutyVisibleIds = friendService.findVisibleFriendIds(loginMember, friendRelations)
-        val scheduleVisibleIds =
-            friendService.findVisibleFriendIds(loginMember, friendRelations, scheduleVisibilityCheck = true)
+        val visibleIds = friendService.findVisibleFriendIds(loginMember, friendRelations)
 
         val dutiesByMemberId = todayDutiesByMembers(
-            friendRelations.map { it.friend }.filter { it.id in dutyVisibleIds }
+            friendRelations.map { it.friend }.filter { it.id in visibleIds.duty }
         )
         val schedulesByMemberId = todaySchedulesByFriends(
             loginMember,
-            friendRelations.filter { it.friend.id in scheduleVisibleIds }
+            friendRelations.filter { it.friend.id in visibleIds.schedule }
         )
 
         val friends = friendRelations
