@@ -265,7 +265,7 @@ struct TeamView: View {
                 set: { if !$0 { viewModel.cancelLeaveTeam() } }
             )
         ) {
-            if let team = viewModel.team {
+            if let teamName = viewModel.leaveConfirmationTeamName {
                 DPModalOverlay(
                     maximumContentWidth: DPConfirmationPanel.maximumWidth,
                     onDismiss: {

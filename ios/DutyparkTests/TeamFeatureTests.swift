@@ -235,6 +235,10 @@ struct TeamFeatureTests {
         #expect(teamView.contains("viewModel.requestLeaveTeam()"))
         #expect(teamView.contains("await viewModel.leaveTeam()"))
         #expect(teamView.contains("_ = await session.refreshCurrentMember()"))
+        // The leave panel must keep rendering while it animates out after the
+        // team state is cleared, so the cover reads the captured name instead.
+        #expect(teamView.contains("if let teamName = viewModel.leaveConfirmationTeamName {"))
+        #expect(teamView.contains("leaveTeamMessage(name: teamName)"))
     }
 
     @Test @MainActor
@@ -317,11 +321,13 @@ struct TeamFeatureTests {
 
         viewModel.requestLeaveTeam()
         #expect(viewModel.leaveConfirmationPresented)
+        #expect(viewModel.leaveConfirmationTeamName == "Team")
         #expect(haptics.event?.kind == .warning)
         let warningID = haptics.event?.id
 
         viewModel.cancelLeaveTeam()
         #expect(viewModel.leaveConfirmationPresented == false)
+        #expect(viewModel.leaveConfirmationTeamName == nil)
         #expect(haptics.event?.id == warningID)
 
         viewModel.requestLeaveTeam()
@@ -329,7 +335,17 @@ struct TeamFeatureTests {
 
         #expect(left)
         #expect(haptics.event?.kind == .success)
+        let successID = haptics.event?.id
         #expect(viewModel.team == nil)
+        // The confirmation stays presented with its captured name until the
+        // panel's own dismissal animation finishes and closes the cover.
+        #expect(viewModel.leaveConfirmationPresented)
+        #expect(viewModel.leaveConfirmationTeamName == "Team")
+
+        viewModel.cancelLeaveTeam()
+        #expect(viewModel.leaveConfirmationPresented == false)
+        #expect(viewModel.leaveConfirmationTeamName == nil)
+        #expect(haptics.event?.id == successID)
         #expect(viewModel.isTeamManager == false)
         #expect(viewModel.showsError == false)
     }
@@ -360,6 +376,8 @@ struct TeamFeatureTests {
 
         #expect(left == false)
         #expect(viewModel.team?.id == 7)
+        #expect(viewModel.leaveConfirmationPresented)
+        #expect(viewModel.leaveConfirmationTeamName == "Team")
         #expect(viewModel.showsError)
         #expect(viewModel.errorMessage == APIErrorLocalization.message(code: "team.member.adminTransferRequired"))
         #expect(haptics.event?.kind == .error)
@@ -382,6 +400,7 @@ struct TeamFeatureTests {
 
         #expect(viewModel.canLeaveTeam == false)
         #expect(viewModel.leaveConfirmationPresented == false)
+        #expect(viewModel.leaveConfirmationTeamName == nil)
         #expect(haptics.event?.id == eventIDBeforeRequest)
     }
 

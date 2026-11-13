@@ -17,6 +17,9 @@ final class TeamViewModel: ObservableObject {
     @Published var selectedIndex = 0
     @Published var showsError = false
     @Published var leaveConfirmationPresented = false
+    /// Captured when the confirmation opens so the panel can keep rendering while it
+    /// animates out after a successful leave has already cleared `team`.
+    @Published private(set) var leaveConfirmationTeamName: String?
     /// Set only when the failure carries its own message; the alert falls back to the generic one.
     @Published private(set) var errorMessage: String?
     @Published var scheduleDraft: TeamScheduleDraft?
@@ -427,7 +430,8 @@ final class TeamViewModel: ObservableObject {
     }
 
     func requestLeaveTeam() {
-        guard canLeaveTeam, !isWorking else { return }
+        guard canLeaveTeam, !isWorking, let team else { return }
+        leaveConfirmationTeamName = team.name
         leaveConfirmationPresented = true
         haptics.emit(.warning)
     }
@@ -435,6 +439,7 @@ final class TeamViewModel: ObservableObject {
     func cancelLeaveTeam() {
         guard !isWorking else { return }
         leaveConfirmationPresented = false
+        leaveConfirmationTeamName = nil
     }
 
     @discardableResult
