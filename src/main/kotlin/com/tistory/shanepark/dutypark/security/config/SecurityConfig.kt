@@ -17,7 +17,6 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
-import org.springframework.web.filter.ForwardedHeaderFilter
 import java.net.URI
 
 @Configuration
@@ -107,14 +106,6 @@ class SecurityConfig(
         filterRegBean.addUrlPatterns("/admin/*")
         filterRegBean.addUrlPatterns("/docs/*")
         filterRegBean.setOrder(Ordered.LOWEST_PRECEDENCE)
-        return filterRegBean
-    }
-
-    @Bean
-    fun forwardedHeaderFilter(): FilterRegistrationBean<ForwardedHeaderFilter> {
-        val filterRegBean = FilterRegistrationBean<ForwardedHeaderFilter>()
-        filterRegBean.setFilter(ForwardedHeaderFilter())
-        filterRegBean.setOrder(Ordered.HIGHEST_PRECEDENCE)
         return filterRegBean
     }
 
