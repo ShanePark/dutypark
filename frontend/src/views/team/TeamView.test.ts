@@ -68,4 +68,21 @@ describe('team self-service creation', () => {
   it('does not expose a join-request action', () => {
     expect(teamView).not.toContain("t('team.view.actions.requestJoin')")
   })
+
+  it('lets a non-lead member leave the team after confirmation', () => {
+    const leaveFlow = teamView.slice(
+      teamView.indexOf('async function leaveTeam()'),
+      teamView.indexOf('function goToMemberDuty('),
+    )
+    expect(leaveFlow).toContain("t('team.view.leave.confirm', { name: team.value.name }),")
+    expect(leaveFlow).toContain("t('team.view.leave.confirmAction'),")
+    expect(leaveFlow).toContain('await teamApi.leaveTeam()')
+    expect(leaveFlow).toContain('await authStore.checkAuth()')
+    expect(leaveFlow).toContain("toastSuccess(t('team.view.leave.success'))")
+    expect(leaveFlow).toContain('await fetchTeamSummary()')
+    expect(leaveFlow).toContain("showError(resolveApiErrorMessage(error, { fallbackKey: 'team.view.leave.failed' }, t))")
+    expect(leaveFlow.indexOf('confirmDelete(')).toBeLessThan(leaveFlow.indexOf('teamApi.leaveTeam()'))
+    expect(teamView).toContain('const canLeaveTeam = computed(() => team.value != null && team.value.adminId !== loginMemberId.value)')
+    expect(teamView).toMatch(/v-if="canLeaveTeam"[\s\S]*?@click="leaveTeam"[\s\S]*?t\('team\.view\.leave\.action'\)/)
+  })
 })

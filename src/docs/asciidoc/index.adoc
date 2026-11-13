@@ -452,6 +452,10 @@ operation::teams/my-summary[]
 
 operation::teams/shift[]
 
+=== Leave My Team
+
+operation::teams/leave[]
+
 === Search Invite Members
 
 operation::teams/manage/search-members[]

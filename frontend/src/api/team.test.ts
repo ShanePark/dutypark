@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('./client', () => ({
   default: {
     post: vi.fn(),
+    delete: vi.fn(),
   },
 }))
 
@@ -31,5 +32,13 @@ describe('member team creation API contract', () => {
       name: '응급 팀',
       description: '',
     })
+  })
+
+  it('leaves the current team through the self membership endpoint', async () => {
+    vi.mocked(apiClient.delete).mockResolvedValue({ data: '' })
+
+    await teamApi.leaveTeam()
+
+    expect(apiClient.delete).toHaveBeenCalledWith('/teams/my/membership')
   })
 })

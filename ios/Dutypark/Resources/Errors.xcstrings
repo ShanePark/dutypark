@@ -1598,6 +1598,22 @@
         }
       }
     },
+    "team.member.blocked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You cannot add a member you blocked or who blocked you."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내가 차단했거나 나를 차단한 사용자는 팀에 추가할 수 없습니다."
+          }
+        }
+      }
+    },
     "team.member.alreadyAssigned": {
       "localizations": {
         "en": {
@@ -1610,6 +1626,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 사용자는 이미 다른 팀에 속해 있습니다."
+          }
+        }
+      }
+    },
+    "team.member.notAssigned": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not belong to a team."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소속된 팀이 없습니다."
           }
         }
       }

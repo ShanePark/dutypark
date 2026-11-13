@@ -25,7 +25,6 @@ nonisolated struct TeamCreateRequest: Codable, Equatable, Sendable {
 nonisolated struct TeamMemberDTO: Codable, Equatable, Sendable {
     let id: MemberID?
     let name: String
-    let email: String?
     let isManager: Bool
     let isAdmin: Bool
     let hasProfilePhoto: Bool

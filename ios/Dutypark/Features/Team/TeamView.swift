@@ -259,6 +259,68 @@ struct TeamView: View {
                 .interactiveDismissDisabled(scheduleDeletionIsWorking)
             }
         }
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { viewModel.leaveConfirmationPresented },
+                set: { if !$0 { viewModel.cancelLeaveTeam() } }
+            )
+        ) {
+            if let team = viewModel.team {
+                DPModalOverlay(
+                    maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                    onDismiss: {
+                        guard !viewModel.isWorking else { return }
+                        viewModel.cancelLeaveTeam()
+                    },
+                    canDismiss: !viewModel.isWorking,
+                    dismissHaptic: nil
+                ) { availableSize, dismiss in
+                    DPConfirmationPanel(
+                        title: teamLocalized("team.view.leave.title"),
+                        message: TeamLocalization.leaveTeamMessage(name: team.name),
+                        confirmTitle: teamLocalized("team.view.leave.confirmAction"),
+                        cancelTitle: teamLocalized("team.common.cancel"),
+                        isDestructive: true,
+                        isWorking: viewModel.isWorking,
+                        maximumHeight: availableSize.height,
+                        cancel: {
+                            guard !viewModel.isWorking else { return }
+                            dismiss()
+                        },
+                        confirm: {
+                            Task {
+                                guard await viewModel.leaveTeam() else { return }
+                                dismiss()
+                                _ = await session.refreshCurrentMember()
+                                await viewModel.load(memberID: memberID, emitErrorFeedback: false)
+                            }
+                        }
+                    )
+                    .alert(
+                        Text("team.common.error", tableName: "Team"),
+                        isPresented: $viewModel.showsError
+                    ) {
+                        Button(teamLocalized("team.common.confirm"), role: .cancel) {}
+                    } message: {
+                        Text(viewModel.errorMessage ?? teamLocalized("team.common.error"))
+                    }
+                }
+                .interactiveDismissDisabled(viewModel.isWorking)
+            }
+        }
+    }
+
+    private var leaveTeamButton: some View {
+        Button(role: .destructive) {
+            viewModel.requestLeaveTeam()
+        } label: {
+            Label(teamLocalized("team.view.leave.action"), systemImage: "rectangle.portrait.and.arrow.right")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(DPDestructiveButtonStyle())
+        .disabled(viewModel.isWorking)
+        .padding(.top, DPSpacing.medium)
+        .accessibilityIdentifier("team.leave")
     }
 
     private func teamContent(_ team: TeamDTO) -> some View {
@@ -268,6 +330,9 @@ struct TeamView: View {
                     calendar
                     selectedSchedules
                     shiftList
+                    if viewModel.canLeaveTeam {
+                        leaveTeamButton
+                    }
                 }
                 .padding(.horizontal, DPSpacing.small)
                 .padding(.top, DPSpacing.medium + Self.thisMonthCalloutClearance)
@@ -1374,6 +1439,15 @@ nonisolated enum TeamLocalization {
         var calendar = Calendar.current
         calendar.locale = locale ?? AppLocalization.locale
         return calendar.shortStandaloneWeekdaySymbols
+    }
+
+    static func leaveTeamMessage(name: String, locale: Locale? = nil) -> String {
+        AppLocalization.format(
+            "team.view.leave.confirm",
+            table: "Team",
+            arguments: [name],
+            locale: locale
+        )
     }
 
     static func scheduleDeletionMessage(title: String, locale: Locale? = nil) -> String {

@@ -60,6 +60,11 @@ class TeamController(
         )
     }
 
+    @DeleteMapping("/my/membership")
+    fun leave(@Login loginMember: LoginMember) {
+        teamService.leaveTeam(loginMember)
+    }
+
     @GetMapping("/shift")
     fun shift(
         @Login loginMember: LoginMember,

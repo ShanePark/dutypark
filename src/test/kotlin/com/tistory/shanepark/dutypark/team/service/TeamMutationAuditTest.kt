@@ -21,7 +21,7 @@ class TeamMutationAuditTest {
         val team = Team("Team")
         ReflectionTestUtils.setField(team, "id", 41L)
         whenever(repository.findById(41L)).thenReturn(Optional.of(team))
-        val service = TeamService(repository, mock(), mock(), mock(), mock(), mock(), mock())
+        val service = TeamService(repository, mock(), mock(), mock(), mock(), mock(), mock(), mock())
         val logger = LoggerFactory.getLogger(TeamService::class.java) as Logger
         val appender = ListAppender<ILoggingEvent>().apply { start() }
         logger.addAppender(appender)

@@ -19,7 +19,7 @@ vi.mock('@lucide/vue', () => {
   const icon = defineComponent({ setup: () => () => h('span') })
   return {
     Settings: icon, CalendarPlus: icon, Pencil: icon, Trash2: icon, Building2: icon,
-    X: icon, Plus: icon, Check: icon, AlertCircle: icon,
+    X: icon, Plus: icon, Check: icon, AlertCircle: icon, LogOut: icon,
     Loader2: defineComponent({ setup: () => () => h('span', { 'data-test': 'spinner' }) }),
   }
 })

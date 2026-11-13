@@ -130,6 +130,8 @@ const apiErrors = {
     member: {
       adminTransferRequired: '팀 관리자는 다른 구성원에게 관리자 권한을 넘긴 뒤 팀에서 제외할 수 있습니다.',
       alreadyAssigned: '이 사용자는 이미 다른 팀에 속해 있습니다.',
+      blocked: '내가 차단했거나 나를 차단한 사용자는 팀에 추가할 수 없습니다.',
+      notAssigned: '소속된 팀이 없습니다.',
       notInTeam: '이 사용자는 이 팀에 속해 있지 않습니다.',
       required: '이 팀에 속한 사용자만 접근할 수 있습니다.',
     },
@@ -1447,6 +1449,13 @@ export default {
           createFailed: '팀 생성에 실패했습니다.',
         },
       },
+      leave: {
+        action: '팀 나가기',
+        confirm: '{name} 팀에서 나가시겠습니까? 지난 근무 기록은 유지되지만 주간 근무 패턴은 오늘부로 종료됩니다.',
+        confirmAction: '나가기',
+        success: '팀에서 나갔습니다.',
+        failed: '팀 나가기에 실패했습니다.',
+      },
       selectedDate: '{year}년 {month}월 {day}일',
       actions: {
         manage: '팀 관리',
@@ -1609,7 +1618,6 @@ export default {
       searchPlaceholder: '이름 또는 이메일로 검색',
       columns: {
         name: '이름',
-        email: '이메일',
         add: '추가',
       },
       confirmAdd: '{name} 님을 이 팀에 추가하시겠습니까?',

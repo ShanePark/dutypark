@@ -31,6 +31,10 @@ struct TeamManageView: View {
         if case .authenticated(let member) = session.state { member.id } else { nil }
     }
 
+    private var isAppAdmin: Bool {
+        if case .authenticated(let member) = session.state { member.isAdmin } else { false }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             manageHeader(viewModel.team)
@@ -226,15 +230,15 @@ struct TeamManageView: View {
                 label: teamLocalized("team.manage.fields.description"),
                 value: team.description ?? teamLocalized("team.manage.labels.notAvailable")
             )
-            if viewModel.canUseAdminTools(loginID: loginID) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("team.manage.fields.admin", tableName: "Team")
-                        .font(DPTypography.caption)
-                        .foregroundStyle(DPColor.textMuted)
-                    HStack {
-                        Text(verbatim: team.adminName ?? teamLocalized("team.manage.labels.notAvailable"))
-                            .font(DPTypography.label)
-                    if team.adminId != nil, team.adminId != loginID {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("team.manage.fields.admin", tableName: "Team")
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+                HStack {
+                    Text(verbatim: team.adminName ?? teamLocalized("team.manage.labels.notAvailable"))
+                        .font(DPTypography.label)
+                    if viewModel.canUseAdminTools(loginID: loginID, isAppAdmin: isAppAdmin),
+                       team.adminId != nil, team.adminId != loginID {
                         Button(role: .destructive) {
                             present(.changeAdmin(nil))
                         } label: {
@@ -243,13 +247,12 @@ struct TeamManageView: View {
                                 .frame(minHeight: DPSize.minimumTouchTarget)
                         }
                     }
-                    }
                 }
-                .padding(.horizontal, DPSpacing.medium)
-                .padding(.vertical, DPSpacing.compact)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
             }
+            .padding(.horizontal, DPSpacing.medium)
+            .padding(.vertical, DPSpacing.compact)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
             VStack(alignment: .leading, spacing: 6) {
                 Text("team.manage.fields.batchTemplate", tableName: "Team")
                     .font(DPTypography.caption)
@@ -328,7 +331,7 @@ struct TeamManageView: View {
                         Text(verbatim: member.name).font(DPTypography.bodyMedium)
                         if member.isManager { Image(systemName: "checkmark").foregroundStyle(DPColor.success) }
                         Spacer()
-                        if let id = member.id {
+                        if let id = member.id, !member.isAdmin {
                             Button { present(.removeMember(id)) } label: {
                                 Label(teamLocalized("team.manage.actions.removeMember"), systemImage: "trash")
                                     .font(DPTypography.caption)
@@ -336,7 +339,7 @@ struct TeamManageView: View {
                             .buttonStyle(DPDestructiveButtonStyle())
                         }
                     }
-                    if let id = member.id, viewModel.canUseAdminTools(loginID: loginID), !member.isAdmin {
+                    if let id = member.id, viewModel.canUseAdminTools(loginID: loginID, isAppAdmin: isAppAdmin), !member.isAdmin {
                         HStack(spacing: DPSpacing.extraSmall) {
                             if member.isManager {
                                 teamSmallAction(teamLocalized("team.manage.actions.revokeManager"), "shield.slash", DPColor.warning, DPColor.warningBorder) { present(.removeManager(id)) }
@@ -1031,6 +1034,10 @@ private struct TeamMemberSearchView: View {
             isPresented: $viewModel.showsError
         ) {
             Button(teamLocalized("team.common.confirm"), role: .cancel) {}
+        } message: {
+            if let errorMessage = viewModel.errorMessage {
+                Text(verbatim: errorMessage)
+            }
         }
     }
 
@@ -1154,10 +1161,6 @@ private struct TeamMemberSearchView: View {
                 Text(verbatim: member.name)
                     .font(DPTypography.bodyMedium)
                     .foregroundStyle(DPColor.textPrimary)
-                    .lineLimit(1)
-                Text(verbatim: member.email ?? teamLocalized("team.manage.labels.notAvailable"))
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textMuted)
                     .lineLimit(1)
             }
             Spacer(minLength: DPSpacing.extraSmall)

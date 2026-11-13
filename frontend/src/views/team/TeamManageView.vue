@@ -54,6 +54,8 @@ const isAdmin = ref(false)
 const isAppAdmin = computed(() => authStore.user?.isAdmin ?? false)
 const canAssignFirstAdmin = computed(() => isAppAdmin.value && team.value?.adminId === null)
 const loginId = computed(() => authStore.user?.id ?? 0)
+// Managers can manage members, but lead and manager role changes are lead-only on the server.
+const canAdminTeam = computed(() => isAppAdmin.value || (team.value?.adminId != null && team.value.adminId === loginId.value))
 const teamLoaded = ref(false)
 
 const team = ref<TeamDto | null>(null)
@@ -118,7 +120,7 @@ async function removeMember(memberId: number) {
     await fetchTeam()
   } catch (error) {
     console.error('Failed to remove member:', error)
-    showError(t('team.manage.messages.removeMemberFailed'))
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'team.manage.messages.removeMemberFailed' }, t))
   } finally {
     saving.value = false
   }
@@ -366,7 +368,7 @@ onMounted(() => {
           <div class="mt-1.5 flex flex-wrap items-center gap-2 text-dp-text-primary">
             <span class="font-medium">{{ team.adminName || t('team.manage.labels.notAvailable') }}</span>
             <button
-              v-if="team.adminId && loginId !== team.adminId"
+              v-if="canAdminTeam && team.adminId && loginId !== team.adminId"
               type="button"
               @click="changeAdmin()"
               class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-dp-danger-border bg-dp-danger-soft px-2.5 py-2 text-sm font-medium text-dp-danger transition-colors hover:bg-dp-danger-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer"
@@ -427,7 +429,7 @@ onMounted(() => {
                 <div class="flex items-center gap-2">
                   <span class="font-medium">{{ team.adminName || t('team.manage.labels.notAvailable') }}</span>
                   <button
-                    v-if="team.adminId && loginId !== team.adminId"
+                    v-if="canAdminTeam && team.adminId && loginId !== team.adminId"
                     type="button"
                     @click="changeAdmin()"
                     class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-dp-danger-border bg-dp-danger-soft px-2.5 py-2 text-sm font-medium text-dp-danger transition-colors hover:bg-dp-danger-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer"
@@ -503,7 +505,7 @@ onMounted(() => {
               <td class="px-4 py-3 text-center text-dp-text-muted">{{ index + 1 }}</td>
               <td class="px-4 py-3 font-medium text-dp-text-primary">{{ member.name }}</td>
               <td class="px-4 py-3 text-center">
-                <template v-if="!isAdmin">
+                <template v-if="!canAdminTeam">
                   <Check v-if="member.isManager" class="w-5 h-5 text-dp-success mx-auto" />
                 </template>
                 <template v-else>
@@ -551,6 +553,7 @@ onMounted(() => {
               </td>
               <td class="px-4 py-3 text-center">
                 <button
+                  v-if="!member.isAdmin"
                   type="button"
                   @click="removeMember(member.id)"
                   class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-danger-border bg-dp-danger-soft px-2.5 py-2 text-sm font-medium text-dp-danger transition-colors hover:bg-dp-danger-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring mx-auto"
@@ -577,6 +580,7 @@ onMounted(() => {
               <Check v-if="member.isManager" class="w-4 h-4 text-dp-success" />
             </div>
             <button
+              v-if="!member.isAdmin"
               type="button"
               @click="removeMember(member.id)"
               class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-danger-border bg-dp-danger-soft px-2.5 py-2 text-xs font-medium text-dp-danger transition-colors hover:bg-dp-danger-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
@@ -585,7 +589,7 @@ onMounted(() => {
               {{ t('team.manage.actions.removeMember') }}
             </button>
           </div>
-          <div v-if="isAdmin && !member.isAdmin" class="flex flex-wrap gap-1">
+          <div v-if="canAdminTeam && !member.isAdmin" class="flex flex-wrap gap-1">
             <template v-if="!member.isManager">
               <button
                 v-if="canAssignFirstAdmin"

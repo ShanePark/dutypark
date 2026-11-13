@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
@@ -68,6 +69,9 @@ class TeamServiceTest {
 
     @Mock
     lateinit var publicContentService: PublicContentService
+
+    @Mock
+    lateinit var blockService: BlockService
 
     @Test
     fun `checkCanManage returns code-first auth exception for non-manager`() {
