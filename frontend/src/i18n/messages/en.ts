@@ -1710,7 +1710,7 @@ export default {
     },
     memberSearch: {
       title: 'Add team member',
-      searchPlaceholder: 'Search by name or email',
+      searchPlaceholder: 'Search by name',
       columns: {
         name: 'Name',
         add: 'Add',

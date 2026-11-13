@@ -1615,7 +1615,7 @@ export default {
     },
     memberSearch: {
       title: '팀 멤버 추가',
-      searchPlaceholder: '이름 또는 이메일로 검색',
+      searchPlaceholder: '이름으로 검색',
       columns: {
         name: '이름',
         add: '추가',

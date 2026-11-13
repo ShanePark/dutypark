@@ -120,7 +120,7 @@
     "team.memberSearch.email" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Email"}},"ko":{"stringUnit":{"state":"translated","value":"이메일"}}}},
     "team.memberSearch.empty" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"No members matched your search."}},"ko":{"stringUnit":{"state":"translated","value":"검색 결과가 없습니다."}}}},
     "team.memberSearch.name" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Name"}},"ko":{"stringUnit":{"state":"translated","value":"이름"}}}},
-    "team.memberSearch.searchPlaceholder" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Search by name or email"}},"ko":{"stringUnit":{"state":"translated","value":"이름 또는 이메일로 검색"}}}},
+    "team.memberSearch.searchPlaceholder" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Search by name"}},"ko":{"stringUnit":{"state":"translated","value":"이름으로 검색"}}}},
     "team.memberSearch.title" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Add team member"}},"ko":{"stringUnit":{"state":"translated","value":"팀 멤버 추가"}}}},
     "team.view.actions.addSchedule" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Add team schedule"}},"ko":{"stringUnit":{"state":"translated","value":"팀 일정 추가"}}}},
     "team.view.actions.manage" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Manage team"}},"ko":{"stringUnit":{"state":"translated","value":"팀 관리"}}}},
