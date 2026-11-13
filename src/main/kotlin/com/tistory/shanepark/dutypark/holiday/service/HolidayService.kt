@@ -30,6 +30,7 @@ class HolidayService(
     private val holidayAPI: HolidayAPI,
     private val dutyRepository: DutyRepository,
     private val clock: Clock,
+    private val holidaySlackNotifier: HolidaySlackNotifier,
 ) {
 
     private val holidayMap: MutableMap<Int, List<HolidayDto>> = ConcurrentHashMap()
@@ -126,6 +127,7 @@ class HolidayService(
                     "Holiday lookup for year {} failed ({}); treating it as empty until the retry interval passes",
                     year, error.javaClass.simpleName,
                 )
+                holidaySlackNotifier.fetchFailed(year, error)
                 emptyList()
             }
             if (fetched.isEmpty()) {

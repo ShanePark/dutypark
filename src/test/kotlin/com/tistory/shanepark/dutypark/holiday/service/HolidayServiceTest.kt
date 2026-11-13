@@ -45,11 +45,14 @@ class HolidayServiceTest {
     @Mock
     lateinit var dutyRepository: DutyRepository
 
+    @Mock
+    lateinit var holidaySlackNotifier: HolidaySlackNotifier
+
     private val clock = Clock.fixed(Instant.parse("2026-07-10T16:00:00Z"), ZoneOffset.UTC)
 
     @BeforeEach
     fun setUp() {
-        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock)
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock, holidaySlackNotifier)
     }
 
     @Test
@@ -176,7 +179,7 @@ class HolidayServiceTest {
     @Test
     fun `allowed year range follows the Seoul current date`() {
         val newYearInSeoul = Clock.fixed(Instant.parse("2026-12-31T16:00:00Z"), ZoneOffset.UTC)
-        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, newYearInSeoul)
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, newYearInSeoul, holidaySlackNotifier)
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
 
         holidayService.findHolidays(CalendarView(2030, 6))
@@ -189,7 +192,7 @@ class HolidayServiceTest {
     @Test
     fun `an empty year is not requested again within 24 hours`() {
         val clock = adjustableClock()
-        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock)
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock, holidaySlackNotifier)
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
         `when`(holidayAPI.requestHolidays(2029)).thenReturn(listOf())
 
@@ -205,7 +208,7 @@ class HolidayServiceTest {
     @Test
     fun `an empty year is requested again after 24 hours and newly announced holidays are cached`() {
         val clock = adjustableClock()
-        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock)
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock, holidaySlackNotifier)
         val announced = HolidayDto("현충일", true, LocalDate.of(2029, 6, 6))
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
         `when`(holidayAPI.requestHolidays(2029)).thenReturn(listOf(), listOf(announced))
@@ -223,7 +226,7 @@ class HolidayServiceTest {
     @Test
     fun `a failed fetch is treated as an empty year for 24 hours`() {
         val clock = adjustableClock()
-        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock)
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock, holidaySlackNotifier)
         val announced = HolidayDto("현충일", true, LocalDate.of(2029, 6, 6))
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
         `when`(holidayAPI.requestHolidays(2029))
@@ -245,9 +248,39 @@ class HolidayServiceTest {
     }
 
     @Test
+    fun `a failed fetch sends one Slack alert per retry window`() {
+        val clock = adjustableClock()
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock, holidaySlackNotifier)
+        val failure = IllegalStateException("upstream failure")
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(2029)).thenThrow(failure)
+
+        holidayService.findHolidays(CalendarView(2029, 6))
+        clock.advance(Duration.ofHours(24).minusSeconds(1))
+        holidayService.findHolidays(CalendarView(2029, 6))
+        verify(holidaySlackNotifier, times(1)).fetchFailed(2029, failure)
+
+        clock.advance(Duration.ofSeconds(1))
+        holidayService.findHolidays(CalendarView(2029, 6))
+
+        verify(holidaySlackNotifier, times(2)).fetchFailed(2029, failure)
+    }
+
+    @Test
+    fun `an empty fetch sends no Slack alert`() {
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(2029)).thenReturn(listOf())
+
+        holidayService.findHolidays(CalendarView(2029, 6))
+
+        verify(holidayAPI).requestHolidays(2029)
+        verifyNoInteractions(holidaySlackNotifier)
+    }
+
+    @Test
     fun `a year with holidays stays cached beyond 24 hours`() {
         val clock = adjustableClock()
-        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock)
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock, holidaySlackNotifier)
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
         `when`(holidayAPI.requestHolidays(2023)).thenReturn(holiday2023Dto())
 
