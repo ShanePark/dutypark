@@ -37,6 +37,7 @@ class HolidayService(
     fun findHolidays(calendarView: CalendarView): Array<List<HolidayDto>> {
         val answer = calendarView.makeCalendarArray<HolidayDto>()
         val years: Set<Int> = setOf(calendarView.startDate.year, calendarView.endDate.year)
+            .filterTo(mutableSetOf(), ::isSupportedYear)
         val holidaysInRange: List<HolidayDto> = holidaysInRangeFromMemory(years)
 
         for (holiday in holidaysInRange) {
@@ -66,6 +67,12 @@ class HolidayService(
                 "cachedHolidayYearsAfter" to emptyList<Int>(),
             ),
         )
+    }
+
+    // Holiday lookups are public, so years far from today must not reach the external API or grow per-year state.
+    private fun isSupportedYear(year: Int): Boolean {
+        val currentYear = LocalDate.now(clock.withZone(SEOUL)).year
+        return year in currentYear - SUPPORTED_YEARS_FROM_CURRENT..currentYear + SUPPORTED_YEARS_FROM_CURRENT
     }
 
     private fun holidaysInRangeFromMemory(years: Set<Int>): List<HolidayDto> {
@@ -129,6 +136,7 @@ class HolidayService(
 
     companion object {
         private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
+        private const val SUPPORTED_YEARS_FROM_CURRENT = 10
     }
 
 }

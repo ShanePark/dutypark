@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.slf4j.LoggerFactory
 import java.time.Clock
 import java.time.Instant
@@ -124,6 +125,64 @@ class HolidayServiceTest {
 
         assert2023DecemberResult(result)
     }
+
+    @Test
+    fun `years more than ten years from the Seoul current year return empty without loading`() {
+        for (calendarView in listOf(CalendarView(2015, 6), CalendarView(2037, 6), CalendarView(1, 1), CalendarView(9999, 6))) {
+            val result = holidayService.findHolidays(calendarView)
+
+            assertThat(result).hasSize(42).allSatisfy { assertThat(it).isEmpty() }
+        }
+
+        verifyNoInteractions(holidayAPI, holidayRepository)
+        assertThat(perYearState("holidayMap")).isEmpty()
+        assertThat(perYearState("locks")).isEmpty()
+    }
+
+    @Test
+    fun `boundary years ten years from the Seoul current year still load from the API`() {
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(any())).thenReturn(listOf())
+
+        holidayService.findHolidays(CalendarView(2016, 6))
+        holidayService.findHolidays(CalendarView(2036, 6))
+
+        verify(holidayAPI).requestHolidays(2016)
+        verify(holidayAPI).requestHolidays(2036)
+        assertThat(perYearState("holidayMap")).containsOnlyKeys(2016, 2036)
+    }
+
+    @Test
+    fun `calendar padding outside the allowed years is not loaded`() {
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(2036)).thenReturn(listOf())
+
+        holidayService.findHolidays(CalendarView(2036, 12))
+
+        verify(holidayAPI).requestHolidays(2036)
+        verify(holidayAPI, never()).requestHolidays(2037)
+        assertThat(perYearState("holidayMap")).containsOnlyKeys(2036)
+        assertThat(perYearState("locks")).containsOnlyKeys(2036)
+    }
+
+    @Test
+    fun `allowed year range follows the Seoul current date`() {
+        val newYearInSeoul = Clock.fixed(Instant.parse("2026-12-31T16:00:00Z"), ZoneOffset.UTC)
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, newYearInSeoul)
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(2037)).thenReturn(listOf())
+
+        holidayService.findHolidays(CalendarView(2037, 6))
+        holidayService.findHolidays(CalendarView(2016, 6))
+
+        verify(holidayAPI).requestHolidays(2037)
+        verify(holidayAPI, never()).requestHolidays(2016)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun perYearState(fieldName: String): Map<Int, Any> =
+        HolidayService::class.java.getDeclaredField(fieldName).apply { isAccessible = true }
+            .get(holidayService) as Map<Int, Any>
 
     private fun assert2023MayResult(result: Array<List<HolidayDto>>) {
         assertThat(result.size).isEqualTo(42)
