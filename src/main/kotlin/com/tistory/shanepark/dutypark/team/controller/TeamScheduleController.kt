@@ -1,6 +1,6 @@
 package com.tistory.shanepark.dutypark.team.controller
 
-import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarRequestDates
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.schedule.domain.dto.TeamScheduleDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -27,7 +27,7 @@ class TeamScheduleController(
         checkCanRead(login = login, teamId = teamId)
         return teamScheduleService.findTeamSchedules(
             teamId = teamId,
-            calendarView = CalendarView(year = year, month = month)
+            calendarView = CalendarRequestDates.calendarView(year = year, month = month)
         )
     }
 

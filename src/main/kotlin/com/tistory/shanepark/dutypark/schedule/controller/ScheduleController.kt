@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.controller
 
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarRequestDates
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -31,6 +32,7 @@ class ScheduleController(
         @RequestParam year: Int,
         @RequestParam month: Int
     ): Array<List<ScheduleDto>> {
+        CalendarRequestDates.yearMonth(year, month)
         if (!friendService.isVisible(login = loginMember, targetId = memberId, scheduleVisibilityCheck = true)) {
             return emptyArray()
         }

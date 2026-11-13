@@ -1,7 +1,7 @@
 package com.tistory.shanepark.dutypark.holiday.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarRequestDates
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
@@ -19,7 +19,7 @@ class HolidayController(
 
     @GetMapping
     fun getHolidays(@RequestParam year: Int, @RequestParam month: Int): Array<List<HolidayDto>> {
-        val calendarView = CalendarView(year = year, month = month)
+        val calendarView = CalendarRequestDates.calendarView(year = year, month = month)
         return holidayService.findHolidays(calendarView = calendarView)
     }
 

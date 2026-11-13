@@ -1,16 +1,13 @@
 package com.tistory.shanepark.dutypark.common.controller
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import java.time.DateTimeException
 
 @AutoConfigureMockMvc
 class CommonControllerTest : DutyparkIntegrationTest() {
@@ -36,15 +33,13 @@ class CommonControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `calendar endpoint returns server error for invalid month`() {
-        val thrown = assertThrows<jakarta.servlet.ServletException> {
-            mockMvc.perform(
-                MockMvcRequestBuilders.get("/api/calendar")
-                    .param("year", "2024")
-                    .param("month", "13")
-            ).andReturn()
-        }
-
-        assertThat(thrown.rootCause).isInstanceOf(DateTimeException::class.java)
+    fun `calendar endpoint returns bad request for invalid month`() {
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/calendar")
+                .param("year", "2024")
+                .param("month", "13")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("common.badRequest"))
     }
 }

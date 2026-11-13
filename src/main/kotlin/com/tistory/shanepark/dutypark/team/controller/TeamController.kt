@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.team.controller
 
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarRequestDates
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -11,7 +12,6 @@ import com.tistory.shanepark.dutypark.team.domain.enums.TeamNameCheckResult.*
 import com.tistory.shanepark.dutypark.team.service.TeamService
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.*
-import java.time.LocalDate
 
 @RestController
 @RequestMapping("/api/teams")
@@ -53,6 +53,7 @@ class TeamController(
         @RequestParam year: Int,
         @RequestParam month: Int,
     ): MyTeamSummary {
+        CalendarRequestDates.yearMonth(year, month)
         return teamService.myTeamSummary(
             loginMember = loginMember,
             year = year,
@@ -72,7 +73,7 @@ class TeamController(
         @RequestParam month: Int,
         @RequestParam day: Int,
     ): List<DutyByShift> {
-        return teamService.loadShift(loginMember = loginMember, localDate = LocalDate.of(year, month, day))
+        return teamService.loadShift(loginMember = loginMember, localDate = CalendarRequestDates.date(year, month, day))
     }
 
 }
