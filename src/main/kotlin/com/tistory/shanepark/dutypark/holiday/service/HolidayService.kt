@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
@@ -32,6 +34,9 @@ class HolidayService(
 
     private val holidayMap: MutableMap<Int, List<HolidayDto>> = ConcurrentHashMap()
     private val locks: ConcurrentHashMap<Int, ReentrantLock> = ConcurrentHashMap()
+
+    // Years whose last fetch returned no holidays or failed, so the external API is not retried on every lookup.
+    private val emptyYearCheckedAt: ConcurrentHashMap<Int, Instant> = ConcurrentHashMap()
     private val log = logger()
 
     fun findHolidays(calendarView: CalendarView): Array<List<HolidayDto>> {
@@ -58,6 +63,7 @@ class HolidayService(
         dutyRepository.deleteAutomaticByDutyDateGreaterThanEqual(resetFrom)
         holidayRepository.deleteAll()
         holidayMap.clear()
+        emptyYearCheckedAt.clear()
         log.auditEventAfterCommit(
             event = "holiday_information_reset",
             actor = actor,
@@ -69,17 +75,22 @@ class HolidayService(
         )
     }
 
-    // Holiday lookups are public, so years far from today must not reach the external API or grow per-year state.
+    // Holiday lookups are public, so years outside the provider's data range must not reach the external API or grow per-year state.
     private fun isSupportedYear(year: Int): Boolean {
         val currentYear = LocalDate.now(clock.withZone(SEOUL)).year
-        return year in currentYear - SUPPORTED_YEARS_FROM_CURRENT..currentYear + SUPPORTED_YEARS_FROM_CURRENT
+        return year in FIRST_SUPPORTED_YEAR..currentYear + SUPPORTED_YEARS_AHEAD
+    }
+
+    private fun isRecentlyEmpty(year: Int): Boolean {
+        val checkedAt = emptyYearCheckedAt[year] ?: return false
+        return clock.instant().isBefore(checkedAt.plus(EMPTY_YEAR_RETRY_INTERVAL))
     }
 
     private fun holidaysInRangeFromMemory(years: Set<Int>): List<HolidayDto> {
         val holidaysInRange: MutableList<HolidayDto> = ArrayList()
         for (year in years) {
-            if (holidayMap[year] == null) {
-                holidayMap[year] = holidaysFromDatabase(year)
+            if (holidayMap[year] == null && !isRecentlyEmpty(year)) {
+                holidaysFromDatabase(year).takeIf { it.isNotEmpty() }?.let { holidayMap[year] = it }
             }
             holidayMap[year]?.let { holidaysInRange.addAll(it) }
         }
@@ -104,9 +115,26 @@ class HolidayService(
             if (existingHolidays != null) {
                 return existingHolidays
             }
+            if (isRecentlyEmpty(year)) {
+                return emptyList()
+            }
 
-            val holidays = holidayAPI.requestHolidays(year)
-                .map { holiday -> Holiday(holiday.dateName, holiday.isHoliday, holiday.localDate) }
+            val fetched = try {
+                holidayAPI.requestHolidays(year)
+            } catch (error: Exception) {
+                log.warn(
+                    "Holiday lookup for year {} failed ({}); treating it as empty until the retry interval passes",
+                    year, error.javaClass.simpleName,
+                )
+                emptyList()
+            }
+            if (fetched.isEmpty()) {
+                emptyYearCheckedAt[year] = clock.instant()
+                return emptyList()
+            }
+            emptyYearCheckedAt.remove(year)
+
+            val holidays = fetched.map { holiday -> Holiday(holiday.dateName, holiday.isHoliday, holiday.localDate) }
             holidayRepository.saveAll(holidays)
             val cached = holidays.map { HolidayDto.of(it) }
             holidayMap[year] = cached
@@ -136,7 +164,10 @@ class HolidayService(
 
     companion object {
         private val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
-        private const val SUPPORTED_YEARS_FROM_CURRENT = 10
+        // data.go.kr has holidays from 2004 through two years ahead; the margins keep newly published years reachable.
+        private const val FIRST_SUPPORTED_YEAR = 2000
+        private const val SUPPORTED_YEARS_AHEAD = 3
+        private val EMPTY_YEAR_RETRY_INTERVAL: Duration = Duration.ofHours(24)
     }
 
 }

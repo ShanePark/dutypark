@@ -5,6 +5,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.time.AdjustableTestClock
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.holiday.domain.Holiday
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
@@ -19,12 +20,15 @@ import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.slf4j.LoggerFactory
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 
 @ExtendWith(MockitoExtension::class)
@@ -127,8 +131,8 @@ class HolidayServiceTest {
     }
 
     @Test
-    fun `years more than ten years from the Seoul current year return empty without loading`() {
-        for (calendarView in listOf(CalendarView(2015, 6), CalendarView(2037, 6), CalendarView(1, 1), CalendarView(9999, 6))) {
+    fun `years outside 2000 through three years after the Seoul current year return empty without loading`() {
+        for (calendarView in listOf(CalendarView(1999, 6), CalendarView(2030, 6), CalendarView(1, 1), CalendarView(9999, 6))) {
             val result = holidayService.findHolidays(calendarView)
 
             assertThat(result).hasSize(42).allSatisfy { assertThat(it).isEmpty() }
@@ -137,32 +141,36 @@ class HolidayServiceTest {
         verifyNoInteractions(holidayAPI, holidayRepository)
         assertThat(perYearState("holidayMap")).isEmpty()
         assertThat(perYearState("locks")).isEmpty()
+        assertThat(perYearState("emptyYearCheckedAt")).isEmpty()
     }
 
     @Test
-    fun `boundary years ten years from the Seoul current year still load from the API`() {
+    fun `boundary years 2000 and three years after the Seoul current year still load from the API`() {
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
-        `when`(holidayAPI.requestHolidays(any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(2000)).thenReturn(listOf(HolidayDto("현충일", true, LocalDate.of(2000, 6, 6))))
+        `when`(holidayAPI.requestHolidays(2029)).thenReturn(listOf(HolidayDto("현충일", true, LocalDate.of(2029, 6, 6))))
 
-        holidayService.findHolidays(CalendarView(2016, 6))
-        holidayService.findHolidays(CalendarView(2036, 6))
+        holidayService.findHolidays(CalendarView(2000, 6))
+        holidayService.findHolidays(CalendarView(2029, 6))
 
-        verify(holidayAPI).requestHolidays(2016)
-        verify(holidayAPI).requestHolidays(2036)
-        assertThat(perYearState("holidayMap")).containsOnlyKeys(2016, 2036)
+        verify(holidayAPI).requestHolidays(2000)
+        verify(holidayAPI).requestHolidays(2029)
+        assertThat(perYearState("holidayMap")).containsOnlyKeys(2000, 2029)
     }
 
     @Test
     fun `calendar padding outside the allowed years is not loaded`() {
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
-        `when`(holidayAPI.requestHolidays(2036)).thenReturn(listOf())
 
-        holidayService.findHolidays(CalendarView(2036, 12))
+        holidayService.findHolidays(CalendarView(2000, 1))
+        holidayService.findHolidays(CalendarView(2029, 12))
 
-        verify(holidayAPI).requestHolidays(2036)
-        verify(holidayAPI, never()).requestHolidays(2037)
-        assertThat(perYearState("holidayMap")).containsOnlyKeys(2036)
-        assertThat(perYearState("locks")).containsOnlyKeys(2036)
+        verify(holidayAPI).requestHolidays(2000)
+        verify(holidayAPI).requestHolidays(2029)
+        verify(holidayAPI, never()).requestHolidays(1999)
+        verify(holidayAPI, never()).requestHolidays(2030)
+        assertThat(perYearState("locks")).containsOnlyKeys(2000, 2029)
+        assertThat(perYearState("emptyYearCheckedAt")).containsOnlyKeys(2000, 2029)
     }
 
     @Test
@@ -170,13 +178,101 @@ class HolidayServiceTest {
         val newYearInSeoul = Clock.fixed(Instant.parse("2026-12-31T16:00:00Z"), ZoneOffset.UTC)
         holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, newYearInSeoul)
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
-        `when`(holidayAPI.requestHolidays(2037)).thenReturn(listOf())
 
-        holidayService.findHolidays(CalendarView(2037, 6))
-        holidayService.findHolidays(CalendarView(2016, 6))
+        holidayService.findHolidays(CalendarView(2030, 6))
+        holidayService.findHolidays(CalendarView(2031, 6))
 
-        verify(holidayAPI).requestHolidays(2037)
-        verify(holidayAPI, never()).requestHolidays(2016)
+        verify(holidayAPI).requestHolidays(2030)
+        verify(holidayAPI, never()).requestHolidays(2031)
+    }
+
+    @Test
+    fun `an empty year is not requested again within 24 hours`() {
+        val clock = adjustableClock()
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock)
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(2029)).thenReturn(listOf())
+
+        holidayService.findHolidays(CalendarView(2029, 6))
+        clock.advance(Duration.ofHours(24).minusSeconds(1))
+        val result = holidayService.findHolidays(CalendarView(2029, 6))
+
+        assertThat(result).hasSize(42).allSatisfy { assertThat(it).isEmpty() }
+        verify(holidayAPI, times(1)).requestHolidays(2029)
+        verify(holidayRepository, times(1)).findAllByLocalDateBetween(any(), any())
+    }
+
+    @Test
+    fun `an empty year is requested again after 24 hours and newly announced holidays are cached`() {
+        val clock = adjustableClock()
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock)
+        val announced = HolidayDto("현충일", true, LocalDate.of(2029, 6, 6))
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(2029)).thenReturn(listOf(), listOf(announced))
+
+        holidayService.findHolidays(CalendarView(2029, 6))
+        clock.advance(Duration.ofHours(24))
+        val result = holidayService.findHolidays(CalendarView(2029, 6))
+
+        assertThat(result.flatMap { it }).containsExactly(announced)
+        verify(holidayAPI, times(2)).requestHolidays(2029)
+        assertThat(perYearState("holidayMap")).containsOnlyKeys(2029)
+        assertThat(perYearState("emptyYearCheckedAt")).isEmpty()
+    }
+
+    @Test
+    fun `a failed fetch is treated as an empty year for 24 hours`() {
+        val clock = adjustableClock()
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock)
+        val announced = HolidayDto("현충일", true, LocalDate.of(2029, 6, 6))
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(2029))
+            .thenThrow(IllegalStateException("upstream failure"))
+            .thenReturn(listOf(announced))
+
+        val failed = holidayService.findHolidays(CalendarView(2029, 6))
+        clock.advance(Duration.ofHours(24).minusSeconds(1))
+        val withinWindow = holidayService.findHolidays(CalendarView(2029, 6))
+        verify(holidayAPI, times(1)).requestHolidays(2029)
+
+        clock.advance(Duration.ofSeconds(1))
+        val afterWindow = holidayService.findHolidays(CalendarView(2029, 6))
+
+        assertThat(failed).hasSize(42).allSatisfy { assertThat(it).isEmpty() }
+        assertThat(withinWindow).hasSize(42).allSatisfy { assertThat(it).isEmpty() }
+        assertThat(afterWindow.flatMap { it }).containsExactly(announced)
+        verify(holidayAPI, times(2)).requestHolidays(2029)
+    }
+
+    @Test
+    fun `a year with holidays stays cached beyond 24 hours`() {
+        val clock = adjustableClock()
+        holidayService = HolidayService(holidayRepository, holidayAPI, dutyRepository, clock)
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+        `when`(holidayAPI.requestHolidays(2023)).thenReturn(holiday2023Dto())
+
+        holidayService.findHolidays(CalendarView(2023, 5))
+        clock.advance(Duration.ofDays(2))
+        val result = holidayService.findHolidays(CalendarView(2023, 5))
+
+        assert2023MayResult(result)
+        verify(holidayAPI, times(1)).requestHolidays(2023)
+        verify(holidayRepository, times(1)).findAllByLocalDateBetween(any(), any())
+    }
+
+    @Test
+    fun `reset forgets remembered empty years`() {
+        `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
+
+        holidayService.findHolidays(CalendarView(2029, 6))
+        holidayService.resetHolidayInfo()
+        holidayService.findHolidays(CalendarView(2029, 6))
+
+        verify(holidayAPI, times(2)).requestHolidays(2029)
+    }
+
+    private fun adjustableClock() = AdjustableTestClock().apply {
+        setDate(LocalDate.of(2026, 7, 11), ZoneId.of("Asia/Seoul"))
     }
 
     @Suppress("UNCHECKED_CAST")
