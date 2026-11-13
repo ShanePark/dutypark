@@ -40,6 +40,19 @@
         }
       },
       "entries": {
+        "pr-438": {
+          "title": "권한·요청 검증 강화와 팀 나가기",
+          "summary": "매니저·팀 관리 권한과 개인정보 노출 범위를 강화하고, 다른 사이트에서 보낸 요청과 잘못된 날짜 요청을 서버에서 차단합니다.",
+          "changes": [
+            "매니저는 차단하지 않은 가족 관계 회원만 지정할 수 있고, 매니저·팀원 목록에 이메일 등 계정 정보를 표시하지 않습니다.",
+            "팀 대표는 대표 본인이나 사이트 관리자만 변경할 수 있으며, 팀에서 제외된 회원의 매니저 권한은 즉시 회수됩니다.",
+            "웹과 iPhone에서 팀원이 직접 팀을 나갈 수 있고, 차단한 회원은 팀에 추가할 수 없습니다.",
+            "알림 메시지를 텍스트로만 표시하고, 보조 계정과 가입 이름의 길이를 검증합니다.",
+            "친구 대시보드의 오늘 근무와 일정이 캘린더 공개 범위를 따릅니다.",
+            "다른 사이트에서 보낸 변경 요청과 존재하지 않는 날짜 요청을 거부합니다.",
+            "공휴일은 제공 범위 안에서만 조회하고, 비어 있거나 실패한 연도는 하루 뒤에 다시 확인합니다."
+          ]
+        },
         "pr-437": {
           "title": "월 이동 집계 안정화·일정 작성자 구분",
           "summary": "웹과 iPhone에서 월 이동 중 근무 개수가 잠깐 바뀌는 문제를 수정하고, 일정 상세에서 작성자를 더 쉽게 구분할 수 있습니다.",
@@ -2409,6 +2422,19 @@
         }
       },
       "entries": {
+        "pr-438": {
+          "title": "Stronger permission and request checks, and leaving a team",
+          "summary": "Tighten manager and team permissions and personal data exposure, and reject cross-site and impossible-date requests on the server.",
+          "changes": [
+            "Managers can only be assigned from unblocked family members, and manager and team member lists no longer show emails or other account details.",
+            "Only the current lead or a site admin can change a team's lead, and members removed from a team lose their manager rights immediately.",
+            "Members can leave a team themselves on web and iPhone, and blocked members can no longer be added to a team.",
+            "Toast messages render as plain text, and auxiliary account and signup names are length-checked.",
+            "Today's duty and schedules on the friend dashboard now follow calendar visibility.",
+            "Reject state-changing requests sent from other sites and requests for dates that do not exist.",
+            "Look up holidays only within the provider's range, and recheck empty or failed years after a day."
+          ]
+        },
         "pr-437": {
           "title": "Stable month totals and clearer schedule authors",
           "summary": "Fix transient duty totals during month changes on web and iPhone, and make schedule authors easier to identify in day details.",
@@ -4741,6 +4767,22 @@
     }
   },
   "items": [
+    {
+      "id": "pr-438",
+      "version": "2026.11.13",
+      "date": "2026-11-13",
+      "pr": 438,
+      "url": "https://github.com/ShanePark/dutypark/pull/438",
+      "category": "security",
+      "areas": [
+        "security",
+        "team",
+        "auth",
+        "dashboard",
+        "calendar",
+        "notifications"
+      ]
+    },
     {
       "id": "pr-437",
       "version": "2026.11.08",
