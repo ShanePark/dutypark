@@ -25,7 +25,7 @@ nonisolated enum DutyparkLaunchPolicy {
                     name: "Test",
                     teamId: nil,
                     team: nil,
-                    isAdmin: false,
+                    isAdmin: arguments.contains("-ui-testing-site-admin"),
                     isImpersonating: false,
                     originalMemberId: nil
                 )

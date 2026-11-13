@@ -506,6 +506,16 @@ struct RootLifecycleTests {
         }
         #expect(member.id == 1)
         #expect(member.email == "test@duty.park")
+        #expect(!member.isAdmin)
+
+        guard case .authenticated(let siteAdmin) = DutyparkLaunchPolicy.initialSessionState(
+            arguments: ["-ui-testing-authenticated", "-ui-testing-site-admin"]
+        ) else {
+            Issue.record("Expected authenticated UI-test state")
+            return
+        }
+        #expect(siteAdmin.id == 1)
+        #expect(siteAdmin.isAdmin)
     }
 
     @Test

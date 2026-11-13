@@ -191,7 +191,8 @@ final class TeamParityVisualUITests: XCTestCase {
 
     @MainActor
     func testResetLeadConfirmationNamesTheCurrentLeadAndFitsThePanel() {
-        let app = launchTeamFixture()
+        // Only the lead or a site admin may change the lead, and the lead cannot reset itself.
+        let app = launchTeamFixture(asSiteAdmin: true)
         defer { app.terminate() }
 
         let manageTeam = app.buttons["팀 관리"].firstMatch
@@ -227,7 +228,8 @@ final class TeamParityVisualUITests: XCTestCase {
     private func launchTeamFixture(
         deviceLanguage: String = "ko",
         deviceLocale: String = "ko_KR",
-        includeShifts: Bool = false
+        includeShifts: Bool = false,
+        asSiteAdmin: Bool = false
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
@@ -239,6 +241,9 @@ final class TeamParityVisualUITests: XCTestCase {
         ]
         if includeShifts {
             app.launchArguments.append("-ui-testing-team-shift-fixture")
+        }
+        if asSiteAdmin {
+            app.launchArguments.append("-ui-testing-site-admin")
         }
         app.launch()
 
