@@ -2152,8 +2152,10 @@ private final class TeamURLProtocolStub: URLProtocol, @unchecked Sendable {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
+        // A cancelled request can reach startLoading after its test returned and cleared the handler.
         guard let handler = Self.handler else {
-            fatalError("TeamURLProtocolStub handler is not set")
+            client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
+            return
         }
         Self.requestCount += 1
         if request.url?.path == "/api/calendar" {
