@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.config
 
+import com.tistory.shanepark.dutypark.security.oauth.OAuthFrontendBaseUrl
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import org.assertj.core.api.Assertions.assertThat
@@ -70,6 +71,7 @@ class SecurityConfigTest {
         authService = mock<AuthService>(),
         cookieService = mock<CookieService>(),
         cookieConfig = cookieConfig,
+        frontendBaseUrl = OAuthFrontendBaseUrl(cookieConfig),
         corsAllowedOrigins = allowedOrigins,
         corsAllowedOriginPatterns = allowedOriginPatterns,
     )
