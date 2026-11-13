@@ -160,9 +160,10 @@ final class TeamParityVisualUITests: XCTestCase {
         manageTeam.tap()
         XCTAssertTrue(app.staticTexts["듀티파크 테스트팀 관리"].waitForExistence(timeout: 10))
 
+        // Hide and restore live in each duty type row's tools menu; the menu's offered
+        // action is the row's visibility state now that the status column is gone.
+        openDutyTypeTools(for: "주간", in: app)
         let hide = app.buttons["숨기기"].firstMatch
-        scrollUntilHittable(hide, in: app)
-        if !hide.isHittable { app.swipeLeft() }
         XCTAssertTrue(hide.waitForExistence(timeout: 5))
         hide.tap()
         assertVisibilityConfirmation(
@@ -172,10 +173,10 @@ final class TeamParityVisualUITests: XCTestCase {
         )
         app.buttons["dp.confirmation.cancel"].tap()
         XCTAssertTrue(app.buttons["dp.confirmation.confirm"].waitForNonExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["사용 중"].exists)
+        assertDutyTypeToolsOffer("숨기기", notOffering: "복원", for: "주간", in: app)
 
+        openDutyTypeTools(for: "야간", in: app)
         let restore = app.buttons["복원"].firstMatch
-        if !restore.isHittable { app.swipeLeft() }
         XCTAssertTrue(restore.waitForExistence(timeout: 5))
         restore.tap()
         assertVisibilityConfirmation(
@@ -185,7 +186,7 @@ final class TeamParityVisualUITests: XCTestCase {
         )
         app.buttons["dp.confirmation.cancel"].tap()
         XCTAssertTrue(app.buttons["dp.confirmation.confirm"].waitForNonExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["숨김"].exists)
+        assertDutyTypeToolsOffer("복원", notOffering: "숨기기", for: "야간", in: app)
         XCTAssertEqual(app.state, .runningForeground)
     }
 
@@ -269,6 +270,39 @@ final class TeamParityVisualUITests: XCTestCase {
         for _ in 0..<attempts where !element.isHittable {
             app.swipeUp()
         }
+    }
+
+    @MainActor
+    private func openDutyTypeTools(for dutyTypeName: String, in app: XCUIApplication) {
+        let row = app.buttons[dutyTypeName].firstMatch
+        scrollUntilHittable(row, in: app)
+        XCTAssertTrue(row.isHittable)
+        let tools = app.buttons
+            .matching(NSPredicate(format: "label == %@", "근무 유형 도구"))
+            .allElementsBoundByIndex
+            .first { abs($0.frame.midY - row.frame.midY) < 4 }
+        guard let menu = tools else {
+            XCTFail("No tools menu on the \(dutyTypeName) duty type row")
+            return
+        }
+        XCTAssertTrue(menu.isHittable)
+        menu.tap()
+    }
+
+    @MainActor
+    private func assertDutyTypeToolsOffer(
+        _ offered: String,
+        notOffering other: String,
+        for dutyTypeName: String,
+        in app: XCUIApplication
+    ) {
+        openDutyTypeTools(for: dutyTypeName, in: app)
+        let offeredAction = app.buttons[offered].firstMatch
+        XCTAssertTrue(offeredAction.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons[other].exists)
+        // Tap the static team description, away from the menu, to dismiss it.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
+        XCTAssertTrue(offeredAction.waitForNonExistence(timeout: 5))
     }
 
     @MainActor

@@ -1558,29 +1558,7 @@ struct CalendarView: View {
     }
 
     private var quickDutyTypes: [DutyTypeDTO] {
-#if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-ui-testing-calendar-duty-types") {
-            return [
-                DutyTypeDTO(
-                    id: 101,
-                    teamId: 1,
-                    name: "주간",
-                    position: 0,
-                    color: "#3B82F6",
-                    hidden: false
-                ),
-                DutyTypeDTO(
-                    id: 102,
-                    teamId: 1,
-                    name: "야간",
-                    position: 1,
-                    color: "#4338CA",
-                    hidden: false
-                ),
-            ]
-        }
-#endif
-        return model.visibleDutyTypes
+        model.visibleDutyTypes
     }
 }
 

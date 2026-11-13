@@ -75,9 +75,17 @@ final class TodoConfirmationVisualUITests: XCTestCase {
         let addButton = app.buttons["todo.add"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 10))
         addButton.tap()
-        XCTAssertTrue(app.buttons["todo.form.status.todo"].waitForExistence(timeout: 10))
+        let statusMenu = app.buttons["todo.form.status"]
+        XCTAssertTrue(statusMenu.waitForExistence(timeout: 10))
+        statusMenu.tap()
+        let todoStatus = app.buttons["todo.form.status.todo"]
+        XCTAssertTrue(todoStatus.waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["todo.form.status.in_progress"].exists)
         XCTAssertTrue(app.buttons["todo.form.status.done"].exists)
+        // Close the menu without picking: a new Todo starts in the selected board
+        // column's status, and changing it would make the cancel ask to discard.
+        statusMenu.tap()
+        XCTAssertTrue(todoStatus.waitForNonExistence(timeout: 5))
         app.buttons["todo.form.cancel"].tap()
 
         let fixtureCard = app.descendants(matching: .any)[
@@ -99,13 +107,26 @@ final class TodoConfirmationVisualUITests: XCTestCase {
             .firstMatch
         XCTAssertTrue(detailEditButton.exists)
         XCTAssertTrue(detailDeleteButton.exists)
-        XCTAssertGreaterThan(detailEditButton.frame.width, 120)
-        XCTAssertEqual(detailEditButton.frame.width, detailDeleteButton.frame.width, accuracy: 2)
+        // Status changes go through the footer's status menu, never a direct
+        // 완료/다시 열기 action. Since that menu joined the footer, its three actions
+        // keep their natural label widths in one row instead of edit and delete
+        // splitting the footer into equal halves.
+        let detailStatusMenu = detailButtons
+            .matching(NSPredicate(format: "label == %@", "상태 변경"))
+            .firstMatch
+        XCTAssertTrue(detailStatusMenu.exists)
+        for action in [detailStatusMenu, detailEditButton, detailDeleteButton] {
+            XCTAssertGreaterThanOrEqual(action.frame.width, 44)
+            XCTAssertEqual(action.frame.midY, detailEditButton.frame.midY, accuracy: 2)
+        }
+        XCTAssertLessThanOrEqual(detailStatusMenu.frame.maxX, detailEditButton.frame.minX)
+        XCTAssertLessThanOrEqual(detailEditButton.frame.maxX, detailDeleteButton.frame.minX)
         XCTAssertFalse(detailButtons.matching(NSPredicate(format: "label == %@", "완료")).firstMatch.exists)
         XCTAssertFalse(detailButtons.matching(NSPredicate(format: "label == %@", "다시 열기")).firstMatch.exists)
 
         editButton.tap()
         XCTAssertTrue(app.textFields["todo.form.title"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["todo.form.status"].exists)
         XCTAssertFalse(app.buttons["todo.form.status.todo"].exists)
         XCTAssertFalse(app.buttons["todo.form.status.in_progress"].exists)
         XCTAssertFalse(app.buttons["todo.form.status.done"].exists)

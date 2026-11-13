@@ -1341,7 +1341,24 @@ final class CalendarViewModel: ObservableObject {
             displayOrder: nil
         )
         friends = includesCalendarParity ? [parityFriend] : []
-        team = nil
+        // Duty editing needs a team, so the duty-types fixture joins one that has them.
+        team = ProcessInfo.processInfo.arguments.contains("-ui-testing-calendar-duty-types")
+            ? TeamDTO(
+                id: 1,
+                name: "UI Test Team",
+                description: nil,
+                dutyTypes: [
+                    DutyTypeDTO(id: 101, teamId: 1, name: "주간", position: 0, color: "#3B82F6", hidden: false),
+                    DutyTypeDTO(id: 102, teamId: 1, name: "야간", position: 1, color: "#4338CA", hidden: false),
+                ],
+                members: [],
+                createdDate: LocalDateTimeValue(rawValue: "2026-01-01T00:00:00"),
+                lastModifiedDate: LocalDateTimeValue(rawValue: "2026-01-01T00:00:00"),
+                adminId: nil,
+                adminName: nil,
+                dutyBatchTemplate: nil
+            )
+            : nil
         // A page that already fits its screen cannot show a scroll either way, so the
         // scroll test asks for enough D-Days to push the calendar past the bottom.
         // The dates sit outside the grid so the cells themselves stay as they were.
@@ -1365,7 +1382,8 @@ final class CalendarViewModel: ObservableObject {
             status: .inProgress,
             createdDate: LocalDateTimeValue(rawValue: "2026-08-15T09:00:00"),
             completedDate: nil,
-            dueDate: DateOnly(rawValue: "2026-08-12"),
+            // Day 12 of the shown month, where the parity compared duty also sits.
+            dueDate: DateOnly(rawValue: String(format: "%04d-%02d-12", year, month)),
             isOverdue: false,
             isTagged: false,
             owner: "UI Test",

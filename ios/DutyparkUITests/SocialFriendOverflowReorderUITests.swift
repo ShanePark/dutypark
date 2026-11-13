@@ -99,16 +99,16 @@ final class SocialFriendOverflowReorderUITests: XCTestCase {
         XCTAssertTrue(target.waitForExistence(timeout: 10))
         XCTAssertTrue(more.waitForExistence(timeout: 10))
 
-        // Trailing lower corner of the card: below the more action button, so
-        // only the card itself is hit.
-        let grab = CGPoint(x: more.frame.midX, y: source.frame.maxY + 8)
+        // The avatar+name button spans the full row height, so the only part of the
+        // card outside it is the trailing management column. Grab there.
+        let grab = CGPoint(x: more.frame.midX, y: more.frame.midY)
         XCTAssertFalse(source.frame.contains(grab), "Grab point must be outside the inner button.")
-        XCTAssertFalse(more.frame.contains(grab), "Grab point must be outside the more button.")
+        XCTAssertEqual(grab.y, source.frame.midY, accuracy: 2, "Grab point must be on the source card.")
 
         let start = app.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: grab.x, dy: grab.y))
         let end = app.coordinate(withNormalizedOffset: .zero)
-            .withOffset(CGVector(dx: grab.x, dy: target.frame.maxY + 8))
+            .withOffset(CGVector(dx: grab.x, dy: target.frame.midY))
 
         start.press(
             forDuration: 0.4,
