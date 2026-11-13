@@ -12,6 +12,7 @@ import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -506,6 +507,38 @@ class FriendServiceUnitTest {
         assertThat(result[family.id]).isEqualTo(Visibility.family())
         assertThat(result[friend.id]).isEqualTo(Visibility.friends())
         assertThat(result[managed.id]).isEqualTo(Visibility.all())
+    }
+
+    @Test
+    fun `find visible friend ids returns duty and schedule sets from one viewer and managed lookup`() {
+        val team = Team("team").apply { ReflectionTestUtils.setField(this, "id", 10L) }
+        val login = createMember(1L, "login").apply { this.team = team }
+        val teammate = createMember(2L, "teammate").apply {
+            this.team = team
+            calendarVisibility = Visibility.PRIVATE
+        }
+        val managed = createMember(3L, "managed").apply { calendarVisibility = Visibility.PRIVATE }
+        val family = createMember(4L, "family").apply { calendarVisibility = Visibility.FAMILY }
+        val friend = createMember(5L, "friend").apply { calendarVisibility = Visibility.FAMILY }
+        val hidden = createMember(6L, "hidden").apply { calendarVisibility = Visibility.PRIVATE }
+
+        val relations = listOf(
+            FriendRelation(member = login, friend = teammate),
+            FriendRelation(member = login, friend = managed),
+            FriendRelation(member = login, friend = family).apply { isFamily = true },
+            FriendRelation(member = login, friend = friend),
+            FriendRelation(member = login, friend = hidden),
+        )
+
+        whenever(memberRepository.findById(login.id!!)).thenReturn(Optional.of(login))
+        whenever(memberService.findManagedMemberIds(loginMember(login))).thenReturn(setOf(managed.id!!))
+
+        val result = friendService.findVisibleFriendIds(loginMember(login), relations)
+
+        assertThat(result.duty).containsExactlyInAnyOrder(teammate.id, managed.id, family.id)
+        assertThat(result.schedule).containsExactlyInAnyOrder(managed.id, family.id)
+        verify(memberRepository, times(1)).findById(login.id!!)
+        verify(memberService, times(1)).findManagedMemberIds(loginMember(login))
     }
 
     private fun createMember(id: Long, name: String): Member {

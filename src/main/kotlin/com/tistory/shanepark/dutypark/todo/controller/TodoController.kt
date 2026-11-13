@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.todo.controller
 
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarRequestDates
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoBoardResponse
@@ -177,6 +178,7 @@ class TodoController(
         @RequestParam year: Int,
         @RequestParam month: Int
     ): List<TodoResponse> {
+        CalendarRequestDates.yearMonth(year, month)
         return todoService.getTodosByMonth(loginMember, year, month)
     }
 

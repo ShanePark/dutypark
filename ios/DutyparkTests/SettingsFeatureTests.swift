@@ -1261,10 +1261,10 @@ struct SettingsFeatureTests {
                 body = "[]"
                 status = 200
             case ("GET", "/api/members/managers"):
-                body = #"[{"id":2,"name":"Manager A","email":null,"teamId":7,"team":"Team","calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":true,"hasProfilePhoto":false,"profilePhotoVersion":0},{"id":3,"name":"Manager B","email":null,"teamId":7,"team":"Team","calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":true,"hasProfilePhoto":false,"profilePhotoVersion":0}]"#
+                body = #"[{"id":2,"name":"Manager A","teamId":7,"team":"Team","calendarVisibility":"FRIENDS","hasPassword":true,"hasProfilePhoto":false,"profilePhotoVersion":0},{"id":3,"name":"Manager B","teamId":7,"team":"Team","calendarVisibility":"FRIENDS","hasPassword":true,"hasProfilePhoto":false,"profilePhotoVersion":0}]"#
                 status = 200
             case ("GET", "/api/members/managed"):
-                body = #"[{"id":10,"name":"Child A","email":null,"teamId":null,"team":null,"calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":false,"hasProfilePhoto":false,"profilePhotoVersion":0},{"id":11,"name":"Child B","email":null,"teamId":null,"team":null,"calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":false,"hasProfilePhoto":false,"profilePhotoVersion":0}]"#
+                body = #"[{"id":10,"name":"Child A","teamId":null,"team":null,"calendarVisibility":"FRIENDS","hasPassword":false,"hasProfilePhoto":false,"profilePhotoVersion":0},{"id":11,"name":"Child B","teamId":null,"team":null,"calendarVisibility":"FRIENDS","hasPassword":false,"hasProfilePhoto":false,"profilePhotoVersion":0}]"#
                 status = 200
             case ("GET", "/api/auth/refresh-tokens"):
                 body = #"[{"memberName":"Owner","memberId":1,"validUntil":"2026-09-01T10:00:00Z","createdDate":"2026-08-01T10:00:00Z","lastUsed":"2026-08-15T10:00:00Z","remoteAddr":"127.0.0.1","id":101,"userAgent":null,"isCurrentLogin":true},{"memberName":"Owner","memberId":1,"validUntil":"2026-09-01T10:00:00Z","createdDate":"2026-08-01T10:00:00Z","lastUsed":"2026-08-14T10:00:00Z","remoteAddr":"127.0.0.2","id":102,"userAgent":null,"isCurrentLogin":false},{"memberName":"Owner","memberId":1,"validUntil":"2026-09-01T10:00:00Z","createdDate":"2026-08-01T10:00:00Z","lastUsed":"2026-08-13T10:00:00Z","remoteAddr":"127.0.0.3","id":103,"userAgent":null,"isCurrentLogin":false}]"#

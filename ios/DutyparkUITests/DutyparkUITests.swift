@@ -126,6 +126,9 @@ final class DutyparkUITests: XCTestCase {
         titleField.tap()
         titleField.typeText("UI test draft")
 
+        let statusMenu = app.buttons["todo.form.status"]
+        XCTAssertTrue(statusMenu.waitForExistence(timeout: 5))
+        statusMenu.tap()
         let todoStatus = app.buttons["todo.form.status.todo"]
         XCTAssertTrue(todoStatus.waitForExistence(timeout: 5))
         todoStatus.tap()
@@ -158,7 +161,7 @@ final class DutyparkUITests: XCTestCase {
 
         let monthControls = app.descendants(matching: .any)["calendar.month.controls"]
         XCTAssertTrue(monthControls.waitForExistence(timeout: 10))
-        XCTAssertEqual(monthControls.frame.midX, app.frame.midX, accuracy: 3)
+        assertMonthControlsCenteredWhenTheyFit(monthControls, in: app)
         XCTAssertFalse(
             app.buttons["calendar.todo.add"].exists,
             "The Todo strip above the calendar is removed"
@@ -341,6 +344,31 @@ final class DutyparkUITests: XCTestCase {
             settingsScrollView.swipeUp(velocity: .fast)
         }
         return element.exists
+    }
+
+    /// The bar centres the month capsule when it fits between the side items and
+    /// slides it toward the trailing side otherwise; either way it overlaps neither.
+    @MainActor
+    private func assertMonthControlsCenteredWhenTheyFit(
+        _ monthControls: XCUIElement,
+        in app: XCUIApplication
+    ) {
+        let identity = app.staticTexts["UI Test"].firstMatch
+        let search = app.buttons["Search schedules"].firstMatch
+        XCTAssertTrue(identity.waitForExistence(timeout: 10))
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        let controls = monthControls.frame
+        let leadingEdge = identity.frame.maxX
+        let trailingEdge = search.frame.minX
+        let frames = "controls \(controls), identity \(identity.frame), search \(search.frame), app \(app.frame)"
+        XCTAssertGreaterThanOrEqual(controls.minX, leadingEdge, "Month controls overlap the identity: \(frames)")
+        XCTAssertLessThanOrEqual(controls.maxX, trailingEdge, "Month controls overlap search: \(frames)")
+        let centeredMinX = app.frame.midX - controls.width / 2
+        if centeredMinX >= leadingEdge, centeredMinX + controls.width <= trailingEdge {
+            XCTAssertEqual(controls.midX, app.frame.midX, accuracy: 3, "Month controls fit but are off-centre: \(frames)")
+        } else {
+            XCTAssertGreaterThan(controls.midX, app.frame.midX, "Month controls slid the wrong way: \(frames)")
+        }
     }
 
     @MainActor

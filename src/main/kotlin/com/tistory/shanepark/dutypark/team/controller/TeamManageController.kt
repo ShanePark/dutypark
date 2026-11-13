@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.team.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarRequestDates
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
@@ -22,7 +23,6 @@ import org.springframework.data.web.PageableDefault
 import org.springframework.data.web.SortDefault
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
-import java.time.YearMonth
 
 @RestController
 @RequestMapping("/api/teams/manage")
@@ -49,7 +49,7 @@ class TeamManageController(
         @PathVariable teamId: Long,
         @RequestParam memberId: Long?
     ) {
-        checkCanManage(login = loginMember, teamId = teamId)
+        checkCanAdmin(login = loginMember, teamId = teamId)
         teamService.changeTeamAdmin(teamId = teamId, memberId = memberId, actor = loginMember)
     }
 
@@ -71,11 +71,11 @@ class TeamManageController(
         @RequestParam(name = "year") year: Int,
         @RequestParam(name = "month") month: Int
     ): DutyBatchTeamResult {
+        val yearMonth = CalendarRequestDates.yearMonth(year, month)
         checkCanManage(login = loginMember, teamId = teamId)
         val team = teamRepository.findById(teamId).orElseThrow()
         val batchTemplate = team.dutyBatchTemplate ?: throw IllegalArgumentException("dutyBatch.template.required")
         val dutyBatchService = applicationContext.getBean(batchTemplate.batchServiceClass)
-        val yearMonth = YearMonth.of(year, month)
         val target = mapOf("type" to "Team", "teamId" to team.id, "teamName" to team.name)
         val uploadDetails = mapOf(
             "template" to batchTemplate.name,

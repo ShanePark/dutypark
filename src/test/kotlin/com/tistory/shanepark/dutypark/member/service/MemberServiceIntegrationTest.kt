@@ -33,7 +33,6 @@ class MemberServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(searchXj.content).isSortedAccordingTo { o1, o2 -> o1.name.compareTo(o2.name) }
         assertThat(searchXj.content).allSatisfy {
             assertThat(it.teamId).isNull()
-            assertThat(it.email).isNotBlank()
         }
 
         // verify exact match

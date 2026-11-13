@@ -164,14 +164,13 @@ struct TeamFeatureTests {
     }
 
     @Test
-    func teamAdminToolPermissionIncludesTeamLeadAndManagerRoles() {
+    func teamAdminToolPermissionIsLimitedToTheTeamLeadAndServiceAdmins() {
         let team = managedTeam(
             adminID: 1,
             members: [
                 TeamMemberDTO(
                     id: 2,
                     name: "Manager",
-                    email: nil,
                     isManager: true,
                     isAdmin: false,
                     hasProfilePhoto: false,
@@ -180,7 +179,6 @@ struct TeamFeatureTests {
                 TeamMemberDTO(
                     id: 3,
                     name: "Member",
-                    email: nil,
                     isManager: false,
                     isAdmin: false,
                     hasProfilePhoto: false,
@@ -189,30 +187,221 @@ struct TeamFeatureTests {
             ]
         )
 
-        #expect(
-            TeamManageViewModel.canUseAdminTools(
-                loginID: 1,
-                team: team
+        #expect(TeamManageViewModel.canUseAdminTools(loginID: 1, isAppAdmin: false, team: team))
+        #expect(TeamManageViewModel.canUseAdminTools(loginID: 2, isAppAdmin: false, team: team) == false)
+        #expect(TeamManageViewModel.canUseAdminTools(loginID: 3, isAppAdmin: false, team: team) == false)
+        #expect(TeamManageViewModel.canUseAdminTools(loginID: 99, isAppAdmin: true, team: team))
+        #expect(TeamManageViewModel.canUseAdminTools(loginID: nil, isAppAdmin: false, team: nil) == false)
+    }
+
+    @Test
+    func teamMemberPayloadsDropEmailAndDecodeWithOrWithoutIt() throws {
+        let member = try JSONDecoder().decode(
+            TeamMemberDTO.self,
+            from: Data(#"{"id":2,"name":"A","isManager":false,"isAdmin":false,"hasProfilePhoto":false,"profilePhotoVersion":0}"#.utf8)
+        )
+        let legacyMember = try JSONDecoder().decode(
+            TeamMemberDTO.self,
+            from: Data(#"{"id":2,"name":"A","email":"a@example.com","isManager":false,"isAdmin":false,"hasProfilePhoto":false,"profilePhotoVersion":0}"#.utf8)
+        )
+        let candidate = try JSONDecoder().decode(
+            MemberInviteCandidateDTO.self,
+            from: Data(#"{"id":9,"name":"B","teamId":null,"team":null,"hasProfilePhoto":false,"profilePhotoVersion":0}"#.utf8)
+        )
+
+        #expect(member == legacyMember)
+        #expect(Mirror(reflecting: member).children.contains { $0.label == "email" } == false)
+        #expect(Mirror(reflecting: candidate).children.contains { $0.label == "email" } == false)
+    }
+
+    @Test
+    func teamScreensGateLeaveAndRemoveActionsByRole() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let manageView = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamManageView.swift"),
+            encoding: .utf8
+        )
+        let teamView = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(manageView.contains("if let id = member.id, !member.isAdmin {"))
+        #expect(manageView.contains("viewModel.canUseAdminTools(loginID: loginID, isAppAdmin: isAppAdmin)"))
+        #expect(manageView.contains("member.email") == false)
+        #expect(teamView.contains("if viewModel.canLeaveTeam {"))
+        #expect(teamView.contains("viewModel.requestLeaveTeam()"))
+        #expect(teamView.contains("await viewModel.leaveTeam()"))
+        #expect(teamView.contains("_ = await session.refreshCurrentMember()"))
+        // The leave panel must keep rendering while it animates out after the
+        // team state is cleared, so the cover reads the captured name instead.
+        #expect(teamView.contains("if let teamName = viewModel.leaveConfirmationTeamName {"))
+        #expect(teamView.contains("leaveTeamMessage(name: teamName)"))
+    }
+
+    @Test @MainActor
+    func failedMemberRemovalShowsTheTranslatedServerReason() async {
+        TeamURLProtocolStub.handler = { request in
+            if request.httpMethod == "DELETE" {
+                return Self.response(
+                    request,
+                    status: 400,
+                    body: #"{"status":400,"code":"team.member.adminTransferRequired"}"#
+                )
+            }
+            return Self.successfulTeamLoadResponse(request)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+        await viewModel.load()
+
+        let succeeded = await viewModel.removeMember(1)
+
+        #expect(succeeded == false)
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == APIErrorLocalization.message(code: "team.member.adminTransferRequired"))
+        #expect(viewModel.errorMessage != APIErrorLocalization.message(code: nil))
+    }
+
+    @Test @MainActor
+    func failedMemberAddShowsTheTranslatedServerReason() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.response(
+                request,
+                status: 400,
+                body: #"{"status":400,"code":"team.member.blocked"}"#
             )
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+        let viewModel = TeamMemberSearchViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
         )
-        #expect(
-            TeamManageViewModel.canUseAdminTools(
-                loginID: 2,
-                team: team
-            )
+        let candidate = MemberInviteCandidateDTO(
+            id: 9,
+            name: "Blocked",
+            teamId: nil,
+            team: nil,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
         )
-        #expect(
-            TeamManageViewModel.canUseAdminTools(
-                loginID: 3,
-                team: team
-            ) == false
+
+        let added = await viewModel.add(candidate)
+
+        #expect(added == false)
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == APIErrorLocalization.message(code: "team.member.blocked"))
+        #expect(viewModel.errorMessage != APIErrorLocalization.message(code: nil))
+    }
+
+    @Test @MainActor
+    func leavingTheTeamWarnsBeforeConfirmationAndSucceedsOnlyAfterTheRequest() async throws {
+        TeamURLProtocolStub.handler = { request in
+            if request.httpMethod == "DELETE" {
+                return request.url?.path == "/api/teams/my/membership"
+                    ? Self.response(request, status: 200)
+                    : Self.response(request, status: 404)
+            }
+            return Self.successfulTeamLoadResponse(request)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1)),
+            haptics: haptics
         )
-        #expect(
-            TeamManageViewModel.canUseAdminTools(
-                loginID: nil,
-                team: nil
-            ) == false
+        await viewModel.load(memberID: 3)
+        #expect(viewModel.canLeaveTeam)
+
+        viewModel.requestLeaveTeam()
+        #expect(viewModel.leaveConfirmationPresented)
+        #expect(viewModel.leaveConfirmationTeamName == "Team")
+        #expect(haptics.event?.kind == .warning)
+        let warningID = haptics.event?.id
+
+        viewModel.cancelLeaveTeam()
+        #expect(viewModel.leaveConfirmationPresented == false)
+        #expect(viewModel.leaveConfirmationTeamName == nil)
+        #expect(haptics.event?.id == warningID)
+
+        viewModel.requestLeaveTeam()
+        let left = await viewModel.leaveTeam()
+
+        #expect(left)
+        #expect(haptics.event?.kind == .success)
+        let successID = haptics.event?.id
+        #expect(viewModel.team == nil)
+        // The confirmation stays presented with its captured name until the
+        // panel's own dismissal animation finishes and closes the cover.
+        #expect(viewModel.leaveConfirmationPresented)
+        #expect(viewModel.leaveConfirmationTeamName == "Team")
+
+        viewModel.cancelLeaveTeam()
+        #expect(viewModel.leaveConfirmationPresented == false)
+        #expect(viewModel.leaveConfirmationTeamName == nil)
+        #expect(haptics.event?.id == successID)
+        #expect(viewModel.isTeamManager == false)
+        #expect(viewModel.showsError == false)
+    }
+
+    @Test @MainActor
+    func failedTeamLeaveKeepsTheTeamAndShowsTheTranslatedServerReason() async throws {
+        TeamURLProtocolStub.handler = { request in
+            if request.httpMethod == "DELETE" {
+                return Self.response(
+                    request,
+                    status: 400,
+                    body: #"{"status":400,"code":"team.member.adminTransferRequired"}"#
+                )
+            }
+            return Self.successfulTeamLoadResponse(request)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1)),
+            haptics: haptics
         )
+        await viewModel.load(memberID: 3)
+        viewModel.requestLeaveTeam()
+
+        let left = await viewModel.leaveTeam()
+
+        #expect(left == false)
+        #expect(viewModel.team?.id == 7)
+        #expect(viewModel.leaveConfirmationPresented)
+        #expect(viewModel.leaveConfirmationTeamName == "Team")
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == APIErrorLocalization.message(code: "team.member.adminTransferRequired"))
+        #expect(haptics.event?.kind == .error)
+    }
+
+    @Test @MainActor
+    func teamLeadCannotStartLeavingTheTeam() async throws {
+        TeamURLProtocolStub.handler = { request in Self.successfulTeamLoadResponse(request) }
+        defer { TeamURLProtocolStub.handler = nil }
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1)),
+            haptics: haptics
+        )
+        await viewModel.load(memberID: 1)
+        let eventIDBeforeRequest = haptics.event?.id
+
+        viewModel.requestLeaveTeam()
+
+        #expect(viewModel.canLeaveTeam == false)
+        #expect(viewModel.leaveConfirmationPresented == false)
+        #expect(viewModel.leaveConfirmationTeamName == nil)
+        #expect(haptics.event?.id == eventIDBeforeRequest)
     }
 
     @Test
@@ -253,7 +442,6 @@ struct TeamFeatureTests {
             TeamMemberDTO(
                 id: 1,
                 name: "Member Lead",
-                email: nil,
                 isManager: true,
                 isAdmin: true,
                 hasProfilePhoto: false,
@@ -354,7 +542,6 @@ struct TeamFeatureTests {
         let candidate = MemberInviteCandidateDTO(
             id: 9,
             name: "New member",
-            email: "new@example.com",
             teamId: nil,
             team: nil,
             hasProfilePhoto: true,
@@ -1984,8 +2171,10 @@ private final class TeamURLProtocolStub: URLProtocol, @unchecked Sendable {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
+        // A cancelled request can reach startLoading after its test returned and cleared the handler.
         guard let handler = Self.handler else {
-            fatalError("TeamURLProtocolStub handler is not set")
+            client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
+            return
         }
         Self.requestCount += 1
         if request.url?.path == "/api/calendar" {

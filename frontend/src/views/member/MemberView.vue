@@ -71,7 +71,7 @@ const contentFilterStore = useContentFilterStore()
 const { logoutAndRedirect } = useLogout()
 
 // Managed members (accounts I manage)
-const managedMembers = ref<MemberDto[]>([])
+const managedMembers = ref<MemberPreviewDto[]>([])
 const managedMembersLoading = ref(false)
 const impersonating = ref<number | null>(null)
 
@@ -127,7 +127,7 @@ async function createAuxiliaryAccount() {
   }
 }
 
-async function handleImpersonate(member: MemberDto) {
+async function handleImpersonate(member: MemberPreviewDto) {
   if (!member.id) return
 
   const confirmed = await confirm(
@@ -186,7 +186,7 @@ const isSsoActionPending = computed(() => !!connectingSso.value || !!unlinkingSs
 
 // Manager delegation
 const familyMembers = ref<MemberPreviewDto[]>([])
-const managers = ref<MemberDto[]>([])
+const managers = ref<MemberPreviewDto[]>([])
 const selectedManagerToAdd = ref<string>('')
 
 const availableFamilyMembers = computed(() => {
@@ -226,7 +226,7 @@ async function assignManager() {
   }
 }
 
-async function unAssignManager(manager: MemberDto) {
+async function unAssignManager(manager: MemberPreviewDto) {
   if (!await confirm(t('member.manager.unassignConfirm', { name: manager.name }))) return
 
   try {

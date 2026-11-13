@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
+import com.tistory.shanepark.dutypark.member.domain.dto.VisibleFriendIds
 import com.tistory.shanepark.dutypark.member.domain.dto.toFriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
@@ -364,6 +365,48 @@ class FriendService(
             }
             friendId to visibilities
         }
+    }
+
+    /**
+     * Batch form of [isVisible] for the viewer's own friend relations, applied to each relation's friend.
+     * [VisibleFriendIds.duty] matches the duty check and [VisibleFriendIds.schedule] the schedule check.
+     * A relation existing satisfies FRIENDS, and blocking removes friendships, so no block lookup is needed.
+     */
+    @Transactional(readOnly = true)
+    fun findVisibleFriendIds(
+        loginMember: LoginMember,
+        friendRelations: List<FriendRelation>,
+    ): VisibleFriendIds {
+        if (friendRelations.isEmpty()) {
+            return VisibleFriendIds(duty = emptySet(), schedule = emptySet())
+        }
+        if (loginMember.isAdmin) {
+            val allIds = friendRelations.mapNotNull { it.friend.id }.toSet()
+            return VisibleFriendIds(duty = allIds, schedule = allIds)
+        }
+
+        val viewer = loginMemberToMember(loginMember)
+        val managedMemberIds = memberService.findManagedMemberIds(loginMember)
+
+        fun visibleIds(scheduleVisibilityCheck: Boolean) = friendRelations.filter { relation ->
+            val friend = relation.friend
+            when {
+                friend.id == loginMember.id -> true
+                !scheduleVisibilityCheck && isSameTeam(viewer, friend) -> true
+                managedMemberIds.contains(friend.id) -> true
+                else -> when (friend.calendarVisibility) {
+                    Visibility.PUBLIC, Visibility.FRIENDS -> true
+                    // The family flag is always set and cleared on both directions together.
+                    Visibility.FAMILY -> relation.isFamily
+                    Visibility.PRIVATE -> false
+                }
+            }
+        }.mapNotNull { it.friend.id }.toSet()
+
+        return VisibleFriendIds(
+            duty = visibleIds(scheduleVisibilityCheck = false),
+            schedule = visibleIds(scheduleVisibilityCheck = true),
+        )
     }
 
     fun updateFriendsOrder(loginMember: LoginMember, friendIds: List<Long>) {

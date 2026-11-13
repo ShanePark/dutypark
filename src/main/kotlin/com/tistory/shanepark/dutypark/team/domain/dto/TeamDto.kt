@@ -66,6 +66,8 @@ data class TeamDto(
                     abbreviation = team.defaultDutyAbbreviation,
                 )
             )
+            // A lead left behind by an earlier removal from the team is reported as no lead.
+            val admin = team.admin?.takeIf { team.isAdmin(it.id) }
 
             return TeamDto(
                 id = team.id ?: -1L,
@@ -77,8 +79,8 @@ data class TeamDto(
                 },
                 createdDate = team.createdDate.toString(),
                 lastModifiedDate = team.lastModifiedDate.toString(),
-                adminName = team.admin?.name,
-                adminId = team.admin?.id,
+                adminName = admin?.name,
+                adminId = admin?.id,
                 dutyBatchTemplate = team.dutyBatchTemplate?.let { DutyBatchTemplateDto(it) }
             )
         }

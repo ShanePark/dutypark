@@ -421,7 +421,6 @@ export interface DutyTypeDto {
 export interface TeamMemberDto {
   id: number
   name: string
-  email: string | null
   isManager: boolean
   isAdmin: boolean
   hasProfilePhoto?: boolean
@@ -515,7 +514,6 @@ export interface MemberPreviewDto {
 export interface MemberInviteCandidateDto {
   id: number | null
   name: string
-  email: string | null
   teamId: number | null
   team: string | null
   hasProfilePhoto?: boolean

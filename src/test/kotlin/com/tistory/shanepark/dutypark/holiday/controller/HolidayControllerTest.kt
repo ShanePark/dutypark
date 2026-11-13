@@ -13,6 +13,8 @@ import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.kotlin.any
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.quality.Strictness
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
@@ -23,6 +25,7 @@ import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
 import org.springframework.restdocs.request.RequestDocumentation
 import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
 import org.springframework.test.util.ReflectionTestUtils
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @ExtendWith(MockitoExtension::class)
@@ -66,6 +69,20 @@ class HolidayControllerTest : RestDocsTest() {
                     )
                 )
             )
+    }
+
+    @Test
+    fun `out of range year returns an empty calendar without calling the holiday API`() {
+        mockMvc.perform(
+            get("/api/holidays")
+                .accept("application/json")
+                .param("year", "2")
+                .param("month", "1")
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(42))
+            .andExpect(jsonPath("$[*][*]").isEmpty)
+
+        verify(dataGoKrApi, never()).getHolidays(any(), any())
     }
 
     @Test

@@ -1672,6 +1672,16 @@ struct TodoDraft: Equatable {
         }
     }
 
+    /// The due date as the calendar day the date field speaks. Picking the day already held
+    /// leaves `dueDate` alone, so closing the calendar on it cannot make the form dirty.
+    var dueDay: DateOnly {
+        get { DateOnly(rawValue: TodoDateFormatter.string(from: dueDate)) }
+        set {
+            guard newValue != dueDay, let date = TodoDateFormatter.date(from: newValue.rawValue) else { return }
+            dueDate = date
+        }
+    }
+
     var canSave: Bool {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return !trimmed.isEmpty && trimmed.count <= 50

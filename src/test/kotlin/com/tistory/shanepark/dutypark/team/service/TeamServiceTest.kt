@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
@@ -69,6 +70,9 @@ class TeamServiceTest {
     @Mock
     lateinit var publicContentService: PublicContentService
 
+    @Mock
+    lateinit var blockService: BlockService
+
     @Test
     fun `checkCanManage returns code-first auth exception for non-manager`() {
         val team = Team("Test Team")
@@ -96,6 +100,34 @@ class TeamServiceTest {
         }
 
         assertThat(exception.message).isEqualTo("team.admin.required")
+    }
+
+    @Test
+    fun `stale manager and admin rows for a member outside the team grant no team rights`() {
+        val team = Team("Test Team")
+        val staleAdmin = Member(name = "Former Admin")
+        val staleManager = Member(name = "Former Manager")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(staleAdmin, "id", 2L)
+        ReflectionTestUtils.setField(staleManager, "id", 3L)
+        staleManager.team = team
+        team.addManager(staleManager)
+        team.changeAdmin(staleAdmin)
+        staleManager.team = null
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+
+        assertThat(team.isManager(staleManager.id)).isFalse
+        assertThat(team.isManager(staleAdmin.id)).isFalse
+        assertThat(team.isAdmin(staleAdmin.id)).isFalse
+        assertThrows<ForbiddenException> {
+            service.checkCanManage(LoginMember(id = 3L, name = "Former Manager"), 1L)
+        }
+        assertThrows<ForbiddenException> {
+            service.checkCanManage(LoginMember(id = 2L, name = "Former Admin"), 1L)
+        }
+        assertThrows<ForbiddenException> {
+            service.checkCanAdmin(LoginMember(id = 2L, name = "Former Admin"), 1L)
+        }
     }
 
     @Test

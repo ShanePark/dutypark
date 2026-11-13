@@ -257,6 +257,42 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `leaving a team closes the active pattern, keeps past duties and deletes future duties`(
+        @Autowired patternRepository: MemberDutyPatternRepository,
+        @Autowired dutyRepository: DutyRepository,
+        @Autowired clock: Clock,
+    ) {
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        val dutyType = TestData.dutyTypes[0]
+        val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        val today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
+        val pattern = patternRepository.saveAndFlush(
+            MemberDutyPattern(
+                member = member,
+                team = team,
+                dayTypes = mapOf(MONDAY to dutyType),
+                holidayOff = false,
+                effectiveFrom = today.minusMonths(1),
+            )
+        )
+        val pastDuty = dutyRepository.saveAndFlush(
+            Duty(today.minusDays(7), dutyType, member, manualOverride = true)
+        )
+        val futureDuty = dutyRepository.saveAndFlush(
+            Duty(today.plusDays(7), dutyType, member, manualOverride = true)
+        )
+
+        service.leaveTeam(loginMember(member))
+        em.flush()
+        em.clear()
+
+        assertThat(patternRepository.findById(pattern.id!!).orElseThrow().effectiveUntilExclusive).isEqualTo(today)
+        assertThat(dutyRepository.findById(pastDuty.id!!)).isPresent
+        assertThat(dutyRepository.findById(futureDuty.id!!)).isEmpty
+        assertThat(memberRepository.findById(member.id!!).orElseThrow().team).isNull()
+    }
+
+    @Test
     fun `can't delete member from team if not member of team`() {
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         val team2 = teamRepository.findById(TestData.team2.id!!).orElseThrow()

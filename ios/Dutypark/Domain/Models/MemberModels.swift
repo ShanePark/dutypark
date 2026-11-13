@@ -89,7 +89,6 @@ nonisolated struct MemberDTO: Codable, Equatable, Sendable {
 nonisolated struct MemberInviteCandidateDTO: Codable, Equatable, Sendable {
     let id: MemberID?
     let name: String
-    let email: String?
     let teamId: TeamID?
     let team: String?
     let hasProfilePhoto: Bool

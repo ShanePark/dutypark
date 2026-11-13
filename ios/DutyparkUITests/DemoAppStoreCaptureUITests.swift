@@ -9,6 +9,8 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
     private let koreanDemoEmail = "demo.seoa@dutypark.local"
     private let englishDemoEmail = "demo.en.emma@dutypark.local"
     private let demoPassword = "demo1234!"
+    /// `ENGLISH_CALENDAR_MONTH` in `scripts/seed-local-demo-content.sh` fills 2026-11.
+    private let englishCaptureYear = 2026
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -174,15 +176,22 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
     private func selectEnglishCaptureMonth(in app: XCUIApplication) {
         let monthDisplay = app.buttons["calendar.month.display"]
         XCTAssertTrue(monthDisplay.waitForExistence(timeout: 10), "Calendar month control did not load")
-        XCTAssertEqual(
-            monthDisplay.value as? String,
-            "2026-08",
-            "The English demo capture starts in August 2026 before its three-month move"
-        )
+        guard let displayed = displayedYearMonth(of: monthDisplay) else {
+            XCTFail("Calendar month control has no yyyy-MM value: \(String(describing: monthDisplay.value))")
+            return
+        }
 
         monthDisplay.tap()
         let monthPicker = app.descendants(matching: .any)["calendar.monthPicker"]
         XCTAssertTrue(monthPicker.waitForExistence(timeout: 5), "Calendar month picker did not load")
+        // The calendar picker's year arrows have no identifier; they are labelled with the
+        // target year and the shown month, which `calendar.month.format` renders as
+        // "yyyy/M" in English.
+        moveMonthPickerYear(from: displayed.year, to: englishCaptureYear) { pickerYear, step in
+            app.buttons.matching(
+                NSPredicate(format: "label == %@", "\(pickerYear + step)/\(displayed.month)")
+            ).firstMatch
+        }
         XCTAssertTrue(
             app.staticTexts["2026"].waitForExistence(timeout: 5),
             "The English month picker must be on the 2026 year"
@@ -200,7 +209,7 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         XCTAssertEqual(
             XCTWaiter.wait(for: [monthChanged], timeout: 10),
             .completed,
-            "English capture must show November 2026 after moving three months"
+            "English capture must show November 2026"
         )
         XCTAssertEqual(monthDisplay.value as? String, "2026-11")
     }
@@ -209,15 +218,25 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
     private func selectEnglishTeamCaptureMonth(in app: XCUIApplication) {
         let monthDisplay = app.buttons["team.calendar.month.display"]
         XCTAssertTrue(monthDisplay.waitForExistence(timeout: 10), "Team month control did not load")
-        XCTAssertEqual(
-            monthDisplay.value as? String,
-            "2026-08",
-            "The English team capture starts in August 2026 before its move to November"
-        )
+        guard let displayed = displayedYearMonth(of: monthDisplay) else {
+            XCTFail("Team month control has no yyyy-MM value: \(String(describing: monthDisplay.value))")
+            return
+        }
 
         monthDisplay.tap()
         let monthPicker = app.descendants(matching: .any)["team.calendar.monthPicker"]
         XCTAssertTrue(monthPicker.waitForExistence(timeout: 5), "Team month picker did not load")
+        // The shared picker identifies only its next-year arrow; the previous-year arrow
+        // is reachable by its English label.
+        moveMonthPickerYear(from: displayed.year, to: englishCaptureYear) { _, step in
+            step > 0
+                ? app.buttons["team.calendar.monthPicker.nextYear"]
+                : app.buttons.matching(NSPredicate(format: "label == %@", "Previous year")).firstMatch
+        }
+        XCTAssertTrue(
+            app.staticTexts[String(englishCaptureYear)].waitForExistence(timeout: 5),
+            "The English team month picker must be on the 2026 year"
+        )
 
         let november = app.buttons["team.calendar.monthPicker.month.11"]
         XCTAssertTrue(november.waitForExistence(timeout: 5), "Team November month button did not load")
@@ -234,6 +253,35 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
             "English team capture must show November 2026"
         )
         waitForSettledContent(in: app, loadingIdentifier: nil)
+    }
+
+    @MainActor
+    private func displayedYearMonth(of monthDisplay: XCUIElement) -> (year: Int, month: Int)? {
+        guard let value = monthDisplay.value as? String else { return nil }
+        let parts = value.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 2 else { return nil }
+        return (parts[0], parts[1])
+    }
+
+    /// Steps an open month picker from `startYear` to `targetYear` with its year arrows.
+    /// `yearButton` receives the picker's current year and the step (-1 or +1) to take.
+    @MainActor
+    private func moveMonthPickerYear(
+        from startYear: Int,
+        to targetYear: Int,
+        yearButton: (_ pickerYear: Int, _ step: Int) -> XCUIElement
+    ) {
+        let step = targetYear < startYear ? -1 : 1
+        var pickerYear = startYear
+        while pickerYear != targetYear {
+            let button = yearButton(pickerYear, step)
+            XCTAssertTrue(
+                button.waitForExistence(timeout: 5),
+                "Month picker year control did not load for \(pickerYear + step)"
+            )
+            button.tap()
+            pickerYear += step
+        }
     }
 
     @MainActor

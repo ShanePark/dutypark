@@ -17,11 +17,15 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.Primary
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.TestPropertySource
 import org.springframework.transaction.annotation.Transactional
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -139,5 +143,10 @@ class HolidayServiceTransactionIntegrationTest {
     class Config {
         @Bean
         fun transactionalLookup(holidayService: HolidayService) = TransactionalLookup(holidayService)
+
+        // Keeps the 2041-2043 lookups within the supported holiday year range.
+        @Bean
+        @Primary
+        fun fixedClock(): Clock = Clock.fixed(Instant.parse("2042-06-01T00:00:00Z"), ZoneOffset.UTC)
     }
 }

@@ -293,4 +293,72 @@ class TeamControllerTest : RestDocsTest() {
             )
     }
 
+    @Test
+    fun `member can leave their team`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/teams/my/membership")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andDo(document("teams/leave"))
+
+        em.flush()
+        em.clear()
+        assertThat(memberRepository.findById(TestData.member.id!!).orElseThrow().team).isNull()
+        assertThat(teamRepository.findById(TestData.team.id!!).orElseThrow().members.map { it.id })
+            .containsExactly(TestData.member2.id)
+    }
+
+    @Test
+    fun `manager who leaves loses the manager role and management access`() {
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        team.addManager(memberRepository.findById(TestData.member2.id!!).orElseThrow())
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/teams/my/membership")
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isOk)
+
+        em.flush()
+        em.clear()
+        assertThat(teamRepository.findById(TestData.team.id!!).orElseThrow().managers).isEmpty()
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/teams/manage/{teamId}", TestData.team.id!!)
+                .withAuth(TestData.member2)
+        )
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `team admin cannot leave without transferring the admin role`() {
+        val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        team.changeAdmin(memberRepository.findById(TestData.member.id!!).orElseThrow())
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/teams/my/membership")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("team.member.adminTransferRequired"))
+
+        em.flush()
+        em.clear()
+        assertThat(memberRepository.findById(TestData.member.id!!).orElseThrow().team?.id).isEqualTo(TestData.team.id)
+    }
+
+    @Test
+    fun `member without a team cannot leave`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/teams/my/membership")
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("team.member.notAssigned"))
+    }
+
 }

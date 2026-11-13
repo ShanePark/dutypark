@@ -55,4 +55,31 @@ describe('team management service-admin access', () => {
     expect(teamManageView).not.toContain("t('team.manage.labels.visible')")
     expect(teamManageView).not.toContain("t('team.manage.labels.offDuty')")
   })
+
+  it('limits admin-only actions to the actual team lead or a service admin', () => {
+    expect(teamManageView).toMatch(
+      /const canAdminTeam = computed\(\(\) => isAppAdmin\.value \|\| \(team\.value\?\.adminId != null && team\.value\.adminId === loginId\.value\)\)/,
+    )
+    expect(teamManageView).toContain('<template v-if="!canAdminTeam">')
+    expect(teamManageView).not.toContain('<template v-if="!isAdmin">')
+    expect(teamManageView).toContain('v-if="canAdminTeam && !member.isAdmin"')
+    expect(teamManageView).not.toContain('v-if="isAdmin && !member.isAdmin"')
+    expect(teamManageView.match(/v-if="canAdminTeam && team\.adminId && loginId !== team\.adminId"/g)).toHaveLength(2)
+  })
+
+  it('does not offer removing the team lead', () => {
+    const removeButtons = teamManageView.match(/<button\s+v-if="!member\.isAdmin"\s+type="button"\s+@click="removeMember\(member\.id\)"/g)
+    expect(removeButtons).toHaveLength(2)
+    expect(teamManageView.match(/@click="removeMember\(member\.id\)"/g)).toHaveLength(2)
+  })
+
+  it('shows the translated server reason when removing a member fails', () => {
+    const removeFlow = teamManageView.slice(
+      teamManageView.indexOf('async function removeMember('),
+      teamManageView.indexOf('async function assignManager('),
+    )
+    expect(removeFlow).toContain(
+      "showError(resolveApiErrorMessage(error, { fallbackKey: 'team.manage.messages.removeMemberFailed' }, t))",
+    )
+  })
 })

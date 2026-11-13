@@ -3,6 +3,8 @@ package com.tistory.shanepark.dutypark.security.config
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.security.filters.AdminAuthFilter
 import com.tistory.shanepark.dutypark.security.filters.JwtAuthFilter
+import com.tistory.shanepark.dutypark.security.filters.OriginCheckFilter
+import com.tistory.shanepark.dutypark.security.oauth.OAuthFrontendBaseUrl
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.Filter
@@ -17,7 +19,7 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
-import org.springframework.web.filter.ForwardedHeaderFilter
+import org.springframework.web.filter.CorsFilter
 import java.net.URI
 
 @Configuration
@@ -25,6 +27,7 @@ class SecurityConfig(
     private val authService: AuthService,
     private val cookieService: CookieService,
     private val cookieConfig: CookieConfig,
+    private val frontendBaseUrl: OAuthFrontendBaseUrl,
     @param:Value("\${dutypark.cors.allowed-origins:}") private val corsAllowedOrigins: String,
     @param:Value("\${dutypark.cors.allowed-origin-patterns:}") private val corsAllowedOriginPatterns: String,
 ) {
@@ -39,6 +42,8 @@ class SecurityConfig(
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         val jwtAuthFilter = JwtAuthFilter(authService, cookieService)
         http.addFilterBefore(jwtAuthFilter, AuthorizationFilter::class.java)
+        // Ahead of CORS so a rejected cross-site write gets the standard error body; preflights pass through.
+        http.addFilterBefore(OriginCheckFilter(stateChangingRequestOrigins()), CorsFilter::class.java)
 
         return http
             .authorizeHttpRequests { it.anyRequest().permitAll() }
@@ -51,12 +56,8 @@ class SecurityConfig(
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        val origins = corsAllowedOrigins.split(",")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-        val originPatterns = corsAllowedOriginPatterns.split(",")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
+        val origins = csv(corsAllowedOrigins)
+        val originPatterns = csv(corsAllowedOriginPatterns)
         validateCorsOrigins(origins, originPatterns)
         configuration.allowedOrigins = origins
         if (originPatterns.isNotEmpty()) {
@@ -71,6 +72,24 @@ class SecurityConfig(
         source.registerCorsConfiguration("/api/**", configuration)
         return source
     }
+
+    /**
+     * CORS allowlist plus the site's own web origin. Production serves the web app same-origin from
+     * DOMAIN_NAME and leaves the CORS allowlist empty, so its origin must be added explicitly.
+     */
+    private fun stateChangingRequestOrigins(): CorsConfiguration {
+        val configuration = CorsConfiguration()
+        configuration.allowedOrigins = csv(corsAllowedOrigins) + frontendBaseUrl.origin
+        val originPatterns = csv(corsAllowedOriginPatterns)
+        if (originPatterns.isNotEmpty()) {
+            configuration.allowedOriginPatterns = originPatterns
+        }
+        return configuration
+    }
+
+    private fun csv(value: String): List<String> = value.split(",")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
 
     private fun validateCorsOrigins(origins: List<String>, originPatterns: List<String>) {
         check("*" !in origins) {
@@ -107,14 +126,6 @@ class SecurityConfig(
         filterRegBean.addUrlPatterns("/admin/*")
         filterRegBean.addUrlPatterns("/docs/*")
         filterRegBean.setOrder(Ordered.LOWEST_PRECEDENCE)
-        return filterRegBean
-    }
-
-    @Bean
-    fun forwardedHeaderFilter(): FilterRegistrationBean<ForwardedHeaderFilter> {
-        val filterRegBean = FilterRegistrationBean<ForwardedHeaderFilter>()
-        filterRegBean.setFilter(ForwardedHeaderFilter())
-        filterRegBean.setOrder(Ordered.HIGHEST_PRECEDENCE)
         return filterRegBean
     }
 

@@ -159,7 +159,7 @@ export const memberApi = {
    * Get all managers of current user
    */
   getManagers() {
-    return apiClient.get<MemberDto[]>('/members/managers')
+    return apiClient.get<MemberPreviewDto[]>('/members/managers')
   },
 
   /**
@@ -182,7 +182,7 @@ export const memberApi = {
    * Get managed members (accounts I manage)
    */
   getManagedMembers() {
-    return apiClient.get<MemberDto[]>('/members/managed')
+    return apiClient.get<MemberPreviewDto[]>('/members/managed')
   },
 
   /**

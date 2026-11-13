@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 import { teamApi } from '@/api/team'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import type { MemberInviteCandidateDto } from '@/types'
 import { Search, X, ChevronLeft, ChevronRight, Loader2 } from '@lucide/vue'
 
@@ -98,7 +99,7 @@ async function addMember(member: MemberInviteCandidateDto) {
     close()
   } catch (error) {
     console.error('Failed to add member:', error)
-    showError(t('team.memberSearch.addFailed'))
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'team.memberSearch.addFailed' }, t))
   } finally {
     emit('update:saving', false)
   }
@@ -149,7 +150,6 @@ async function addMember(member: MemberInviteCandidateDto) {
             <tr>
               <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">#</th>
               <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">{{ t('team.memberSearch.columns.name') }}</th>
-              <th class="px-3 py-2 text-left text-sm text-dp-text-secondary">{{ t('team.memberSearch.columns.email') }}</th>
               <th class="px-3 py-2 text-center text-sm text-dp-text-secondary">{{ t('team.memberSearch.columns.add') }}</th>
             </tr>
           </thead>
@@ -159,7 +159,6 @@ async function addMember(member: MemberInviteCandidateDto) {
                 {{ currentPage * pageSize + index + 1 }}
               </td>
               <td class="px-3 py-2 text-sm font-medium text-dp-text-primary">{{ member.name }}</td>
-              <td class="px-3 py-2 text-sm text-dp-text-muted">{{ member.email }}</td>
               <td class="px-3 py-2 text-center">
                 <button
                   @click="addMember(member)"

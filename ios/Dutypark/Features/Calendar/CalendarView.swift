@@ -642,22 +642,18 @@ struct CalendarView: View {
         return nil
     }
 
+    // One principal header keeps the capsule on the bar's centre; separate side items let the
+    // bar slide it by the identity's width.
     @ToolbarContentBuilder
     private var calendarToolbar: some ToolbarContent {
-        DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
-            // Reports its ideal width up to the cap; the bar otherwise squeezes the identity
-            // to centre the capsule and cuts the name down to a single letter.
-            memberIdentityBar
-                .frame(maxWidth: Self.barSideWidth, alignment: .leading)
-                .fixedSize(horizontal: true, vertical: false)
-        }
         DPDashboardHeaderToolbarItem(placement: .principal) {
-            monthControls
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("calendar.month.controls")
-        }
-        DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
-            Group {
+            DPMonthHeaderBar {
+                memberIdentityBar
+            } center: {
+                monthControls
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("calendar.month.controls")
+            } trailing: {
                 if model.canSearchSchedules {
                     searchControl
                 }
@@ -749,12 +745,12 @@ struct CalendarView: View {
     }
 
     private var memberIdentity: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: memberBackAction == nil ? 6 : 4) {
             CalendarMemberAvatar(
                 memberID: model.targetMemberID,
                 hasProfilePhoto: model.targetHasProfilePhoto,
                 profilePhotoVersion: model.targetProfilePhotoVersion,
-                size: 32
+                size: memberBackAction == nil ? Self.barAvatarSize : Self.barAvatarSizeBesideBack
             )
             Text(model.targetName)
                 .font(DPFont.bold(size: 12, relativeTo: .caption))
@@ -780,11 +776,10 @@ struct CalendarView: View {
     // the full touch target.
     private static let barBackWidth: CGFloat = 16
 
-    // Caps the leading identity. The side items otherwise keep their natural widths: the bar
-    // gives the principal month capsule only the room between them, and anything drawn past
-    // that room ignores touches. The bar centres the capsule when it fits and slides it
-    // toward the trailing side otherwise.
-    private static let barSideWidth: CGFloat = 88
+    // The centred capsule leaves the leading slot about 73pt on a 375pt screen. Beside the
+    // back chevron a smaller avatar keeps room for a short name instead of one letter.
+    private static let barAvatarSize: CGFloat = 32
+    private static let barAvatarSizeBesideBack: CGFloat = 24
 
     // The callout is hosted by the full calendar body rather than the navigation-bar item.
     // That keeps the item at its native 44pt height while the body still owns the callout's
@@ -1558,29 +1553,7 @@ struct CalendarView: View {
     }
 
     private var quickDutyTypes: [DutyTypeDTO] {
-#if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-ui-testing-calendar-duty-types") {
-            return [
-                DutyTypeDTO(
-                    id: 101,
-                    teamId: 1,
-                    name: "주간",
-                    position: 0,
-                    color: "#3B82F6",
-                    hidden: false
-                ),
-                DutyTypeDTO(
-                    id: 102,
-                    teamId: 1,
-                    name: "야간",
-                    position: 1,
-                    color: "#4338CA",
-                    hidden: false
-                ),
-            ]
-        }
-#endif
-        return model.visibleDutyTypes
+        model.visibleDutyTypes
     }
 }
 
@@ -4723,9 +4696,11 @@ private struct DDayEditorView: View {
     @State private var isPrivate: Bool
     @State private var isSaving = false
     @State private var showsDiscardConfirmation = false
+    @State private var isDateCalendarOpen = false
     @FocusState private var focusedField: Field?
 
-    private enum Field { case title }
+    /// `date` is never focused; it only names the row the panel scrolls to.
+    private enum Field { case title, date }
 
     init(
         model: CalendarViewModel,
@@ -4767,7 +4742,8 @@ private struct DDayEditorView: View {
     var body: some View {
         DPModalPanel(
             maximumPanelHeight: maximumPanelHeight,
-            scrollTarget: focusedField
+            // An open calendar grows below the fold the moment it opens, so it outranks focus.
+            scrollTarget: isDateCalendarOpen ? Field.date : focusedField
         ) {
             header
         } content: {
@@ -4777,10 +4753,6 @@ private struct DDayEditorView: View {
         }
         .onAppear { onWorkingChange(isSaving) }
         .onChange(of: isSaving) { _, isWorking in onWorkingChange(isWorking) }
-        .onChange(of: date) { _, _ in
-            guard !isSaving else { return }
-            DPHapticCenter.shared.emit(.selection)
-        }
         .onChange(of: isPrivate) { _, _ in
             guard !isSaving else { return }
             DPHapticCenter.shared.emit(.selection)
@@ -4845,29 +4817,33 @@ private struct DDayEditorView: View {
                 Text("calendar.dday.date", tableName: "Calendar")
                     .font(DPTypography.label)
                     .foregroundStyle(DPColor.textSecondary)
-                DatePicker(
-                    CalendarLocalization.text("calendar.dday.date"),
-                    selection: $date,
-                    displayedComponents: .date
+                // The whole box is the control, and the field emits the pick's own haptic.
+                DPDateField(
+                    value: dayBinding,
+                    fieldName: CalendarLocalization.text("calendar.dday.date"),
+                    rowHeight: DPSize.minimumTouchTarget,
+                    locale: CalendarLocalization.selectedLocale,
+                    expansion: $isDateCalendarOpen,
+                    accessibilityIdentifier: "calendar.dday.form.date"
                 )
-                .labelsHidden()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, DPSpacing.compact)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .background(DPColor.backgroundInput)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderInput))
                 .disabled(isSaving)
+            }
+            .id(Field.date)
+            .onChange(of: isDateCalendarOpen) { _, isOpen in
+                if isOpen { focusedField = nil }
             }
 
             HStack(spacing: DPSpacing.small) {
                 ForEach([-7, -1, 0, 1, 7], id: \.self) { offset in
                     Button(offset == 0 ? CalendarLocalization.text("calendar.today") : (offset > 0 ? "+\(offset)" : "\(offset)")) {
-                        date = CalendarDateSupport.calendar.date(
+                        let moved = CalendarDateSupport.calendar.date(
                             byAdding: .day,
                             value: offset,
                             to: offset == 0 ? Date() : date
                         ) ?? date
+                        guard !CalendarDateSupport.calendar.isDate(moved, inSameDayAs: date) else { return }
+                        date = moved
+                        DPHapticCenter.shared.emit(.selection)
                     }
                     .font(DPTypography.caption)
                     .foregroundStyle(offset == 0 ? DPColor.accentHover : DPColor.textPrimary)
@@ -4906,6 +4882,17 @@ private struct DDayEditorView: View {
         }
         .padding(DPSpacing.medium)
         .opacity(isSaving ? DPChrome.disabledOpacity : 1)
+    }
+
+    /// The editor keeps an instant and the field speaks calendar days; a picked day moves the
+    /// instant without touching its clock, so picking the day already held changes nothing.
+    private var dayBinding: Binding<DateOnly> {
+        Binding(
+            get: { ScheduleEditorTimePolicy.day(of: date) },
+            set: {
+                date = ScheduleEditorTimePolicy.date(date, movedTo: $0, calendar: CalendarDateSupport.calendar)
+            }
+        )
     }
 
     private var footer: some View {

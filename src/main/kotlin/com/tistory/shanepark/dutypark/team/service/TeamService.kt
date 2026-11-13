@@ -14,6 +14,7 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.duty.service.DutyPatternService
 import com.tistory.shanepark.dutypark.duty.service.DutyResolver
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
@@ -39,6 +40,7 @@ class TeamService(
     private val dutyPatternService: DutyPatternService,
     private val dutyResolver: DutyResolver,
     private val publicContentService: PublicContentService,
+    private val blockService: BlockService,
 ) {
     private val log = logger()
 
@@ -148,6 +150,11 @@ class TeamService(
         if (member.team != null) {
             throw BadRequestException("team.member.alreadyAssigned")
         }
+        if (actor != null && blockService.isBlockedEitherWay(actor.id, memberId)) {
+            throw BadRequestException("team.member.blocked")
+        }
+        // A manager row must never outlive membership; clear any stale one before re-adding.
+        team.managers.removeIf { it.member.id == member.id }
         team.addMember(member)
         log.auditEventAfterCommit("team.member_added", actor?.toAuditActor(), teamAuditTarget(team),
             mapOf("memberId" to member.id, "memberName" to member.name))
@@ -161,10 +168,20 @@ class TeamService(
         if (member.team != team) {
             throw BadRequestException("team.member.notInTeam")
         }
+        if (team.isAdmin(memberId)) {
+            throw BadRequestException("team.member.adminTransferRequired")
+        }
         dutyPatternService.terminateActivePattern(member, actor = actor)
         team.removeMember(member)
         log.auditEventAfterCommit("team.member_removed", actor?.toAuditActor(), teamAuditTarget(team),
             mapOf("memberId" to member.id, "memberName" to member.name))
+    }
+
+    @Transactional(timeout = 20)
+    fun leaveTeam(loginMember: LoginMember) {
+        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        val team = member.team ?: throw BadRequestException("team.member.notAssigned")
+        removeMemberFromTeam(team.id!!, member.id!!, actor = loginMember)
     }
 
     fun changeTeamAdmin(teamId: Long, memberId: Long?, actor: LoginMember? = null) {

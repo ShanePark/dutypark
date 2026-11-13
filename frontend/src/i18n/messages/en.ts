@@ -126,7 +126,10 @@ const apiErrors = {
       required: 'Only team admins can perform this action.',
     },
     member: {
+      adminTransferRequired: 'Transfer the team admin role to another member before removing the team admin from the team.',
       alreadyAssigned: 'This member already belongs to a team.',
+      blocked: 'You cannot add a member you blocked or who blocked you.',
+      notAssigned: 'You do not belong to a team.',
       notInTeam: 'This member does not belong to this team.',
       required: 'You must belong to this team to access it.',
     },
@@ -1541,6 +1544,13 @@ export default {
           createFailed: 'Failed to create the team.',
         },
       },
+      leave: {
+        action: 'Leave team',
+        confirm: 'Leave {name}? Your past duties are kept, but your weekly duty pattern ends today.',
+        confirmAction: 'Leave',
+        success: 'You left the team.',
+        failed: 'Failed to leave the team.',
+      },
       selectedDate: '{month}/{day}/{year}',
       actions: {
         manage: 'Manage team',
@@ -1700,10 +1710,9 @@ export default {
     },
     memberSearch: {
       title: 'Add team member',
-      searchPlaceholder: 'Search by name or email',
+      searchPlaceholder: 'Search by name',
       columns: {
         name: 'Name',
-        email: 'Email',
         add: 'Add',
       },
       confirmAdd: 'Add {name} to this team?',

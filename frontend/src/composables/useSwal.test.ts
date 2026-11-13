@@ -78,6 +78,20 @@ describe('useSwal', () => {
     }))
   })
 
+  it.each(['toastSuccess', 'toastInfo', 'toastError'] as const)(
+    '%s renders the message as text, not HTML',
+    async (toast) => {
+      const message = 'Sent to <img src=x onerror=alert(1)>.'
+
+      await useSwal()[toast](message)
+
+      const options = mocks.toastFire.mock.calls[0]![0]
+      expect(options.titleText).toBe(message)
+      expect(options).not.toHaveProperty('title')
+      expect(options).not.toHaveProperty('html')
+    },
+  )
+
   it('returns the selected three-way choice with custom labels', async () => {
     mocks.fire.mockResolvedValue({ isDenied: true })
     const { choose } = useSwal()

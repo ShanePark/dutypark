@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarRequestDates
 import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
@@ -16,7 +17,6 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.context.ApplicationContext
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
-import java.time.YearMonth
 
 @RestController
 @RequestMapping("/api/duty_batch")
@@ -40,6 +40,7 @@ class DutyBatchController(
         @RequestParam year: Int,
         @RequestParam month: Int,
     ): DutyBatchResult {
+        val yearMonth = CalendarRequestDates.yearMonth(year, month)
         if (dutyService.canEdit(loginMember = loginMember, memberId = memberId).not())
             throw ForbiddenException("duty.edit.forbidden")
 
@@ -47,7 +48,6 @@ class DutyBatchController(
             ?: throw IllegalArgumentException("dutyBatch.template.required")
 
         val dutyBatchService = applicationContext.getBean(dutyBatchTemplate.batchServiceClass)
-        val yearMonth = YearMonth.of(year, month)
         val target = mapOf(
             "type" to "Member",
             "memberId" to memberId,

@@ -88,6 +88,10 @@ export const teamApi = {
     })
   },
 
+  leaveTeam() {
+    return apiClient.delete('/teams/my/membership')
+  },
+
   removeMember(teamId: number, memberId: number) {
     return apiClient.delete(`/teams/manage/${teamId}/members`, {
       params: { memberId },

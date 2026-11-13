@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.common.time
 
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -22,5 +23,9 @@ class AdjustableTestClock private constructor(
 
     fun setDate(date: LocalDate, zone: ZoneId) {
         currentInstant.set(date.atStartOfDay(zone).toInstant())
+    }
+
+    fun advance(duration: Duration) {
+        currentInstant.updateAndGet { it.plus(duration) }
     }
 }

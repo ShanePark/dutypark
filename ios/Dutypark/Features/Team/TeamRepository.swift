@@ -132,6 +132,10 @@ nonisolated struct TeamRepository: Sendable {
         try await memberAction(teamID: teamID, memberID: memberID, path: "members", method: .post)
     }
 
+    func leaveTeam() async throws {
+        try await client.data("teams/my/membership", method: .delete)
+    }
+
     func removeMember(teamID: TeamID, memberID: MemberID) async throws {
         try await memberAction(teamID: teamID, memberID: memberID, path: "members", method: .delete)
     }

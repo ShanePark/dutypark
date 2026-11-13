@@ -62,6 +62,7 @@ class Team(
 
     fun removeMember(member: Member) {
         members.remove(member)
+        managers.removeIf { it.member.id == member.id }
         member.team = null
     }
 
@@ -88,14 +89,20 @@ class Team(
     fun isManager(memberId: Long?): Boolean {
         if (memberId == null)
             return false
-        return isAdmin(memberId) || managers.any { it.member.id == memberId }
+        return isAdmin(memberId) || managers.any { it.member.id == memberId && belongsToThisTeam(it.member) }
     }
 
     fun isAdmin(memberId: Long?): Boolean {
         if (memberId == null)
             return false
-        val adminId = admin?.id ?: return false
-        return adminId == memberId
+        val admin = admin ?: return false
+        return admin.id == memberId && belongsToThisTeam(admin)
+    }
+
+    // Admin and manager rows left behind for members who no longer belong to the team must grant nothing.
+    private fun belongsToThisTeam(member: Member): Boolean {
+        val memberTeam = member.team ?: return false
+        return memberTeam === this || (id != null && memberTeam.id == id)
     }
 
     fun addManager(member: Member) {

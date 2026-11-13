@@ -2113,6 +2113,7 @@ struct TodoFormSheet: View {
     @FocusState private var focusedField: TodoFormField?
     @State private var isTagSearchFocused = false
     @State private var isStatusMenuPresented = false
+    @State private var isDueDateCalendarOpen = false
 
     init(
         titleKey: String,
@@ -2168,10 +2169,12 @@ struct TodoFormSheet: View {
         min(maximumHeight.map { $0 * TodoModalLayout.maximumPanelHeightRatio } ?? .infinity, 786)
     }
 
-    /// The tag search field belongs to `DPFriendTagSelector`, so it never appears in
+    /// An open due-date calendar outranks everything: it grows below the fold the moment it
+    /// opens. The tag search field belongs to `DPFriendTagSelector`, so it never appears in
     /// `focusedField`; fall back to it only when no field of this sheet holds focus.
     private var scrollTarget: TodoFormField? {
-        focusedField ?? (isTagSearchFocused ? .tags : nil)
+        if isDueDateCalendarOpen { return .dueDate }
+        return focusedField ?? (isTagSearchFocused ? .tags : nil)
     }
 
     var body: some View {
@@ -2285,38 +2288,43 @@ struct TodoFormSheet: View {
             .id(TodoFormField.content)
 
             TodoFormSection(title: todoLocalized("todo.field.dueDate")) {
-                HStack(spacing: DPSpacing.small) {
-                    Label(todoLocalized("todo.field.setDueDate"), systemImage: "calendar")
-                        .font(DPTypography.supporting)
-                        .foregroundStyle(DPColor.textSecondary)
-                    Spacer(minLength: DPSpacing.small)
-
-                    if draft.hasDueDate {
-                        DatePicker(
-                            todoLocalized("todo.field.dueDate"),
-                            selection: $draft.dueDate,
-                            displayedComponents: .date
-                        )
-                        .labelsHidden()
-                        .datePickerStyle(.compact)
-                        .font(DPTypography.body)
-                        .accessibilityIdentifier("todo.form.dueDate")
-                    } else {
-                        Text(todoLocalized("todo.field.dueDate"))
+                VStack(alignment: .leading, spacing: DPSpacing.small) {
+                    HStack(spacing: DPSpacing.small) {
+                        Label(todoLocalized("todo.field.setDueDate"), systemImage: "calendar")
                             .font(DPTypography.supporting)
-                            .foregroundStyle(DPColor.textMuted)
+                            .foregroundStyle(DPColor.textSecondary)
+                        Spacer(minLength: DPSpacing.small)
+
+                        Toggle("", isOn: $draft.hasDueDate)
+                            .labelsHidden()
+                            .tint(DPColor.accent)
+                            .accessibilityLabel(todoLocalized("todo.field.setDueDate"))
+                    }
+                    .frame(minHeight: DPSize.minimumTouchTarget)
+                    .onChange(of: draft.hasDueDate) { _, hasDueDate in
+                        if !hasDueDate { isDueDateCalendarOpen = false }
+                        model.emitHaptic(.selection)
                     }
 
-                    Toggle("", isOn: $draft.hasDueDate)
-                        .labelsHidden()
-                        .tint(DPColor.accent)
-                        .accessibilityLabel(todoLocalized("todo.field.setDueDate"))
+                    // The field gets the whole row so every part of the box opens the calendar,
+                    // and the calendar it expands has the width its seven columns need.
+                    if draft.hasDueDate {
+                        DPDateField(
+                            value: $draft.dueDay,
+                            fieldName: todoLocalized("todo.field.dueDate"),
+                            rowHeight: DPSize.minimumTouchTarget,
+                            expansion: $isDueDateCalendarOpen,
+                            accessibilityIdentifier: "todo.form.dueDate"
+                        )
+                        .disabled(isBusy)
+                    }
                 }
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .onChange(of: draft.hasDueDate) { _, _ in
-                    model.emitHaptic(.selection)
+                // The calendar needs the height the keyboard is holding.
+                .onChange(of: isDueDateCalendarOpen) { _, isOpen in
+                    if isOpen { focusedField = nil }
                 }
             }
+            .id(TodoFormField.dueDate)
 
             if !friends.isEmpty || !preservedTags.isEmpty {
                 TodoFormSection(title: todoLocalized("todo.field.tags")) {
@@ -2590,6 +2598,7 @@ struct TodoFormSheet: View {
 private enum TodoFormField: Hashable {
     case title
     case content
+    case dueDate
     case tags
 }
 

@@ -143,6 +143,68 @@ struct DPDateFieldTests {
         )
     }
 
+    /// A single field has no confirm step to protect, so its Today control is a tap on today's
+    /// cell — pick it and close. A range keeps the navigate-only shortcut, so it still cannot
+    /// slip a value past the footer's confirm.
+    @Test
+    func todayPicksAndClosesASingleFieldButOnlyMovesARange() throws {
+        let today = try date("2026-08-20")
+
+        #expect(
+            DPDateFieldPolicy.todayAction(mode: .single, minimum: nil, maximum: nil, today: today)
+                == .commit(value("2026-08-20"))
+        )
+        #expect(DPDateFieldPolicy.todayAction(mode: rangeMode, minimum: nil, maximum: nil, today: today) == .navigate)
+        #expect(
+            DPDateFieldPolicy.todayAction(mode: .single, minimum: nil, maximum: value("2026-08-19"), today: today)
+                == .ignored
+        )
+        #expect(
+            DPDateFieldPolicy.todayAction(mode: .range(anchor: value("2027-01-10")), minimum: nil, maximum: nil, today: today)
+                == .ignored
+        )
+    }
+
+    /// "Pick and done": a committed day closes the calendar even when it is the day already
+    /// chosen, while a staged range end and an ignored tap leave it open.
+    @Test
+    func onlyACommittedDayClosesTheCalendar() {
+        let day = value("2026-08-24")
+
+        #expect(DPDateFieldPolicy.closesCalendar(after: .committed(day)))
+        #expect(DPDateFieldPolicy.closesCalendar(after: .staged(day)) == false)
+        #expect(DPDateFieldPolicy.closesCalendar(after: .ignored) == false)
+    }
+
+    /// The Todo and D-Day forms used the system's compact picker, which neither closes on a
+    /// pick nor offers Today, and whose tappable area was only the date text inside the box.
+    /// Both now pick their date through this field, with stable identifiers for the field and
+    /// its Today control, and the D-Day editor no longer adds its own date haptic on top of the
+    /// one the field already emits.
+    @Test
+    func theTodoAndDDayFormsPickTheirDateThroughTheField() throws {
+        let todo = try Self.source("Dutypark/Features/Todo/TodoView.swift")
+        let todoSection = try #require(
+            todo.range(of: "TodoFormSection(title: todoLocalized(\"todo.field.dueDate\"))")
+                .map { String(todo[$0.lowerBound...].prefix(2_000)) }
+        )
+        #expect(todoSection.contains("DPDateField("))
+        #expect(todoSection.contains("DatePicker(") == false)
+        #expect(todoSection.contains("accessibilityIdentifier: \"todo.form.dueDate\""))
+
+        let calendar = try Self.source("Dutypark/Features/Calendar/CalendarView.swift")
+        let editorStart = try #require(calendar.range(of: "private struct DDayEditorView: View {"))
+        let editorEnd = try #require(calendar.range(of: "nonisolated enum DDayEditorDismissalPolicy"))
+        let editor = String(calendar[editorStart.lowerBound..<editorEnd.lowerBound])
+        #expect(editor.contains("DPDateField("))
+        #expect(editor.contains("DatePicker(") == false)
+        #expect(editor.contains("accessibilityIdentifier: \"calendar.dday.form.date\""))
+        #expect(editor.contains(".onChange(of: date)") == false)
+
+        let component = try Self.componentSource()
+        #expect(component.contains(".accessibilityIdentifier(accessibilityIdentifier.map { \"\\($0).today\" } ?? \"\")"))
+    }
+
     // MARK: - Grid
 
     /// The view draws whatever this hands it, so the floor has to be folded in here rather than
@@ -708,10 +770,11 @@ struct DPDateFieldTests {
     }
 
     private static func componentSource() throws -> String {
-        try String(
-            contentsOf: projectRoot().appending(path: "Dutypark/Components/DPDateField.swift"),
-            encoding: .utf8
-        )
+        try source("Dutypark/Components/DPDateField.swift")
+    }
+
+    private static func source(_ path: String) throws -> String {
+        try String(contentsOf: projectRoot().appending(path: path), encoding: .utf8)
     }
 
     private static func calendarCatalog() throws -> [String: Any] {

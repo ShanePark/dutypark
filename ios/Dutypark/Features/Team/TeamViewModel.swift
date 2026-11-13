@@ -16,6 +16,10 @@ final class TeamViewModel: ObservableObject {
     @Published private(set) var shifts: [DutyByShiftDTO] = []
     @Published var selectedIndex = 0
     @Published var showsError = false
+    @Published var leaveConfirmationPresented = false
+    /// Captured when the confirmation opens so the panel can keep rendering while it
+    /// animates out after a successful leave has already cleared `team`.
+    @Published private(set) var leaveConfirmationTeamName: String?
     /// Set only when the failure carries its own message; the alert falls back to the generic one.
     @Published private(set) var errorMessage: String?
     @Published var scheduleDraft: TeamScheduleDraft?
@@ -419,6 +423,45 @@ final class TeamViewModel: ObservableObject {
         }
     }
 
+    /// The server requires the lead to hand over the role before leaving.
+    var canLeaveTeam: Bool {
+        guard let team, let memberID else { return false }
+        return team.adminId != memberID
+    }
+
+    func requestLeaveTeam() {
+        guard canLeaveTeam, !isWorking, let team else { return }
+        leaveConfirmationTeamName = team.name
+        leaveConfirmationPresented = true
+        haptics.emit(.warning)
+    }
+
+    func cancelLeaveTeam() {
+        guard !isWorking else { return }
+        leaveConfirmationPresented = false
+        leaveConfirmationTeamName = nil
+    }
+
+    @discardableResult
+    func leaveTeam() async -> Bool {
+        guard canLeaveTeam, !isWorking else { return false }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            try await repository.leaveTeam()
+            team = nil
+            isTeamManager = false
+            schedules = []
+            shifts = []
+            calendarPreviewRevision &+= 1
+            haptics.emit(.success)
+            return true
+        } catch {
+            presentError((error as? APIError)?.errorDescription)
+            return false
+        }
+    }
+
     private func presentError(_ message: String? = nil, emitHaptic: Bool = true) {
         errorMessage = message
         showsError = true
@@ -785,20 +828,23 @@ final class TeamManageViewModel: ObservableObject {
         }
     }
 
-    func canUseAdminTools(loginID: MemberID?) -> Bool {
+    func canUseAdminTools(loginID: MemberID?, isAppAdmin: Bool) -> Bool {
         Self.canUseAdminTools(
             loginID: loginID,
+            isAppAdmin: isAppAdmin,
             team: team
         )
     }
 
+    /// Managers may manage members, but lead and manager role changes are
+    /// limited to the actual team lead (or a service admin) on the server.
     nonisolated static func canUseAdminTools(
         loginID: MemberID?,
+        isAppAdmin: Bool,
         team: TeamDTO?
     ) -> Bool {
         guard let loginID, let team else { return false }
-        return team.adminId == loginID
-            || team.members.contains { $0.id == loginID && $0.isManager }
+        return isAppAdmin || team.adminId == loginID
     }
 
     func changeAdmin(memberID: MemberID?) async -> Bool {
@@ -838,6 +884,7 @@ final class TeamManageViewModel: ObservableObject {
     func removeMember(_ id: MemberID) async -> Bool {
         await perform(
             operation: { try await repository.removeMember(teamID: teamID, memberID: id) },
+            showsServerReason: true,
             update: { team in
                 let removingAdmin = team.adminId == id
                 return Self.copy(
@@ -993,7 +1040,6 @@ final class TeamManageViewModel: ObservableObject {
         let member = TeamMemberDTO(
             id: id,
             name: candidate.name,
-            email: candidate.email,
             isManager: false,
             isAdmin: false,
             hasProfilePhoto: candidate.hasProfilePhoto,
@@ -1060,6 +1106,7 @@ final class TeamManageViewModel: ObservableObject {
     @discardableResult
     private func perform(
         operation: () async throws -> Void,
+        showsServerReason: Bool = false,
         update: ((TeamDTO) -> TeamDTO)? = nil,
         reconcile: Bool = false
     ) async -> Bool {
@@ -1083,11 +1130,11 @@ final class TeamManageViewModel: ObservableObject {
             showsSuccess = true
             return true
         } catch {
-            presentError(
-                isContentFilterBlocked(error)
-                    ? teamLocalized("team.common.contentFilterError")
-                    : nil
-            )
+            if isContentFilterBlocked(error) {
+                presentError(teamLocalized("team.common.contentFilterError"))
+            } else {
+                presentError(showsServerReason ? (error as? APIError)?.errorDescription : nil)
+            }
             return false
         }
     }
@@ -1131,7 +1178,6 @@ final class TeamManageViewModel: ObservableObject {
         TeamMemberDTO(
             id: member.id,
             name: member.name,
-            email: member.email,
             isManager: isManager ?? member.isManager,
             isAdmin: isAdmin ?? member.isAdmin,
             hasProfilePhoto: member.hasProfilePhoto,
@@ -1253,7 +1299,6 @@ private nonisolated enum TeamUITestingFixture {
                 TeamMemberDTO(
                     id: 1,
                     name: "테스트 관리자",
-                    email: "test@duty.park",
                     isManager: true,
                     isAdmin: false,
                     hasProfilePhoto: false,
@@ -1262,7 +1307,6 @@ private nonisolated enum TeamUITestingFixture {
                 TeamMemberDTO(
                     id: 2,
                     name: "김듀티",
-                    email: "member@duty.park",
                     isManager: true,
                     isAdmin: true,
                     hasProfilePhoto: false,
@@ -1288,6 +1332,8 @@ final class TeamMemberSearchViewModel: ObservableObject {
     @Published private(set) var totalElements: Int64 = 0
     @Published var keyword = ""
     @Published var showsError = false
+    /// Server reason for a failed add; the alert falls back to the generic error.
+    @Published private(set) var errorMessage: String?
 
     private let teamID: TeamID
     private let repository: TeamRepository
@@ -1318,6 +1364,7 @@ final class TeamMemberSearchViewModel: ObservableObject {
     private func load(page: Int) async {
         isWorking = true
         defer { isWorking = false }
+        errorMessage = nil
         do {
             let response = try await repository.searchMembers(
                 teamID: teamID,
@@ -1338,11 +1385,13 @@ final class TeamMemberSearchViewModel: ObservableObject {
         guard let id = member.id else { return false }
         isWorking = true
         defer { isWorking = false }
+        errorMessage = nil
         do {
             try await repository.addMember(teamID: teamID, memberID: id)
             DPHapticCenter.shared.emit(.success)
             return true
         } catch {
+            errorMessage = (error as? APIError)?.errorDescription
             showsError = true
             DPHapticCenter.shared.emit(.error)
             return false

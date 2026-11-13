@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.member.controller
 
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.AuxiliaryAccountCreateRequest
+import com.tistory.shanepark.dutypark.member.domain.dto.ManagerMemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.dto.VisibilityUpdateRequest
@@ -78,14 +79,14 @@ class MemberController(
     @GetMapping("/managers")
     fun getManagers(
         @Login loginMember: LoginMember,
-    ): List<MemberDto> {
+    ): List<ManagerMemberDto> {
         return memberService.findAllManagers(loginMember)
     }
 
     @GetMapping("/managed")
     fun getManagedMembers(
         @Login loginMember: LoginMember,
-    ): List<MemberDto> {
+    ): List<ManagerMemberDto> {
         return memberService.findManagedMembers(loginMember)
     }
 

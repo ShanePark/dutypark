@@ -13,6 +13,7 @@ import {
   Plus,
   Check,
   AlertCircle,
+  LogOut,
 } from '@lucide/vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import DatePickerField from '@/components/common/DatePickerField.vue'
@@ -24,7 +25,7 @@ import { useCalendarMonthSwipe } from '@/composables/useCalendarMonthSwipe'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import { isLightColor } from '@/utils/color'
 import { orderForCalendarCell } from '@/utils/calendarScheduleOrder'
-import { extractApiError } from '@/utils/resolveApiError'
+import { extractApiError, resolveApiErrorMessage } from '@/utils/resolveApiError'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
@@ -75,6 +76,9 @@ const isCreateTeamDisabled = computed(() =>
 const hasTeam = ref(false)
 const isTeamManager = ref(false)
 const loginMemberId = computed(() => authStore.user?.id ?? 0)
+// The server requires the lead to hand over the role before leaving.
+const canLeaveTeam = computed(() => team.value != null && team.value.adminId !== loginMemberId.value)
+const isLeavingTeam = ref(false)
 const team = ref<TeamDto | null>(null)
 
 const now = new Date()
@@ -433,6 +437,32 @@ async function handleCreateTeam() {
   }
 }
 
+async function leaveTeam() {
+  if (!team.value || isLeavingTeam.value) return
+  if (!await confirmDelete(
+    t('team.view.leave.confirm', { name: team.value.name }),
+    t('team.view.leave.action'),
+    t('team.view.leave.confirmAction'),
+  )) return
+
+  isLeavingTeam.value = true
+  try {
+    await teamApi.leaveTeam()
+    try {
+      await authStore.checkAuth()
+    } catch (error) {
+      console.error('Failed to refresh member team after leaving:', error)
+    }
+    toastSuccess(t('team.view.leave.success'))
+    await fetchTeamSummary()
+  } catch (error) {
+    console.error('Failed to leave team:', error)
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'team.view.leave.failed' }, t))
+  } finally {
+    isLeavingTeam.value = false
+  }
+}
+
 function goToMemberDuty(memberId: number) {
   router.push(`/duty/${memberId}`)
 }
@@ -747,6 +777,18 @@ onMounted(() => {
             </div>
           </div>
         </template>
+      </div>
+
+      <div v-if="canLeaveTeam" class="mt-6 flex justify-end">
+        <button
+          type="button"
+          :disabled="isLeavingTeam"
+          class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-dp-danger-border bg-dp-danger-soft px-4 py-2 text-sm font-medium text-dp-danger transition-colors hover:bg-dp-danger-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          @click="leaveTeam"
+        >
+          <LogOut class="w-4 h-4" />
+          {{ t('team.view.leave.action') }}
+        </button>
       </div>
     </template>
 

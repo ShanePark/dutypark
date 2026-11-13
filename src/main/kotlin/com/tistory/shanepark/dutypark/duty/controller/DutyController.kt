@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
+import com.tistory.shanepark.dutypark.common.domain.dto.CalendarRequestDates
 import com.tistory.shanepark.dutypark.common.exceptions.ForbiddenException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
@@ -24,6 +25,7 @@ class DutyController(
         @RequestParam month: Int,
         @RequestParam memberId: Long,
     ): List<DutyDto> {
+        CalendarRequestDates.yearMonth(year, month)
         return dutyService.getDuties(
             loginMember = loginMember,
             memberId = memberId,
@@ -39,6 +41,7 @@ class DutyController(
         @RequestParam month: Int,
         @RequestParam memberIds: List<Long>,
     ): List<OtherDutyResponse> {
+        CalendarRequestDates.yearMonth(year, month)
         return dutyService.getOtherDuties(
             loginMember = loginMember,
             memberIds = memberIds,
@@ -52,6 +55,7 @@ class DutyController(
         @RequestBody dutyUpdateDto: DutyUpdateDto,
         @Login loginMember: LoginMember
     ): ResponseEntity<Boolean> {
+        CalendarRequestDates.date(dutyUpdateDto.year, dutyUpdateDto.month, dutyUpdateDto.day)
         checkAuthentication(loginMember, dutyUpdateDto.memberId)
         dutyService.update(dutyUpdateDto, actor = loginMember)
         return ResponseEntity.ok(true)
