@@ -366,6 +366,42 @@ class FriendService(
         }
     }
 
+    /**
+     * Batch form of [isVisible] for the viewer's own friend relations, applied to each relation's friend.
+     * A relation existing satisfies FRIENDS, and blocking removes friendships, so no block lookup is needed.
+     */
+    @Transactional(readOnly = true)
+    fun findVisibleFriendIds(
+        loginMember: LoginMember,
+        friendRelations: List<FriendRelation>,
+        scheduleVisibilityCheck: Boolean = false,
+    ): Set<Long> {
+        if (friendRelations.isEmpty()) {
+            return emptySet()
+        }
+        if (loginMember.isAdmin) {
+            return friendRelations.mapNotNull { it.friend.id }.toSet()
+        }
+
+        val viewer = loginMemberToMember(loginMember)
+        val managedMemberIds = memberService.findManagedMemberIds(loginMember)
+
+        return friendRelations.filter { relation ->
+            val friend = relation.friend
+            when {
+                friend.id == loginMember.id -> true
+                !scheduleVisibilityCheck && isSameTeam(viewer, friend) -> true
+                managedMemberIds.contains(friend.id) -> true
+                else -> when (friend.calendarVisibility) {
+                    Visibility.PUBLIC, Visibility.FRIENDS -> true
+                    // The family flag is always set and cleared on both directions together.
+                    Visibility.FAMILY -> relation.isFamily
+                    Visibility.PRIVATE -> false
+                }
+            }
+        }.mapNotNull { it.friend.id }.toSet()
+    }
+
     fun updateFriendsOrder(loginMember: LoginMember, friendIds: List<Long>) {
         val login = loginMemberToMember(loginMember)
         val friends = memberRepository.findAllById(friendIds)
