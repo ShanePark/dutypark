@@ -19,13 +19,14 @@ class CalendarRequestDateValidationTest : RestDocsTest() {
         2000000000 to 6,
         0 to 6,
         -1 to 6,
+        1 to 1,
         9999 to 6,
         2026 to 0,
         2026 to 13,
         2026 to -1,
     )
 
-    private val boundaryYearMonths = listOf(1 to 1, 9998 to 12)
+    private val boundaryYearMonths = listOf(2 to 1, 9998 to 12)
 
     @Test
     fun `holidays rejects year or month that cannot form a calendar`() {

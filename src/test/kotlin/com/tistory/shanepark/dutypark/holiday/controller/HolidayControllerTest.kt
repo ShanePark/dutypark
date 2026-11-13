@@ -76,7 +76,7 @@ class HolidayControllerTest : RestDocsTest() {
         mockMvc.perform(
             get("/api/holidays")
                 .accept("application/json")
-                .param("year", "1")
+                .param("year", "2")
                 .param("month", "1")
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(42))

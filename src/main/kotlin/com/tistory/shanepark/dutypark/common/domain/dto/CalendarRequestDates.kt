@@ -9,7 +9,9 @@ import java.time.YearMonth
  * with a bad request instead of letting java.time or the database fail with a server error.
  */
 object CalendarRequestDates {
-    const val MIN_YEAR = 1
+    // A January calendar pads into December of the previous year. The MySQL driver writes year 0 (1 BC) as
+    // year 0001, so a January of year 1 would query an empty range.
+    const val MIN_YEAR = 2
 
     // A December calendar pads into January of the next year, and MySQL DATETIME cannot represent year 10000.
     const val MAX_YEAR = 9998
