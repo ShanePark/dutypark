@@ -50,7 +50,8 @@
             "알림 메시지를 텍스트로만 표시하고, 보조 계정과 가입 이름의 길이를 검증합니다.",
             "친구 대시보드의 오늘 근무와 일정이 캘린더 공개 범위를 따릅니다.",
             "다른 사이트에서 보낸 변경 요청과 존재하지 않는 날짜 요청을 거부합니다.",
-            "공휴일은 제공 범위 안에서만 조회하고, 비어 있거나 실패한 연도는 하루 뒤에 다시 확인합니다."
+            "공휴일은 제공 범위 안에서만 조회하고, 비어 있거나 실패한 연도는 하루 뒤에 다시 확인합니다.",
+            "iPhone에서 달력과 팀 화면의 월 이동 버튼이 항상 가운데에 고정되고, 할일·디데이 날짜는 칸 어디를 눌러도 열리며 날짜나 오늘을 고르면 바로 닫힙니다."
           ]
         },
         "pr-437": {
@@ -2432,7 +2433,8 @@
             "Toast messages render as plain text, and auxiliary account and signup names are length-checked.",
             "Today's duty and schedules on the friend dashboard now follow calendar visibility.",
             "Reject state-changing requests sent from other sites and requests for dates that do not exist.",
-            "Look up holidays only within the provider's range, and recheck empty or failed years after a day."
+            "Look up holidays only within the provider's range, and recheck empty or failed years after a day.",
+            "On iPhone, the month controls stay centred on the Calendar and Team screens, and the to-do and D-Day date fields open from anywhere in the box and close as soon as a day or Today is picked."
           ]
         },
         "pr-437": {
@@ -4780,7 +4782,8 @@
         "auth",
         "dashboard",
         "calendar",
-        "notifications"
+        "notifications",
+        "todo"
       ]
     },
     {
