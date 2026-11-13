@@ -4696,9 +4696,11 @@ private struct DDayEditorView: View {
     @State private var isPrivate: Bool
     @State private var isSaving = false
     @State private var showsDiscardConfirmation = false
+    @State private var isDateCalendarOpen = false
     @FocusState private var focusedField: Field?
 
-    private enum Field { case title }
+    /// `date` is never focused; it only names the row the panel scrolls to.
+    private enum Field { case title, date }
 
     init(
         model: CalendarViewModel,
@@ -4740,7 +4742,8 @@ private struct DDayEditorView: View {
     var body: some View {
         DPModalPanel(
             maximumPanelHeight: maximumPanelHeight,
-            scrollTarget: focusedField
+            // An open calendar grows below the fold the moment it opens, so it outranks focus.
+            scrollTarget: isDateCalendarOpen ? Field.date : focusedField
         ) {
             header
         } content: {
@@ -4750,10 +4753,6 @@ private struct DDayEditorView: View {
         }
         .onAppear { onWorkingChange(isSaving) }
         .onChange(of: isSaving) { _, isWorking in onWorkingChange(isWorking) }
-        .onChange(of: date) { _, _ in
-            guard !isSaving else { return }
-            DPHapticCenter.shared.emit(.selection)
-        }
         .onChange(of: isPrivate) { _, _ in
             guard !isSaving else { return }
             DPHapticCenter.shared.emit(.selection)
@@ -4818,29 +4817,33 @@ private struct DDayEditorView: View {
                 Text("calendar.dday.date", tableName: "Calendar")
                     .font(DPTypography.label)
                     .foregroundStyle(DPColor.textSecondary)
-                DatePicker(
-                    CalendarLocalization.text("calendar.dday.date"),
-                    selection: $date,
-                    displayedComponents: .date
+                // The whole box is the control, and the field emits the pick's own haptic.
+                DPDateField(
+                    value: dayBinding,
+                    fieldName: CalendarLocalization.text("calendar.dday.date"),
+                    rowHeight: DPSize.minimumTouchTarget,
+                    locale: CalendarLocalization.selectedLocale,
+                    expansion: $isDateCalendarOpen,
+                    accessibilityIdentifier: "calendar.dday.form.date"
                 )
-                .labelsHidden()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, DPSpacing.compact)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .background(DPColor.backgroundInput)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderInput))
                 .disabled(isSaving)
+            }
+            .id(Field.date)
+            .onChange(of: isDateCalendarOpen) { _, isOpen in
+                if isOpen { focusedField = nil }
             }
 
             HStack(spacing: DPSpacing.small) {
                 ForEach([-7, -1, 0, 1, 7], id: \.self) { offset in
                     Button(offset == 0 ? CalendarLocalization.text("calendar.today") : (offset > 0 ? "+\(offset)" : "\(offset)")) {
-                        date = CalendarDateSupport.calendar.date(
+                        let moved = CalendarDateSupport.calendar.date(
                             byAdding: .day,
                             value: offset,
                             to: offset == 0 ? Date() : date
                         ) ?? date
+                        guard !CalendarDateSupport.calendar.isDate(moved, inSameDayAs: date) else { return }
+                        date = moved
+                        DPHapticCenter.shared.emit(.selection)
                     }
                     .font(DPTypography.caption)
                     .foregroundStyle(offset == 0 ? DPColor.accentHover : DPColor.textPrimary)
@@ -4879,6 +4882,17 @@ private struct DDayEditorView: View {
         }
         .padding(DPSpacing.medium)
         .opacity(isSaving ? DPChrome.disabledOpacity : 1)
+    }
+
+    /// The editor keeps an instant and the field speaks calendar days; a picked day moves the
+    /// instant without touching its clock, so picking the day already held changes nothing.
+    private var dayBinding: Binding<DateOnly> {
+        Binding(
+            get: { ScheduleEditorTimePolicy.day(of: date) },
+            set: {
+                date = ScheduleEditorTimePolicy.date(date, movedTo: $0, calendar: CalendarDateSupport.calendar)
+            }
+        )
     }
 
     private var footer: some View {

@@ -19,6 +19,15 @@ nonisolated enum DPDateFieldTap: Equatable, Sendable {
     case committed(DateOnly)
 }
 
+/// The answer to the header's Today control.
+nonisolated enum DPDateFieldTodayAction: Equatable, Sendable {
+    case ignored
+    /// Only move the view to today's month.
+    case navigate
+    /// Pick today, exactly as a tap on its cell would.
+    case commit(DateOnly)
+}
+
 nonisolated enum DPDateFieldHapticPolicy {
     static func selection(for tap: DPDateFieldTap) -> DPHapticKind? {
         switch tap {
@@ -194,8 +203,7 @@ nonisolated enum DPDateFieldPolicy {
         return !DatePickerGridLogic.isDisabled(next, maximum: maximum)
     }
 
-    /// The header shortcut navigates and nothing else, so it is offered exactly while today is a
-    /// day the grid is allowed to show.
+    /// The header shortcut is offered exactly while today is a day the grid is allowed to show.
     static func canGoToToday(
         mode: DPDateFieldMode,
         minimum: DateOnly?,
@@ -207,6 +215,28 @@ nonisolated enum DPDateFieldPolicy {
             minimum: lowerBound(mode: mode, minimum: minimum),
             maximum: maximum
         )
+    }
+
+    /// A single field has no confirm step, so Today is a tap on today's cell: it picks the day
+    /// and closes. A range only moves the view, so Today cannot slip a value past the confirm.
+    static func todayAction(
+        mode: DPDateFieldMode,
+        minimum: DateOnly?,
+        maximum: DateOnly?,
+        today: Date = Date()
+    ) -> DPDateFieldTodayAction {
+        guard canGoToToday(mode: mode, minimum: minimum, maximum: maximum, today: today) else { return .ignored }
+        let day = DatePickerGridLogic.day(from: today)
+        guard case let .committed(committed) = tap(day, mode: mode, minimum: minimum, maximum: maximum)
+        else { return .navigate }
+        return .commit(committed)
+    }
+
+    /// "Pick and done": a committed day closes the calendar even when it is the day already
+    /// chosen. A staged range end waits for the confirm, and an ignored tap changes nothing.
+    static func closesCalendar(after tap: DPDateFieldTap) -> Bool {
+        if case .committed = tap { return true }
+        return false
     }
 
     /// The month the field opens on. A range field opens on the end it already carries and on
@@ -412,6 +442,7 @@ struct DPDateField<Accessory: View>: View {
     private let locale: Locale
     private let calendarLeadingBleed: CGFloat
     private let expansion: Binding<Bool>?
+    private let accessibilityIdentifier: String?
     private let accessory: Accessory
 
     /// Only used while no caller takes part in the state — see `expansion`.
@@ -443,6 +474,8 @@ struct DPDateField<Accessory: View>: View {
     ///   - initiallyExpanded: opens the calendar without a tap. For previews and tests only;
     ///     production callers always start collapsed. Ignored when `expansion` is supplied,
     ///     which is the caller's to seed.
+    ///   - accessibilityIdentifier: names the collapsed field; its Today control gets the same
+    ///     identifier with a `.today` suffix.
     ///   - accessory: a control that shares the collapsed row, such as the schedule form's
     ///     optional time. It sits beside the field rather than under it so a row that has
     ///     nothing to show there leaves invisible space inside the row instead of an empty band
@@ -460,6 +493,7 @@ struct DPDateField<Accessory: View>: View {
         calendarLeadingBleed: CGFloat = 0,
         expansion: Binding<Bool>? = nil,
         initiallyExpanded: Bool = false,
+        accessibilityIdentifier: String? = nil,
         @ViewBuilder accessory: () -> Accessory
     ) {
         _value = value
@@ -473,6 +507,7 @@ struct DPDateField<Accessory: View>: View {
         self.locale = locale
         self.calendarLeadingBleed = calendarLeadingBleed
         self.expansion = expansion
+        self.accessibilityIdentifier = accessibilityIdentifier
         self.accessory = accessory()
 
         let now = Date()
@@ -583,6 +618,7 @@ struct DPDateField<Accessory: View>: View {
         .buttonStyle(.plain)
         .accessibilityLabel(fieldName)
         .accessibilityValue(displayText)
+        .accessibilityIdentifier(accessibilityIdentifier ?? "")
     }
 
     /// A locked field is not a control: it keeps the editable box exactly and differs by *state*
@@ -623,9 +659,9 @@ struct DPDateField<Accessory: View>: View {
         .accessibilityLabel(DPDateFieldLocalization.dialogLabel(isRange: isRange, locale: locale))
     }
 
-    /// The way back to today sits with the month arrows, where a calendar is expected to keep
-    /// it. It moves the view and nothing else: it never selects and never closes, so it cannot
-    /// slip a value past the confirm step.
+    /// Today sits with the month arrows, where a calendar is expected to keep it. In a single
+    /// field it picks today and closes like a tap on its cell; in a range it only moves the
+    /// view, so it cannot slip a value past the confirm step.
     private var header: some View {
         HStack(spacing: DPSpacing.extraSmall) {
             Text(DatePickerGridLogic.monthLabel(
@@ -655,7 +691,11 @@ struct DPDateField<Accessory: View>: View {
             .buttonStyle(.plain)
             .disabled(!canGoToToday)
             .opacity(canGoToToday ? 1 : DPChrome.disabledOpacity)
-            .accessibilityLabel(DPDateFieldLocalization.text("datePicker.goToToday", locale: locale))
+            .accessibilityLabel(DPDateFieldLocalization.text(
+                isRange ? "datePicker.goToToday" : "calendar.today",
+                locale: locale
+            ))
+            .accessibilityIdentifier(accessibilityIdentifier.map { "\($0).today" } ?? "")
 
             monthStep(symbol: "chevron.left", labelKey: "datePicker.previousMonth", isEnabled: canGoToPreviousMonth, delta: -1)
             monthStep(symbol: "chevron.right", labelKey: "datePicker.nextMonth", isEnabled: canGoToNextMonth, delta: 1)
@@ -958,9 +998,11 @@ struct DPDateField<Accessory: View>: View {
             let didChange = value != day
             value = day
             if didChange { DPHapticCenter.shared.emit(feedback) }
-            collapse(emitFeedback: false)
         case .ignored:
             return
+        }
+        if DPDateFieldPolicy.closesCalendar(after: tap) {
+            collapse(emitFeedback: false)
         }
     }
 
@@ -985,9 +1027,16 @@ struct DPDateField<Accessory: View>: View {
     }
 
     private func goToToday() {
-        guard canGoToToday,
-              let month = DatePickerGridLogic.month(of: DatePickerGridLogic.day(from: today))
-        else { return }
+        switch DPDateFieldPolicy.todayAction(mode: mode, minimum: minimum, maximum: maximum, today: today) {
+        case .ignored:
+            return
+        case let .commit(day):
+            select(day)
+            return
+        case .navigate:
+            break
+        }
+        guard let month = DatePickerGridLogic.month(of: DatePickerGridLogic.day(from: today)) else { return }
         guard DPDateFieldHapticPolicy.monthNavigation(from: visibleMonth, to: month) != nil else { return }
         visibleMonth = month
         DPHapticCenter.shared.emit(.routine)
@@ -1009,7 +1058,8 @@ extension DPDateField where Accessory == EmptyView {
         locale: Locale = AppLocalization.locale,
         calendarLeadingBleed: CGFloat = 0,
         expansion: Binding<Bool>? = nil,
-        initiallyExpanded: Bool = false
+        initiallyExpanded: Bool = false,
+        accessibilityIdentifier: String? = nil
     ) {
         self.init(
             value: value,
@@ -1024,6 +1074,7 @@ extension DPDateField where Accessory == EmptyView {
             calendarLeadingBleed: calendarLeadingBleed,
             expansion: expansion,
             initiallyExpanded: initiallyExpanded,
+            accessibilityIdentifier: accessibilityIdentifier,
             accessory: { EmptyView() }
         )
     }

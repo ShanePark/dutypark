@@ -24,6 +24,31 @@ struct TodoDraftDirtyStateTests {
         #expect(isDirty(initial: initial, draft: draft))
     }
 
+    /// The date field speaks calendar days. Picking the day the draft already holds closes the
+    /// calendar but must not move the stored instant, or an untouched form would read as dirty.
+    @Test
+    func pickingTheSameDueDayLeavesTheDraftUnchanged() {
+        var initial = TodoDraft(status: .inProgress)
+        initial.hasDueDate = true
+        var draft = initial
+
+        draft.dueDay = initial.dueDay
+
+        #expect(draft == initial)
+        #expect(!isDirty(initial: initial, draft: draft))
+    }
+
+    @Test
+    func pickingADueDayIsWhatTheRequestSends() {
+        var draft = TodoDraft(status: .inProgress)
+        draft.hasDueDate = true
+
+        draft.dueDay = DateOnly(rawValue: "2026-08-24")
+
+        #expect(draft.dueDay == DateOnly(rawValue: "2026-08-24"))
+        #expect(draft.request().dueDate == DateOnly(rawValue: "2026-08-24"))
+    }
+
     @Test
     func editableFieldDifferencesMakeDraftDirty() {
         let initial = TodoDraft(status: .inProgress)
