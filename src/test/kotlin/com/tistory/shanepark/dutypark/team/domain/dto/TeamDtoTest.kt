@@ -19,6 +19,7 @@ class TeamDtoTest {
 
         val admin = Member("admin", "admin@duty.park", "pass")
         setId(admin, 100L)
+        team.addMember(admin)
         team.changeAdmin(admin)
 
         val dutyType1 = DutyType("B", 2, team, "#000000")
@@ -32,6 +33,22 @@ class TeamDtoTest {
         assertThat(dto.dutyBatchTemplate?.name).isEqualTo("SUNGSIM_CAKE")
         assertThat(dto.dutyTypes.first().name).isEqualTo("OFF")
         assertThat(dto.dutyTypes.drop(1).map { it.name }).containsExactly("A", "B")
+    }
+
+    @Test
+    fun `of reports no admin when the admin no longer belongs to the team`() {
+        val team = Team("gamma")
+        setId(team, 20L)
+        val formerAdmin = Member("former", "former@duty.park", "pass")
+        setId(formerAdmin, 200L)
+        team.addMember(formerAdmin)
+        team.changeAdmin(formerAdmin)
+        team.removeMember(formerAdmin)
+
+        val dto = TeamDto.of(team, members = emptyList(), dutyTypes = emptyList())
+
+        assertThat(dto.adminId).isNull()
+        assertThat(dto.adminName).isNull()
     }
 
     @Test
