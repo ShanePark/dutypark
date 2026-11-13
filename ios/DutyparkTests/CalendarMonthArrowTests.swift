@@ -133,29 +133,102 @@ final class CalendarMonthArrowTests: XCTestCase {
         XCTAssertTrue(controls.contains("monthIdentifier: \"guest.calendar.monthPicker.open\""))
     }
 
-    /// The navigation bar gives the principal item only the room between the leading and
-    /// trailing items, and anything the capsule draws past that room ignores touches. Padding
-    /// both sides to one fixed width left a 375pt screen too little room for the capsule, so
-    /// the side items keep their natural widths (the leading one capped) and the bar centres
-    /// the capsule when it fits, sliding it aside otherwise.
-    func testTheBarSideItemsLeaveTheCapsuleItsWidth() throws {
+    /// The navigation bar centres a principal item only when it fits between the leading and
+    /// trailing items; otherwise it slides it, so the capsule moved with every name length and
+    /// trailing control. Padding both sides to one fixed width instead left a 375pt screen too
+    /// little room, and the bar ignored touches on whatever the capsule drew past it. Both
+    /// headers now hand the bar one full-width principal header that centres the capsule
+    /// itself and gives each side only the room beside it.
+    func testCalendarAndTeamHostTheirSideItemsInsideTheSharedHeader() throws {
         let calendar = try Self.source("Dutypark/Features/Calendar/CalendarView.swift")
         let calendarToolbar = try Self.declaration(named: "private var calendarToolbar: some ToolbarContent", in: calendar)
-        XCTAssertTrue(
-            calendarToolbar.contains("memberIdentityBar\n                .frame(maxWidth: Self.barSideWidth, alignment: .leading)\n                .fixedSize(horizontal: true, vertical: false)"),
-            "The bar would squeeze the identity to make room and cut the name; it keeps its ideal width up to the cap"
-        )
-        XCTAssertFalse(calendarToolbar.contains(".frame(width: Self.barSideWidth"))
-        let identityBar = try Self.declaration(named: "private var memberIdentityBar: some View", in: calendar)
-        XCTAssertFalse(identityBar.contains("maxWidth: .infinity"), "The identity reports its natural width")
-
         let team = try Self.source("Dutypark/Features/Team/TeamView.swift")
         let teamToolbar = try Self.declaration(named: "private func teamToolbar(_ team: TeamDTO) -> some ToolbarContent", in: team)
+
+        for (name, toolbar) in [("Calendar", calendarToolbar), ("Team", teamToolbar)] {
+            XCTAssertTrue(toolbar.contains("DPDashboardHeaderToolbarItem(placement: .principal) {\n            DPMonthHeaderBar {"), name)
+            XCTAssertFalse(toolbar.contains(".topBarLeading"), "\(name): a separate side item would push the capsule off centre again")
+            XCTAssertFalse(toolbar.contains(".topBarTrailing"), "\(name): a separate side item would push the capsule off centre again")
+            XCTAssertFalse(toolbar.contains("barSideWidth"), "\(name): the header sizes the sides from the capsule, not a fixed cap")
+        }
+        XCTAssertTrue(calendarToolbar.contains("memberIdentityBar"))
+        XCTAssertTrue(calendarToolbar.contains("monthControls"))
+        XCTAssertTrue(calendarToolbar.contains("searchControl"))
+        XCTAssertTrue(teamToolbar.contains("teamNameChip(team)"))
+        XCTAssertTrue(teamToolbar.contains("monthHeader"))
+        XCTAssertTrue(teamToolbar.contains("manageControl(team)"))
+
+        let identityBar = try Self.declaration(named: "private var memberIdentityBar: some View", in: calendar)
+        XCTAssertFalse(identityBar.contains("maxWidth: .infinity"), "The identity reports its natural width")
         XCTAssertTrue(
-            teamToolbar.contains("teamNameChip(team)\n                .frame(maxWidth: Self.barSideWidth, alignment: .leading)\n                .fixedSize(horizontal: true, vertical: false)"),
-            "The bar would squeeze the chip down to its icon"
+            calendar.contains("size: memberBackAction == nil ? Self.barAvatarSize : Self.barAvatarSizeBesideBack"),
+            "Beside the back chevron the centred capsule leaves the name too little room at the full avatar size"
         )
-        XCTAssertFalse(teamToolbar.contains(".frame(width: Self.barSideWidth"))
+    }
+
+    func testTheSharedHeaderKeepsTheCapsuleAtItsFullWidth() throws {
+        let source = try Self.source("Dutypark/Components/DPMonthHeaderBar.swift")
+        XCTAssertTrue(source.contains("struct DPMonthHeaderBar<Leading: View, Center: View, Trailing: View>: View"))
+        XCTAssertTrue(
+            source.contains("subviews[1].sizeThatFits(.unspecified)"),
+            "The capsule is measured at its ideal size and never squeezed by the side items"
+        )
+        // A header narrower than the capsule would let the bar clip the arrows' touch area.
+        XCTAssertTrue(source.contains("max(width, capsule.width)"))
+    }
+
+    /// The capsule's centre is the header's centre whatever the side items hold.
+    func testTheCapsuleStaysCentredWhateverTheSideItemsHold() {
+        let capsuleWidth: CGFloat = 193
+        let containerWidth: CGFloat = 343
+        let reference = DPMonthHeaderPlacement(
+            containerWidth: containerWidth,
+            capsuleWidth: capsuleWidth,
+            leadingIdealWidth: 77,
+            trailingIdealWidth: 36
+        )
+        XCTAssertEqual(reference.capsuleMinX + capsuleWidth / 2, containerWidth / 2)
+
+        for (leading, trailing) in [(0, 0), (88, 36), (240, 0), (12, 120)] as [(CGFloat, CGFloat)] {
+            let placement = DPMonthHeaderPlacement(
+                containerWidth: containerWidth,
+                capsuleWidth: capsuleWidth,
+                leadingIdealWidth: leading,
+                trailingIdealWidth: trailing
+            )
+            XCTAssertEqual(placement.capsuleMinX, reference.capsuleMinX, "leading \(leading), trailing \(trailing)")
+            XCTAssertEqual(placement.sideWidth, reference.sideWidth)
+        }
+    }
+
+    /// Each side gets only the room beside the capsule: a short item keeps its natural width,
+    /// a long one is truncated to the room, and neither reaches the capsule.
+    func testEachSideGetsOnlyTheRoomBesideTheCapsule() {
+        let placement = DPMonthHeaderPlacement(
+            containerWidth: 343,
+            capsuleWidth: 193,
+            leadingIdealWidth: 240,
+            trailingIdealWidth: 36
+        )
+        let room = (343 - 193) / 2 - DPMonthHeaderPlacement.capsuleSpacing
+        XCTAssertEqual(placement.sideWidth, room)
+        XCTAssertEqual(placement.leadingWidth, room)
+        XCTAssertEqual(placement.trailingWidth, 36)
+        XCTAssertLessThanOrEqual(placement.leadingWidth, placement.capsuleMinX)
+        XCTAssertGreaterThanOrEqual(343 - placement.trailingWidth, placement.capsuleMinX + 193)
+    }
+
+    func testANarrowHeaderGivesTheSidesNoRoomButKeepsTheCapsuleWhole() {
+        let placement = DPMonthHeaderPlacement(
+            containerWidth: 150,
+            capsuleWidth: 193,
+            leadingIdealWidth: 77,
+            trailingIdealWidth: 36
+        )
+        XCTAssertEqual(placement.sideWidth, 0)
+        XCTAssertEqual(placement.leadingWidth, 0)
+        XCTAssertEqual(placement.trailingWidth, 0)
+        XCTAssertEqual(placement.capsuleMinX + 193 / 2, 75)
     }
 
     func testTheOldStandaloneArrowIsGone() throws {

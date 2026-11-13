@@ -277,7 +277,7 @@ struct TeamView: View {
                 ) { availableSize, dismiss in
                     DPConfirmationPanel(
                         title: teamLocalized("team.view.leave.title"),
-                        message: TeamLocalization.leaveTeamMessage(name: team.name),
+                        message: TeamLocalization.leaveTeamMessage(name: teamName),
                         confirmTitle: teamLocalized("team.view.leave.confirmAction"),
                         cancelTitle: teamLocalized("team.common.cancel"),
                         isDestructive: true,
@@ -368,26 +368,18 @@ struct TeamView: View {
         }
     }
 
-    // Caps the leading team chip. The side items otherwise keep their natural widths so the
-    // principal month capsule gets every point the bar can spare; it ignores touches past the
-    // room the bar gives it. The bar centres the capsule when it fits.
-    private static let barSideWidth: CGFloat = 88
-
+    // The same principal header as Calendar, so the capsule sits on the same centre in both tabs.
     @ToolbarContentBuilder
     private func teamToolbar(_ team: TeamDTO) -> some ToolbarContent {
-        DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
-            // Reports its ideal width up to the cap; the bar otherwise squeezes the chip to
-            // centre the capsule and hides the team name.
-            teamNameChip(team)
-                .frame(maxWidth: Self.barSideWidth, alignment: .leading)
-                .fixedSize(horizontal: true, vertical: false)
-        }
         DPDashboardHeaderToolbarItem(placement: .principal) {
-            monthHeader
-        }
-        DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
-            if viewModel.isTeamManager {
-                manageControl(team)
+            DPMonthHeaderBar {
+                teamNameChip(team)
+            } center: {
+                monthHeader
+            } trailing: {
+                if viewModel.isTeamManager {
+                    manageControl(team)
+                }
             }
         }
     }

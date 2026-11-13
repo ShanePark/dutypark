@@ -642,22 +642,18 @@ struct CalendarView: View {
         return nil
     }
 
+    // One principal header keeps the capsule on the bar's centre; separate side items let the
+    // bar slide it by the identity's width.
     @ToolbarContentBuilder
     private var calendarToolbar: some ToolbarContent {
-        DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
-            // Reports its ideal width up to the cap; the bar otherwise squeezes the identity
-            // to centre the capsule and cuts the name down to a single letter.
-            memberIdentityBar
-                .frame(maxWidth: Self.barSideWidth, alignment: .leading)
-                .fixedSize(horizontal: true, vertical: false)
-        }
         DPDashboardHeaderToolbarItem(placement: .principal) {
-            monthControls
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("calendar.month.controls")
-        }
-        DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
-            Group {
+            DPMonthHeaderBar {
+                memberIdentityBar
+            } center: {
+                monthControls
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("calendar.month.controls")
+            } trailing: {
                 if model.canSearchSchedules {
                     searchControl
                 }
@@ -749,12 +745,12 @@ struct CalendarView: View {
     }
 
     private var memberIdentity: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: memberBackAction == nil ? 6 : 4) {
             CalendarMemberAvatar(
                 memberID: model.targetMemberID,
                 hasProfilePhoto: model.targetHasProfilePhoto,
                 profilePhotoVersion: model.targetProfilePhotoVersion,
-                size: 32
+                size: memberBackAction == nil ? Self.barAvatarSize : Self.barAvatarSizeBesideBack
             )
             Text(model.targetName)
                 .font(DPFont.bold(size: 12, relativeTo: .caption))
@@ -780,11 +776,10 @@ struct CalendarView: View {
     // the full touch target.
     private static let barBackWidth: CGFloat = 16
 
-    // Caps the leading identity. The side items otherwise keep their natural widths: the bar
-    // gives the principal month capsule only the room between them, and anything drawn past
-    // that room ignores touches. The bar centres the capsule when it fits and slides it
-    // toward the trailing side otherwise.
-    private static let barSideWidth: CGFloat = 88
+    // The centred capsule leaves the leading slot about 73pt on a 375pt screen. Beside the
+    // back chevron a smaller avatar keeps room for a short name instead of one letter.
+    private static let barAvatarSize: CGFloat = 32
+    private static let barAvatarSizeBesideBack: CGFloat = 24
 
     // The callout is hosted by the full calendar body rather than the navigation-bar item.
     // That keeps the item at its native 44pt height while the body still owns the callout's
