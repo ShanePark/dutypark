@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.net.URI
 
 /**
  * Runs through the real Spring Security chain so the origin check is exercised alongside the CORS filter.
@@ -93,6 +94,24 @@ class OriginCheckFilterTest : DutyparkIntegrationTest() {
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.status").value(403))
             .andExpect(jsonPath("$.code").value(REJECTED_CODE))
+    }
+
+    @Test
+    fun `cross-site form post to a percent-encoded admin API path is rejected without side effects`() {
+        val target = TestData.member
+
+        // URI.create keeps %61 ("a") raw; Spring MVC decodes it and routes to /admin/api/... anyway.
+        mockMvc.perform(
+            post(URI.create("$BASE/%61dmin/api/members/${target.id}/suspension"))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .header(HttpHeaders.ORIGIN, EVIL_ORIGIN)
+                .cookie(accessCookie(TestData.admin))
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.status").value(403))
+            .andExpect(jsonPath("$.code").value(REJECTED_CODE))
+
+        assertThat(statusOf(target)).isEqualTo(MemberStatus.ACTIVE)
     }
 
     @Test

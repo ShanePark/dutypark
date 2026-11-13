@@ -10,13 +10,16 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.filter.OncePerRequestFilter
 
 /**
- * Blocks cross-site state-changing API requests (CSRF) that carry the browser's auth cookies.
+ * Blocks cross-site state-changing requests (CSRF) that carry the browser's auth cookies.
  *
  * SameSite=Lax is not enough here: the production host is a subdomain of a shared domain that is not on the
  * Public Suffix List, so sibling subdomains are same-site and their form posts carry the cookies.
  * Browsers always send Origin on cross-origin writes, so a write is accepted only from an allowed origin or
  * without Origin at all (native iOS URLSession, server-to-server). `Origin: null` (sandboxed frames,
  * privacy redirects) is rejected because no legitimate flow posts to these APIs with it.
+ *
+ * Every state-changing request is checked regardless of path: the raw request URI is still percent-encoded
+ * while Spring MVC routes on the decoded path, so prefix-matching it would let `/%61dmin/api/...` slip past.
  */
 class OriginCheckFilter(
     private val allowedOrigins: CorsConfiguration,
@@ -24,11 +27,7 @@ class OriginCheckFilter(
 
     private val log = logger()
 
-    override fun shouldNotFilter(request: HttpServletRequest): Boolean {
-        if (request.method !in STATE_CHANGING_METHODS) return true
-        val path = request.requestURI.removePrefix(request.contextPath)
-        return PROTECTED_PATH_PREFIXES.none(path::startsWith)
-    }
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean = request.method !in STATE_CHANGING_METHODS
 
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         val origin = request.getHeader(HttpHeaders.ORIGIN)
@@ -50,7 +49,6 @@ class OriginCheckFilter(
 
     companion object {
         private val STATE_CHANGING_METHODS = setOf("POST", "PUT", "PATCH", "DELETE")
-        private val PROTECTED_PATH_PREFIXES = listOf("/api/", "/admin/api/")
         private const val REJECTED_CODE = "common.badRequest"
     }
 }
