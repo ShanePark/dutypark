@@ -10,7 +10,7 @@ import java.time.Instant
 
 @Entity
 class Member(
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = NAME_MAX_LENGTH)
     var name: String,
 
     @Column
@@ -72,6 +72,10 @@ class Member(
 
     override fun toString(): String {
         return "Member(name='$name', id=$id)"
+    }
+
+    companion object {
+        const val NAME_MAX_LENGTH = 10
     }
 
     fun isEquals(loginMember: LoginMember): Boolean {

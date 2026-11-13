@@ -146,11 +146,12 @@ export function useSwal() {
     }).then((result) => result.isConfirmed)
   }
 
+  // Toast messages often interpolate user-provided names, so they must stay text (titleText), never HTML.
+  // The success check icon is drawn by CSS on .colored-toast-success.
   const toastSuccess = (message: string) => {
-    const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
     return Toast.fire({
       icon: undefined,
-      title: `<span class="toast-with-icon">${checkIcon}<span>${message}</span></span>`,
+      titleText: message,
       customClass: {
         popup: 'colored-toast colored-toast-success',
       },
@@ -160,7 +161,7 @@ export function useSwal() {
   const toastInfo = (message: string) => {
     return Toast.fire({
       icon: undefined,
-      title: message,
+      titleText: message,
       customClass: {
         popup: 'colored-toast colored-toast-info',
       },
@@ -170,7 +171,7 @@ export function useSwal() {
   const toastError = (message: string) => {
     return Toast.fire({
       icon: undefined,
-      title: message,
+      titleText: message,
       customClass: {
         popup: 'colored-toast colored-toast-error',
       },

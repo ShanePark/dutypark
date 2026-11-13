@@ -152,6 +152,40 @@ class MemberControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `createAuxiliaryAccount rejects a name longer than the signup limit`() {
+        val member = TestData.member
+        val name = "x<img src=x onerror=alert(1)>"
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/members/auxiliary")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to name)))
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("sso.username.length"))
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
+
+        assertThat(memberRepository.findAll().none { it.name == name }).isTrue
+    }
+
+    @Test
+    fun `createAuxiliaryAccount accepts a name at the signup limit`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/members/auxiliary")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "가나다라마바사아자차")))
+                .withAuth(member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.name").value("가나다라마바사아자차"))
+    }
+
+    @Test
     fun `amIManager returns false when not logged in`() {
         val member = TestData.member
 
