@@ -228,6 +228,19 @@ Set `BUILD_NUMBER` to override the generated build number, for example
 canonical file is the single source for the app release version. App Store
 Connect processing continues asynchronously after the upload command succeeds.
 
+### iOS release tags
+
+Keep the existing `YYYY.MM.DD` release tags and add an annotated
+`ios/v<marketing-version>` tag for each iOS release, such as `ios/v1.2.2`.
+The iOS tag must point to the commit used to build the submitted archive;
+record its marketing version and build number in the tag message. The upload
+script does not create tags.
+
+Upload transport acceptance, completed App Store Connect processing, submission
+for App Review, and App Store release are separate states. Record only the state
+actually confirmed; an iOS tag or successful upload alone does not confirm review
+submission or release.
+
 ### Screenshots and demo captures
 
 Use a local, marker-owned demo account and local backend data for captures;
