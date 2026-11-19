@@ -18,6 +18,7 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.test.util.ReflectionTestUtils
@@ -37,7 +38,7 @@ class DutyAbbreviationServiceTest {
     fun setUp() {
         team = Team("team")
         ReflectionTestUtils.setField(team, "id", 1L)
-        service = DutyTypeService(types, teams, duties, Clock.systemUTC(), content)
+        service = DutyTypeService(types, teams, duties, Clock.systemUTC(), content, mock())
     }
 
     @Test

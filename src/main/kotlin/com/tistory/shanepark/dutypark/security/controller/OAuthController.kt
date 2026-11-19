@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.security.controller
 
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
@@ -135,7 +134,6 @@ class OAuthController(
     }
 
     @PostMapping("sso/signup/token")
-    @SlackNotification
     fun ssoSignup(
         @Valid @RequestBody request: SsoSignupRequest,
         httpServletRequest: HttpServletRequest,

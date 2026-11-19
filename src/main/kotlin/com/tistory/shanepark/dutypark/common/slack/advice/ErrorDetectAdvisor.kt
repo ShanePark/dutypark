@@ -2,11 +2,10 @@ package com.tistory.shanepark.dutypark.common.slack.advice
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.logging.auditContext
-import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
+import com.tistory.shanepark.dutypark.common.slack.SlackEvent
+import com.tistory.shanepark.dutypark.common.slack.SlackEventLevel
+import com.tistory.shanepark.dutypark.common.slack.notifier.SlackEventNotifier
 import jakarta.servlet.http.HttpServletRequest
-import net.gpedro.integrations.slack.SlackAttachment
-import net.gpedro.integrations.slack.SlackField
-import net.gpedro.integrations.slack.SlackMessage
 import org.apache.catalina.connector.ClientAbortException
 import org.apache.coyote.CloseNowException
 import org.springframework.http.ResponseEntity
@@ -23,7 +22,7 @@ import java.util.IdentityHashMap
 
 @ControllerAdvice
 class ErrorDetectAdvisor(
-    private val slackNotifier: SlackNotifier,
+    private val slackEventNotifier: SlackEventNotifier,
 ) {
     private val log = logger()
 
@@ -71,24 +70,16 @@ class ErrorDetectAdvisor(
         if (isNotNotify(e))
             return
 
-        val slackAttachment = SlackAttachment()
-        slackAttachment.setFallback("Error")
-        slackAttachment.setColor("danger")
-        slackAttachment.setTitle("Error Detect")
-        slackAttachment.setFields(
-            listOf(
-                SlackField().setTitle("Error Type").setValue(exceptionType(e)),
-            )
-        )
-
-        val slackMessage = SlackMessage()
-        slackMessage.setAttachments(Collections.singletonList(slackAttachment))
-        slackMessage.setIcon(":ghost:")
-        slackMessage.setText("")
-        slackMessage.setUsername("DutyPark")
-
         try {
-            slackNotifier.call(slackMessage)
+            slackEventNotifier.send(
+                SlackEvent(
+                    emoji = "🔥",
+                    title = "Unhandled error",
+                    headline = exceptionType(e),
+                    chips = listOf(_req.method, pathPattern(_req)),
+                    level = SlackEventLevel.ALERT,
+                )
+            )
         } catch (notificationFailure: Throwable) {
             log.error(
                 "Failed to send Slack notification (exception={})",

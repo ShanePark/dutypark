@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.team.controller
 
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeVisibilityDto
@@ -18,7 +17,6 @@ class TeamManageDutyTypeController(
     private val dutyTypeService: DutyTypeService,
 ) {
     @PostMapping("/{teamId}/duty-types")
-    @SlackNotification
     fun addDutyType(
         @Login loginMember: LoginMember,
         @PathVariable teamId: Long,
@@ -30,7 +28,6 @@ class TeamManageDutyTypeController(
     }
 
     @PatchMapping("/{teamId}/duty-types")
-    @SlackNotification
     fun updateDutyType(
         @Login loginMember: LoginMember,
         @PathVariable teamId: Long,
@@ -57,7 +54,6 @@ class TeamManageDutyTypeController(
     }
 
     @PatchMapping("/{teamId}/duty-types/{id}/visibility")
-    @SlackNotification
     fun updateVisibility(
         @Login loginMember: LoginMember,
         @PathVariable teamId: Long,

@@ -2,10 +2,10 @@ package com.tistory.shanepark.dutypark.common.slack.advice
 
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
+import com.google.gson.JsonObject
+import com.tistory.shanepark.dutypark.common.slack.SlackEventLevel
+import com.tistory.shanepark.dutypark.common.slack.notifier.SlackEventNotifier
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
-import net.gpedro.integrations.slack.SlackAttachment
-import net.gpedro.integrations.slack.SlackException
-import net.gpedro.integrations.slack.SlackField
 import net.gpedro.integrations.slack.SlackMessage
 import org.apache.catalina.connector.ClientAbortException
 import org.apache.coyote.CloseNowException
@@ -18,9 +18,10 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
-import org.mockito.kotlin.any
-import org.mockito.kotlin.whenever
 import org.slf4j.LoggerFactory
+import org.springframework.core.task.SyncTaskExecutor
+import org.springframework.core.task.TaskExecutor
+import org.springframework.core.task.TaskRejectedException
 import org.springframework.http.HttpStatus
 import org.springframework.http.converter.HttpMessageNotWritableException
 import org.springframework.mock.web.MockHttpServletRequest
@@ -33,7 +34,7 @@ import java.util.concurrent.TimeUnit
 class ErrorDetectAdvisorTest {
 
     private val slackNotifier: SlackNotifier = mock()
-    private val advisor = ErrorDetectAdvisor(slackNotifier)
+    private val advisor = ErrorDetectAdvisor(SlackEventNotifier(slackNotifier, SyncTaskExecutor()))
 
     @Test
     fun `handleMethodNotSupported returns 404`() {
@@ -69,7 +70,7 @@ class ErrorDetectAdvisorTest {
     }
 
     @Test
-    fun `handleException sends only the exception class`() {
+    fun `handleException sends only the exception class and request method`() {
         val request = requestWithBody("/api/private", "email=private@example.com&content=submitted-secret")
         request.queryString = "token=query-secret"
         val exception = RuntimeException("user supplied exception message")
@@ -79,11 +80,13 @@ class ErrorDetectAdvisorTest {
         }
 
         val message = captureSlackMessage()
-        val attachment = readAttachments(message).single()
-        assertThat(readFieldTitles(attachment)).containsExactly("Error Type")
-        assertThat(findField(message, "Error Type")).isEqualTo("RuntimeException")
-        assertThat(attachment.toJson()["text"]).isNull()
+        val attachment = attachmentOf(message)
+        assertThat(attachment["title"].asString).isEqualTo("🔥 Unhandled error")
+        assertThat(attachment["text"].asString).isEqualTo("*RuntimeException*\n`POST`  `&lt;unmatched&gt;`")
+        assertThat(attachment["color"].asString).isEqualTo(SlackEventLevel.ALERT.color)
+        assertThat(attachment["fields"]).isNull()
         assertThat(message.prepare().toString()).doesNotContain(
+            "/api/private",
             "private@example.com",
             "submitted-secret",
             "query-secret",
@@ -143,7 +146,10 @@ class ErrorDetectAdvisorTest {
                 "submitted-secret",
             )
         assertThat(event.throwableProxy).isNull()
-        assertThat(findField(captureSlackMessage(), "Error Type")).isEqualTo("HttpMessageNotWritableException")
+        val slackText = attachmentOf(captureSlackMessage())["text"].asString
+        assertThat(slackText)
+            .isEqualTo("*HttpMessageNotWritableException*\n`GET`  `/api/attachments/{id}/download`")
+            .doesNotContain("attachment-secret", "query-secret", "private@example.com", "submitted-secret")
     }
 
     @Test
@@ -171,12 +177,12 @@ class ErrorDetectAdvisorTest {
     }
 
     @Test
-    fun `handleException keeps the original error when Slack sending fails`() {
+    fun `handleException keeps the original error when Slack submission fails`() {
         val request = requestWithBody("/api/private", "content=submitted-secret")
         val original = RuntimeException("original user supplied message")
         val webhookFailureMessage = "https://hooks.slack.com/services/T000/B000/secret-token"
-        whenever(slackNotifier.call(any()))
-            .thenThrow(SlackException(IllegalStateException(webhookFailureMessage)))
+        val rejectingExecutor = TaskExecutor { throw TaskRejectedException(webhookFailureMessage) }
+        val advisor = ErrorDetectAdvisor(SlackEventNotifier(slackNotifier, rejectingExecutor))
 
         val logger = LoggerFactory.getLogger(ErrorDetectAdvisor::class.java)
             as ch.qos.logback.classic.Logger
@@ -194,7 +200,7 @@ class ErrorDetectAdvisorTest {
         assertThat(appender.list).hasSize(2)
         val slackFailureLog = appender.list.first()
         assertThat(slackFailureLog.formattedMessage)
-            .contains("SlackException")
+            .contains("TaskRejectedException")
             .doesNotContain(webhookFailureMessage, original.message)
         val diagnosticLog = appender.list.last()
         assertThat(diagnosticLog.formattedMessage)
@@ -262,7 +268,8 @@ class ErrorDetectAdvisorTest {
             logger.detachAppender(appender)
         }
 
-        assertThat(findField(captureSlackMessage(), "Error Type")).isEqualTo("HttpMessageNotWritableException")
+        assertThat(attachmentOf(captureSlackMessage())["text"].asString)
+            .startsWith("*HttpMessageNotWritableException*")
         assertThat(appender.list).hasSize(1)
         assertThat(appender.list.single().formattedMessage)
             .contains("HttpMessageNotWritableException", "CyclicCauseException")
@@ -309,39 +316,6 @@ class ErrorDetectAdvisorTest {
         return captor.firstValue
     }
 
-    private fun findField(message: SlackMessage, title: String): String? {
-        val attachments = readAttachments(message)
-        val attachment = attachments.single()
-        val fields = readFields(attachment)
-        val match = fields.firstOrNull { readFieldTitle(it) == title }
-        return match?.let { readFieldValue(it) }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun readAttachments(message: SlackMessage): List<SlackAttachment> {
-        val field = SlackMessage::class.java.getDeclaredField("attach")
-        field.isAccessible = true
-        return field.get(message) as? List<SlackAttachment> ?: emptyList()
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun readFields(attachment: SlackAttachment): List<SlackField> {
-        val field = SlackAttachment::class.java.getDeclaredField("fields")
-        field.isAccessible = true
-        return field.get(attachment) as? List<SlackField> ?: emptyList()
-    }
-
-    private fun readFieldTitles(attachment: SlackAttachment): List<String?> = readFields(attachment).map(::readFieldTitle)
-
-    private fun readFieldTitle(field: SlackField): String? {
-        val titleField = SlackField::class.java.getDeclaredField("title")
-        titleField.isAccessible = true
-        return titleField.get(field) as? String
-    }
-
-    private fun readFieldValue(field: SlackField): String? {
-        val valueField = SlackField::class.java.getDeclaredField("value")
-        valueField.isAccessible = true
-        return valueField.get(field) as? String
-    }
+    private fun attachmentOf(message: SlackMessage): JsonObject =
+        message.prepare()["attachments"].asJsonArray.single().asJsonObject
 }
