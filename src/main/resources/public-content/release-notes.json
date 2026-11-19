@@ -40,6 +40,14 @@
         }
       },
       "entries": {
+        "pr-439": {
+          "title": "운영 알림 개선",
+          "summary": "서비스 운영자가 받는 내부 알림에서 어떤 변경이 있었는지 더 쉽게 알아볼 수 있습니다. 이용 화면에는 바뀌는 점이 없습니다.",
+          "changes": [
+            "근무 유형 추가·수정·숨김·표시 알림에 근무 유형 이름과 팀 이름이 함께 표시됩니다.",
+            "회원 이름, 이메일 같은 개인정보는 계속 운영 알림에 담지 않습니다."
+          ]
+        },
         "pr-438": {
           "title": "권한·요청 검증 강화와 팀 나가기",
           "summary": "매니저·팀 관리 권한과 개인정보 노출 범위를 강화하고, 다른 사이트에서 보낸 요청과 잘못된 날짜 요청을 서버에서 차단합니다.",
@@ -2423,6 +2431,14 @@
         }
       },
       "entries": {
+        "pr-439": {
+          "title": "Clearer operator alerts",
+          "summary": "Internal alerts sent to the service operator now show what actually changed. Nothing changes in the app itself.",
+          "changes": [
+            "Duty type create, update, hide, and show alerts now include the duty type name and team name.",
+            "Operator alerts still never include personal data such as member names or emails."
+          ]
+        },
         "pr-438": {
           "title": "Stronger permission and request checks, and leaving a team",
           "summary": "Tighten manager and team permissions and personal data exposure, and reject cross-site and impossible-date requests on the server.",
@@ -4769,6 +4785,17 @@
     }
   },
   "items": [
+    {
+      "id": "pr-439",
+      "version": "2026.11.19",
+      "date": "2026-11-19",
+      "pr": 439,
+      "url": "https://github.com/ShanePark/dutypark/pull/439",
+      "category": "maintenance",
+      "areas": [
+        "admin"
+      ]
+    },
     {
       "id": "pr-438",
       "version": "2026.11.13",
