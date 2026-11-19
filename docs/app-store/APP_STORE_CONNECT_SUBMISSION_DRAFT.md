@@ -42,10 +42,11 @@ and does not replace App Store Connect Privacy Details.
 - Google Gemini receives only the date and schedule text after the user separately opts
   into `AI_SCHEDULE_PARSING`. Dutypark does not intentionally send member, team, or record
   identifiers in that request. Manual schedule entry remains available.
-- Current Slack application events are restricted to fixed operational text and enums;
-  inquiry/report content, names, user IDs, record IDs, IP addresses, request bodies, and
-  stack traces are excluded. If production behavior later sends user-linked data, update
-  both the policy and App Privacy Details.
+- Current Slack application events are restricted to fixed operational text, enums, and
+  team-managed labels (team names and duty type names); member names, email addresses,
+  user IDs, record IDs, IP addresses, inquiry/report content, request bodies, exception
+  messages, and stack traces are excluded. If production behavior later sends user-linked
+  data, update both the policy and App Privacy Details.
 
 ### Retention and deletion boundaries
 

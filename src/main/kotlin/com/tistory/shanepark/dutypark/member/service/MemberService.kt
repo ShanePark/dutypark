@@ -40,6 +40,7 @@ class MemberService(
     private val memberDtoAssembler: MemberDtoAssembler,
     private val friendRelationRepository: FriendRelationRepository,
     private val blockService: BlockService,
+    private val memberSlackNotifier: MemberSlackNotifier,
 ) {
 
     private val log = logger()
@@ -75,6 +76,7 @@ class MemberService(
             event = "member.signup.completed", actor = member.toAuditActor(),
             target = mapOf("memberId" to member.id), details = mapOf("provider" to ssoRegister.ssoType),
         )
+        memberSlackNotifier.ssoSignedUp(ssoRegister.ssoType)
         return member
     }
 

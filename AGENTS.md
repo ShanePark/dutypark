@@ -67,6 +67,13 @@ The source code, tests, and task-specific documentation are the source of truth 
 - After completing an iOS app change, install the latest successfully verified build on the simulator named exactly `iPhone 13 mini` so the user can inspect it immediately. This does not authorize starting a development server. If that simulator is unavailable or installation is blocked by CoreSimulator or another error, report the exact reason.
 - Also build and install the latest verified version on the user's connected physical iPhone after every iOS app change. If multiple physical iPhones are available and the user's device cannot be identified, ask which one to use. If the device is disconnected or signing, pairing, or installation is blocked, report the exact reason.
 
+### iOS Build Artifacts
+
+- Reuse documented, fixed DerivedData paths for routine verification. Do not create persistent date- or task-specific build directories for each verification run.
+- Install the original build product directly on the simulator or device when possible. Avoid duplicate app copies such as `verified-simulator`; when re-signing requires a copy, use a task-owned temporary path.
+- When an isolated build is necessary, use a task-owned temporary path and remove the temporary products and unneeded DerivedData created by that task after testing and installation. Preserve active builds, other tasks' files, and pre-existing user artifacts.
+- Do not delete release `.xcarchive` bundles, dSYMs, IPAs, or release records without an explicit request.
+
 ### iOS Interaction Feedback
 
 - Use semantic haptics consistently throughout the iOS app: `.selection` for tabs, menus, pickers, toggles, consent choices, and other discrete value changes; a routine impact for explicit modal dismissal and navigation; `.warning` before logout, deletion, or other destructive intent; and `.success` only after a create, update, delete, or save operation has actually completed.

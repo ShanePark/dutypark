@@ -2,7 +2,9 @@ package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.logging.auditContext
-import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
+import com.tistory.shanepark.dutypark.common.slack.SlackEvent
+import com.tistory.shanepark.dutypark.common.slack.SlackEventLevel
+import com.tistory.shanepark.dutypark.common.slack.notifier.SlackEventNotifier
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
@@ -12,9 +14,6 @@ import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeIn
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
-import net.gpedro.integrations.slack.SlackAttachment
-import net.gpedro.integrations.slack.SlackField
-import net.gpedro.integrations.slack.SlackMessage
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -24,7 +23,7 @@ import java.time.format.DateTimeParseException
 class ScheduleTimeParsingWorker(
     private val scheduleTimeParsingService: ScheduleTimeParsingService,
     private val scheduleRepository: ScheduleRepository,
-    private val slackNotifier: SlackNotifier,
+    private val slackEventNotifier: SlackEventNotifier,
     private val aiScheduleParsingConsentService: AiScheduleParsingConsentService,
 ) {
     private val log = logger()
@@ -233,21 +232,14 @@ class ScheduleTimeParsingWorker(
     }
 
     private fun notifyLlmError(failureKind: String) {
-        val slackAttachment = SlackAttachment()
-        slackAttachment.setFallback("LLM Parsing Error")
-        slackAttachment.setColor("danger")
-        slackAttachment.setTitle("LLM Time Parsing Failed")
-
-        val fields = listOf(SlackField().setTitle("Failure Kind").setValue(failureKind))
-        slackAttachment.setFields(fields)
-
-        val slackMessage = SlackMessage()
-        slackMessage.setAttachments(listOf(slackAttachment))
-        slackMessage.setIcon(":warning:")
-        slackMessage.setText("LLM Parsing Error Detected")
-        slackMessage.setUsername("DutyPark")
-
-        slackNotifier.call(slackMessage)
+        slackEventNotifier.send(
+            SlackEvent(
+                emoji = "⚠️",
+                title = "LLM time parsing failed",
+                headline = failureKind,
+                level = SlackEventLevel.ALERT,
+            )
+        )
     }
 
 }

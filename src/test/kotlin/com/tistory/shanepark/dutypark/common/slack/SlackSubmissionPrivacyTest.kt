@@ -3,27 +3,19 @@ package com.tistory.shanepark.dutypark.common.slack
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import com.google.gson.JsonObject
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
-import com.tistory.shanepark.dutypark.common.slack.aspect.SlackNotificationAspect
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackEventNotifier
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
-import com.tistory.shanepark.dutypark.inquiry.domain.dto.CreateInquiryRequest
 import com.tistory.shanepark.dutypark.inquiry.domain.entity.Inquiry
 import com.tistory.shanepark.dutypark.inquiry.service.InquirySlackNotifier
-import com.tistory.shanepark.dutypark.inquiry.service.InquiryService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
-import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.report.domain.dto.CreateReportRequest
 import com.tistory.shanepark.dutypark.report.domain.dto.ReportCreateResult
 import com.tistory.shanepark.dutypark.report.domain.entity.ContentReport
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportReason
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
-import com.tistory.shanepark.dutypark.report.service.ReportService
 import com.tistory.shanepark.dutypark.report.service.ReportSlackNotifier
 import net.gpedro.integrations.slack.SlackMessage
 import net.gpedro.integrations.slack.SlackException
-import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.reflect.MethodSignature
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -43,28 +35,6 @@ class SlackSubmissionPrivacyTest {
 
     private val notifier: SlackNotifier = mock()
     private val eventNotifier = SlackEventNotifier(notifier, SyncTaskExecutor())
-
-    @Test
-    fun `submission entry points do not fall back to the generic argument dump`() {
-        val createInquiry = InquiryService::class.java.getMethod(
-            "createInquiry",
-            Long::class.javaObjectType,
-            CreateInquiryRequest::class.java,
-            String::class.java,
-            LoginMember::class.java,
-        )
-        val createReport = ReportService::class.java.getMethod(
-            "createReport",
-            Long::class.javaPrimitiveType!!,
-            CreateReportRequest::class.java,
-            LoginMember::class.java,
-        )
-
-        // 전용 알림이 필요한 값만 골라 보낸다. @SlackNotification 을 다시 붙이면 알림이 중복되고
-        // 이메일·본문·IP 가 가공 없이 슬랙으로 나간다.
-        assertThat(createInquiry.getAnnotation(SlackNotification::class.java)).isNull()
-        assertThat(createReport.getAnnotation(SlackNotification::class.java)).isNull()
-    }
 
     @Test
     fun `message body is not repeated above the attachment`() {
@@ -243,64 +213,6 @@ class SlackSubmissionPrivacyTest {
     }
 
     @Test
-    fun `generic aspect never includes arguments even when annotation allows them`() {
-        val joinPoint = mock<ProceedingJoinPoint>()
-        val signature = mock<MethodSignature>()
-        val method = AnnotatedOperation::class.java.getDeclaredMethod(
-            "save",
-            String::class.java,
-            String::class.java,
-        )
-        whenever(joinPoint.proceed()).thenReturn("result")
-        whenever(joinPoint.signature).thenReturn(signature)
-        whenever(signature.method).thenReturn(method)
-        whenever(signature.name).thenReturn("save")
-        whenever(joinPoint.args).thenReturn(
-            arrayOf<Any?>("private@example.com", "submitted text and 192.0.2.1")
-        )
-
-        val result = SlackNotificationAspect(notifier, SyncTaskExecutor()).slackNotification(joinPoint)
-
-        assertThat(result).isEqualTo("result")
-        val attachment = capturedAttachment()
-        assertThat(attachment["title"].asString).isEqualTo("Data save detected")
-        assertThat(attachment["fields"].asJsonArray.map { it.asJsonObject["title"].asString })
-            .containsExactly("method")
-        assertThat(attachment["fields"].asJsonArray.single().asJsonObject["value"].asString)
-            .isEqualTo("save")
-        assertThat(captured().toString()).doesNotContain(
-            "private@example.com",
-            "submitted text",
-            "192.0.2.1",
-        )
-    }
-
-    @Test
-    fun `generic aspect leaves original business failure to global diagnostics`() {
-        val joinPoint = mock<ProceedingJoinPoint>()
-        val signature = mock<MethodSignature>()
-        val secret = "submitted secret from request"
-        whenever(joinPoint.signature).thenReturn(signature)
-        whenever(signature.name).thenReturn("save")
-        whenever(joinPoint.proceed()).thenThrow(IllegalStateException(secret))
-
-        val logger = LoggerFactory.getLogger(SlackNotificationAspect::class.java)
-            as ch.qos.logback.classic.Logger
-        val appender = ListAppender<ILoggingEvent>().apply { start() }
-        logger.addAppender(appender)
-        try {
-            org.junit.jupiter.api.assertThrows<IllegalStateException> {
-                SlackNotificationAspect(notifier, SyncTaskExecutor()).slackNotification(joinPoint)
-            }
-        } finally {
-            logger.detachAppender(appender)
-        }
-
-        assertThat(appender.list).isEmpty()
-        verifyNoInteractions(notifier)
-    }
-
-    @Test
     fun `event notifier logs only the exception class when sending fails`() {
         val secret = "https://hooks.slack.com/services/T000/B000/secret-token"
         whenever(notifier.call(any())).thenThrow(SlackException(IllegalStateException(secret)))
@@ -311,35 +223,6 @@ class SlackSubmissionPrivacyTest {
         logger.addAppender(appender)
         try {
             eventNotifier.send(SlackEvent(emoji = "🔔", title = "Test event"))
-        } finally {
-            logger.detachAppender(appender)
-        }
-
-        assertThat(appender.list).hasSize(1)
-        assertThat(appender.list.single().formattedMessage)
-            .contains("SlackException")
-            .doesNotContain(secret)
-        assertThat(appender.list.single().throwableProxy).isNull()
-    }
-
-    @Test
-    fun `generic aspect logs only the exception class when async sending fails`() {
-        val secret = "https://hooks.slack.com/services/T000/B000/secret-token"
-        whenever(notifier.call(any())).thenThrow(SlackException(IllegalStateException(secret)))
-
-        val joinPoint = mock<ProceedingJoinPoint>()
-        val signature = mock<MethodSignature>()
-        whenever(joinPoint.proceed()).thenReturn("result")
-        whenever(joinPoint.signature).thenReturn(signature)
-        whenever(signature.name).thenReturn("save")
-
-        val logger = LoggerFactory.getLogger(SlackNotificationAspect::class.java)
-            as ch.qos.logback.classic.Logger
-        val appender = ListAppender<ILoggingEvent>().apply { start() }
-        logger.addAppender(appender)
-        try {
-            assertThat(SlackNotificationAspect(notifier, SyncTaskExecutor()).slackNotification(joinPoint))
-                .isEqualTo("result")
         } finally {
             logger.detachAppender(appender)
         }
@@ -370,11 +253,6 @@ class SlackSubmissionPrivacyTest {
         assertThat(appender.list.single().formattedMessage).contains("submission", "TaskRejectedException")
             .doesNotContain("secret-rejection", "secret-title")
         verifyNoInteractions(notifier)
-    }
-
-    private class AnnotatedOperation {
-        @SlackNotification(includeArguments = true)
-        fun save(email: String, content: String): String = email + content
     }
 
     private fun report(reported: Member?): ContentReport {

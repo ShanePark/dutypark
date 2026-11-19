@@ -53,6 +53,9 @@ class MemberServiceTest {
     @Mock
     private lateinit var blockService: BlockService
 
+    @Mock
+    private lateinit var memberSlackNotifier: MemberSlackNotifier
+
     private lateinit var memberService: MemberService
 
     @BeforeEach
@@ -65,6 +68,7 @@ class MemberServiceTest {
             memberDtoAssembler,
             friendRelationRepository,
             blockService,
+            memberSlackNotifier,
         )
     }
 
@@ -96,6 +100,7 @@ class MemberServiceTest {
         assertThat(member.toMemberDto().hasPassword).isFalse()
         verify(memberRepository).save(any<Member>())
         verify(memberSocialAccountService).link(member, SsoType.KAKAO, "kakao_id")
+        verify(memberSlackNotifier).ssoSignedUp(SsoType.KAKAO)
     }
 
     @Test
@@ -110,6 +115,7 @@ class MemberServiceTest {
         assertThrows<IllegalArgumentException> {
             memberService.createSsoMember("shane", uuid)
         }
+        verifyNoInteractions(memberSlackNotifier)
     }
 
     @Test

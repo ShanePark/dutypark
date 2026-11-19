@@ -24,6 +24,7 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
+import org.mockito.Mockito.verifyNoMoreInteractions
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.whenever
@@ -51,6 +52,9 @@ class DutyTypeServiceTest {
     @Mock
     private lateinit var publicContentService: PublicContentService
 
+    @Mock
+    private lateinit var dutyTypeSlackNotifier: DutyTypeSlackNotifier
+
     // UTC is still July 10, but Asia/Seoul is already July 11.
     private val clock = Clock.fixed(Instant.parse("2026-07-10T16:00:00Z"), ZoneOffset.UTC)
 
@@ -60,7 +64,7 @@ class DutyTypeServiceTest {
 
     @BeforeEach
     fun setUp() {
-        dutyTypeService = DutyTypeService(dutyTypeRepository, teamRepository, dutyRepository, clock, publicContentService)
+        dutyTypeService = DutyTypeService(dutyTypeRepository, teamRepository, dutyRepository, clock, publicContentService, dutyTypeSlackNotifier)
         team = Team("testTeam")
         ReflectionTestUtils.setField(team, "id", 1L)
     }
@@ -358,6 +362,58 @@ class DutyTypeServiceTest {
         assertThrows<IllegalArgumentException> {
             dutyTypeService.swapDutyTypePosition(1L, 1L)
         }
+    }
+
+    @Test
+    fun `creating a duty type notifies Slack with the team and duty type names`() {
+        whenever(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+
+        dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "야간", "#F6D365"))
+
+        verify(dutyTypeSlackNotifier).created(teamName = "testTeam", dutyTypeName = "야간")
+    }
+
+    @Test
+    fun `a rejected duty type creation does not notify Slack`() {
+        whenever(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+        team.dutyTypes.add(dutyType(10L, "야간", hidden = false))
+
+        assertThrows<IllegalArgumentException> {
+            dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "야간", "#F6D365"))
+        }
+
+        verifyNoInteractions(dutyTypeSlackNotifier)
+    }
+
+    @Test
+    fun `updating a duty type notifies Slack once with the old and new names`() {
+        val existing = dutyType(10L, "야간", hidden = false)
+        team.dutyTypes.add(existing)
+        whenever(dutyTypeRepository.findById(10L)).thenReturn(Optional.of(existing))
+        whenever(teamRepository.findByIdWithDutyTypes(team.id!!)).thenReturn(Optional.of(team))
+
+        val update = DutyTypeUpdateDto(10L, "나이트", "#111111")
+        dutyTypeService.update(update)
+        dutyTypeService.update(update)
+
+        verify(dutyTypeSlackNotifier).updated(teamName = "testTeam", beforeName = "야간", afterName = "나이트")
+        verifyNoMoreInteractions(dutyTypeSlackNotifier)
+    }
+
+    @Test
+    fun `changing visibility notifies Slack only when the state changes`() {
+        val dutyType = dutyType(10L, "야간", hidden = false)
+        team.dutyTypes.add(dutyType)
+        whenever(dutyTypeRepository.findTeamIdById(dutyType.id!!)).thenReturn(team.id!!)
+        whenever(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+
+        dutyTypeService.updateVisibility(dutyType.id!!, true)
+        dutyTypeService.updateVisibility(dutyType.id!!, true)
+        dutyTypeService.updateVisibility(dutyType.id!!, false)
+
+        verify(dutyTypeSlackNotifier).visibilityChanged(teamName = "testTeam", dutyTypeName = "야간", hidden = true)
+        verify(dutyTypeSlackNotifier).visibilityChanged(teamName = "testTeam", dutyTypeName = "야간", hidden = false)
+        verifyNoMoreInteractions(dutyTypeSlackNotifier)
     }
 
     private fun dutyType(id: Long, name: String, hidden: Boolean): DutyType {

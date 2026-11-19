@@ -29,6 +29,7 @@ class DutyTypeService(
     private val dutyRepository: DutyRepository,
     private val clock: Clock,
     private val publicContentService: PublicContentService,
+    private val dutyTypeSlackNotifier: DutyTypeSlackNotifier,
 ) {
     private val log = logger()
 
@@ -58,6 +59,7 @@ class DutyTypeService(
             before = before,
             after = mapOf("hidden" to dutyType.hidden),
         )
+        dutyTypeSlackNotifier.visibilityChanged(teamName = team.name, dutyTypeName = dutyType.name, hidden = hidden)
         return dutyType
     }
 
@@ -89,6 +91,7 @@ class DutyTypeService(
                     "hidden" to it.hidden,
                 ),
             )
+            dutyTypeSlackNotifier.created(teamName = team.name, dutyTypeName = it.name)
         }
     }
 
@@ -119,7 +122,7 @@ class DutyTypeService(
         if (dutyTypeUpdateDto.abbreviationSpecified) {
             dutyType.abbreviation = abbreviation
         }
-        log.auditChangeAfterCommit(
+        val changed = log.auditChangeAfterCommit(
             event = "duty_type.updated",
             actor = actor?.toAuditActor(),
             target = dutyTypeAuditTarget(teamId = team.id, teamName = team.name, dutyType = dutyType),
@@ -130,6 +133,13 @@ class DutyTypeService(
                 "abbreviation" to dutyType.abbreviation,
             ),
         )
+        if (changed) {
+            dutyTypeSlackNotifier.updated(
+                teamName = team.name,
+                beforeName = before.getValue("name") as String,
+                afterName = dutyType.name,
+            )
+        }
         return dutyType
     }
 

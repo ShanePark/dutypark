@@ -1,7 +1,9 @@
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
-import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
+import com.tistory.shanepark.dutypark.common.slack.SlackEvent
+import com.tistory.shanepark.dutypark.common.slack.SlackEventLevel
+import com.tistory.shanepark.dutypark.common.slack.notifier.SlackEventNotifier
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -11,9 +13,6 @@ import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimePa
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingService
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingWorker
-import net.gpedro.integrations.slack.SlackMessage
-import net.gpedro.integrations.slack.SlackAttachment
-import net.gpedro.integrations.slack.SlackField
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -43,7 +42,7 @@ class ScheduleTimeParsingWorkerTest {
     lateinit var scheduleRepository: ScheduleRepository
 
     @Mock
-    lateinit var slackNotifier: SlackNotifier
+    lateinit var slackEventNotifier: SlackEventNotifier
 
     @Mock
     lateinit var aiScheduleParsingConsentService: AiScheduleParsingConsentService
@@ -390,7 +389,7 @@ class ScheduleTimeParsingWorkerTest {
         worker.run(task)
 
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
-        verify(slackNotifier, never()).call(any<SlackMessage>())
+        verify(slackEventNotifier, never()).send(any())
     }
 
     @Test
@@ -407,7 +406,7 @@ class ScheduleTimeParsingWorkerTest {
             assertThat(aiAttempted).isFalse()
             assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
             verify(scheduleRepository, never()).updateParsingStatusIfCurrent(any(), any(), any(), any())
-            verify(slackNotifier, never()).call(any<SlackMessage>())
+            verify(slackEventNotifier, never()).send(any())
         } finally {
             Thread.interrupted()
         }
@@ -653,7 +652,7 @@ class ScheduleTimeParsingWorkerTest {
         worker.run(task)
 
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.FAILED)
-        verify(slackNotifier).call(any<SlackMessage>())
+        verify(slackEventNotifier).send(any())
     }
 
     @Test
@@ -670,7 +669,7 @@ class ScheduleTimeParsingWorkerTest {
         worker.run(task)
 
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.FAILED)
-        verify(slackNotifier).call(any<SlackMessage>())
+        verify(slackEventNotifier).send(any())
     }
 
     @Test
@@ -687,18 +686,21 @@ class ScheduleTimeParsingWorkerTest {
                 rawResponse = rawAiResponse,
             )
         )
-        val messageCaptor = argumentCaptor<SlackMessage>()
+        val eventCaptor = argumentCaptor<SlackEvent>()
 
         worker.run(task)
 
-        verify(slackNotifier).call(messageCaptor.capture())
-        val fields = readAttachments(messageCaptor.firstValue).flatMap(::readFields)
-        assertThat(fields.mapNotNull(::readFieldTitle))
-            .containsExactly("Failure Kind")
-            .doesNotContain("Content", "LLM Response", "Error Message")
-        assertThat(fields.mapNotNull(::readFieldValue))
-            .containsExactly("INVALID_RESPONSE")
-            .doesNotContain(schedule.id.toString(), privateContent, rawAiResponse)
+        verify(slackEventNotifier).send(eventCaptor.capture())
+        assertThat(eventCaptor.firstValue).isEqualTo(
+            SlackEvent(
+                emoji = "⚠️",
+                title = "LLM time parsing failed",
+                headline = "INVALID_RESPONSE",
+                level = SlackEventLevel.ALERT,
+            )
+        )
+        assertThat(eventCaptor.firstValue.toString())
+            .doesNotContain(schedule.id.toString(), privateContent, rawAiResponse, "invalid response format")
     }
 
     @Test
@@ -716,33 +718,7 @@ class ScheduleTimeParsingWorkerTest {
         worker.run(task)
 
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.FAILED)
-        verify(slackNotifier, never()).call(any<SlackMessage>())
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun readAttachments(message: SlackMessage): List<SlackAttachment> {
-        val field = SlackMessage::class.java.getDeclaredField("attach")
-        field.isAccessible = true
-        return field.get(message) as? List<SlackAttachment> ?: emptyList()
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun readFields(attachment: SlackAttachment): List<SlackField> {
-        val field = SlackAttachment::class.java.getDeclaredField("fields")
-        field.isAccessible = true
-        return field.get(attachment) as? List<SlackField> ?: emptyList()
-    }
-
-    private fun readFieldTitle(field: SlackField): String? {
-        val titleField = SlackField::class.java.getDeclaredField("title")
-        titleField.isAccessible = true
-        return titleField.get(field) as? String
-    }
-
-    private fun readFieldValue(field: SlackField): String? {
-        val valueField = SlackField::class.java.getDeclaredField("value")
-        valueField.isAccessible = true
-        return valueField.get(field) as? String
+        verify(slackEventNotifier, never()).send(any())
     }
 
 }
