@@ -11,7 +11,7 @@ final class TodoConfirmationVisualUITests: XCTestCase {
         defer { app.terminate() }
 
         openTodoScreen(in: app)
-        let addButton = app.buttons["todo.add"]
+        let addButton = app.buttons["todo.column.IN_PROGRESS.add"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 10))
         addButton.tap()
 
@@ -72,7 +72,7 @@ final class TodoConfirmationVisualUITests: XCTestCase {
 
         openTodoScreen(in: app)
 
-        let addButton = app.buttons["todo.add"]
+        let addButton = app.buttons["todo.column.IN_PROGRESS.add"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 10))
         addButton.tap()
         let statusMenu = app.buttons["todo.form.status"]

@@ -839,26 +839,6 @@ export default {
       untagSuccess: 'TODO 태그가 제거되었습니다.',
       untagFailed: '태그 제거에 실패했습니다.',
     },
-    help: {
-      openAriaLabel: '도움말',
-      title: '할일 보드 사용법',
-      whatIsKanbanTitle: '칸반 보드란?',
-      whatIsKanbanText: '할일을 할일, 진행중, 완료 세 단계로 나누어 관리하는 방식입니다. 카드를 클릭하면 상세 화면에서 상태를 변경할 수 있고, 카드를 드래그해 다른 컬럼으로 옮길 수도 있습니다.',
-      todoTitle: '할일 (TODO)',
-      todoText: '아직 시작하지 않은 할일들이 여기에 표시됩니다. + 버튼을 눌러 새로운 할일을 추가하세요.',
-      inProgressTitle: '진행중 (IN PROGRESS)',
-      inProgressText: '현재 작업 중인 할일들입니다. 진행중 상태의 할일은 내 달력에 표시되어 오늘 집중해야 할 일을 한눈에 확인할 수 있습니다.',
-      doneTitle: '완료 (DONE)',
-      doneText: '완료된 할일들이 여기에 보관됩니다. 필요하면 다시 진행중이나 할일로 되돌릴 수 있습니다.',
-      tipsTitle: '사용 팁',
-      tips: {
-        drag: '카드를 클릭해 상세 화면에서 상태를 변경하거나, 드래그&드롭하여 다른 컬럼으로 옮기세요.',
-        reorder: '같은 컬럼 내에서도 드래그로 순서를 조정할 수 있습니다.',
-        details: '카드를 클릭하면 상세 내용을 확인하고 수정할 수 있습니다.',
-        dueDate: '마감일을 설정하면 기한 관리가 편리합니다.',
-        attachments: '필요한 경우 파일을 첨부할 수도 있습니다.',
-      },
-    },
   },
   auth: {
     login: {
@@ -1630,7 +1610,7 @@ export default {
   },
   friendSearchModal: {
     title: '친구 찾기',
-    searchPlaceholder: '이름 또는 팀명으로 검색',
+    searchPlaceholder: '이름으로 검색',
     noTeam: '소속 없음',
     requestFriend: '친구 추가',
     resultsSummary: '{current}/{total} 페이지 · 총 {count}명',
@@ -1732,12 +1712,16 @@ export default {
     dismissForDays: '{days}일간 보지 않기',
   },
   guide: {
+    tabs: {
+      guide: '이용 안내',
+      releaseNotes: '업데이트 내역',
+    },
     status: {
       loadingGuide: '이용 안내를 불러오는 중...',
       guideLoadFailed: '이용 안내를 불러오지 못했습니다.',
-      loadingReleaseNotes: '릴리스 노트를 불러오는 중...',
-      releaseNotesLoadFailed: '릴리스 노트를 불러오지 못했습니다.',
-      releaseNotesLoadMoreFailed: '릴리스 노트를 더 불러오지 못했습니다.',
+      loadingReleaseNotes: '업데이트 내역을 불러오는 중...',
+      releaseNotesLoadFailed: '업데이트 내역을 불러오지 못했습니다.',
+      releaseNotesLoadMoreFailed: '업데이트 내역을 더 불러오지 못했습니다.',
     },
   },
   admin: {

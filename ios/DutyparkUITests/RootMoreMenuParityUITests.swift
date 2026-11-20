@@ -44,9 +44,12 @@ final class RootMoreMenuParityUITests: XCTestCase {
                 "more.support",
                 "more.settings",
                 "more.logout",
+                "more.terms",
+                "more.privacy",
             ]
         )
-        for button in moreButtons {
+        let footerIdentifiers: Set<String> = ["more.terms", "more.privacy"]
+        for button in moreButtons where !footerIdentifiers.contains(button.identifier) {
             XCTAssertTrue(button.isHittable, "More action is not hittable: \(button.identifier)")
             XCTAssertGreaterThanOrEqual(button.frame.height, 44)
         }
@@ -65,6 +68,11 @@ final class RootMoreMenuParityUITests: XCTestCase {
         XCTAssertTrue(versionLabel.label.hasPrefix("버전 "), "Unexpected version label: \(versionLabel.label)")
         for button in moreButtons {
             XCTAssertLessThan(button.frame.minY, versionLabel.frame.minY)
+        }
+        // Terms and privacy sit in the same quiet footer, after the menu and the logout row.
+        let logout = app.buttons["more.logout"]
+        for identifier in footerIdentifiers {
+            XCTAssertGreaterThan(app.buttons[identifier].frame.minY, logout.frame.maxY)
         }
 
         for removedIdentifier in [

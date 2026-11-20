@@ -11,7 +11,7 @@ struct RootChromeLocalizationTests {
         #expect(RootChromeLocalization.home("home.friends", locale: korean) == "친구")
         #expect(RootChromeLocalization.social("social.title", locale: korean) == "친구관리")
         #expect(RootChromeLocalization.localizable("root.menu.guide", locale: korean) == "이용 안내")
-        #expect(RootChromeLocalization.localizable("root.menu.support", locale: korean) == "문의하기")
+        #expect(RootChromeLocalization.localizable("root.menu.support", locale: korean) == "문의·지원")
         #expect(RootChromeLocalization.localizable("root.menu.settings", locale: korean) == "설정")
         #expect(RootChromeLocalization.notifications("notifications.title", locale: korean) == "알림")
         #expect(RootChromeLocalization.notifications("notifications.common.close", locale: korean) == "알림 닫기")

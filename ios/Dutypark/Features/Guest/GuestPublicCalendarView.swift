@@ -297,7 +297,13 @@ struct GuestPublicCalendarView: View {
     // The same flat, connected grid as the member calendar: the gutter colour shows
     // through the gaps between tiles.
     private var calendarGrid: some View {
-        VStack(spacing: DPCalendarCellStyle.gutterWidth) {
+        let spanLanes = DPCalendarSpanLanes.layout(
+            visibleCalendarDays.map(\.schedules),
+            id: \.id,
+            daysFromStart: \.daysFromStart,
+            totalDays: \.totalDays
+        )
+        return VStack(spacing: DPCalendarCellStyle.gutterWidth) {
             DPCalendarWeekdayRow(
                 labels: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map {
                     GuestLocalization.text("guest.calendar.weekday.\($0)")
@@ -310,7 +316,7 @@ struct GuestPublicCalendarView: View {
                 )
             )
             CalendarMonthCellGrid(items: visibleCalendarDays) { index, day in
-                GuestCalendarDayCell(day: day, weekday: index % 7)
+                GuestCalendarDayCell(day: day, weekday: index % 7, spanLanes: spanLanes[index])
                     .onTapGesture {
                         DPHapticCenter.shared.emit(.routine)
                         withoutPresentationAnimation { model.selectedDay = day }
@@ -500,6 +506,7 @@ private struct GuestReportLoginPrompt: View {
 private struct GuestCalendarDayCell: View {
     let day: GuestCalendarDay
     let weekday: Int
+    let spanLanes: [DPCalendarSpanLanes.Placement<ScheduleDTO>?]
 
     var body: some View {
         DPCalendarDayTile(
@@ -508,7 +515,8 @@ private struct GuestCalendarDayCell: View {
             dutyColor: dutyColor,
             isCurrentMonth: isCurrentMonth,
             isToday: isToday,
-            hasHoliday: !day.holidays.isEmpty
+            hasHoliday: !day.holidays.isEmpty,
+            ribbonColumn: DPCalendarSpanLanes.startsRibbon(spanLanes, column: weekday) ? weekday : nil
         ) {
             EmptyView()
         } content: {
@@ -522,6 +530,9 @@ private struct GuestCalendarDayCell: View {
     // hiding any behind a count.
     private var details: some View {
         VStack(alignment: .leading, spacing: 0) {
+            DPCalendarSpanLaneStack(lanes: spanLanes, column: weekday) { placement in
+                spanRibbon(placement)
+            }
             ForEach(Array(day.holidays.enumerated()), id: \.offset) { _, holiday in
                 Text(verbatim: holiday.dateName)
                     .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
@@ -539,27 +550,26 @@ private struct GuestCalendarDayCell: View {
                         .lineLimit(2)
                 }
             }
-            ForEach(Array(cellSchedules.enumerated()), id: \.element.id) { index, schedule in
-                DPCalendarItemRow(
-                    showsRule: index + day.dDays.count > 0,
-                    rule: ruleColor,
-                    span: DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays),
-                    spanColor: primaryForeground,
-                    spanID: schedule.id,
-                    spanDay: schedule.daysFromStart
-                ) {
-                    DPCalendarScheduleTitle.text(
-                        scheduleTitleLine(schedule),
-                        daysFromStart: schedule.daysFromStart,
-                        totalDays: schedule.totalDays,
-                        counterColor: secondaryForeground
-                    )
-                    .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
-                    .tracking(-0.3)
-                    .lineSpacing(1)
-                    .foregroundStyle(primaryForeground)
-                    .lineLimit(2)
-                    .truncationMode(.tail)
+            ForEach(Array(singleDaySchedules.enumerated()), id: \.element.id) { index, schedule in
+                DPCalendarItemRow(showsRule: index + day.dDays.count > 0, rule: ruleColor) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        scheduleTitleLine(schedule)
+                            .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
+                            .tracking(-0.3)
+                            .lineSpacing(1)
+                            .foregroundStyle(primaryForeground)
+                            .lineLimit(2)
+                            .truncationMode(.tail)
+
+                        if let time = CalendarVisualLogic.calendarScheduleTimeText(
+                            start: schedule.startDateTime,
+                            end: schedule.endDateTime,
+                            daysFromStart: schedule.daysFromStart,
+                            totalDays: schedule.totalDays
+                        ) {
+                            DPCalendarScheduleTime(time: time, dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+                        }
+                    }
                 }
             }
         }
@@ -568,8 +578,11 @@ private struct GuestCalendarDayCell: View {
     private var dutyColor: String? { day.duty?.dutyColor }
     private var isCurrentMonth: Bool { day.cell.isCurrentMonth }
 
-    private var cellSchedules: [ScheduleDTO] {
-        DPCalendarSpan.orderedForCell(day.schedules, daysFromStart: { $0.daysFromStart }, totalDays: { $0.totalDays })
+    /// Multi-day schedules ride in the ribbon lanes above; the tile lists the rest.
+    private var singleDaySchedules: [ScheduleDTO] {
+        day.schedules.filter {
+            !DPCalendarSpanLanes.isSpan(daysFromStart: $0.daysFromStart, totalDays: $0.totalDays)
+        }
     }
 
     private var primaryForeground: Color {
@@ -589,8 +602,25 @@ private struct GuestCalendarDayCell: View {
         return day.cell.year == today.year && day.cell.month == today.month && day.cell.day == today.day
     }
 
-    /// A narrow tile shows the title without the time, as the member calendar does; a
-    /// multi-day run's day counter is appended by `DPCalendarScheduleTitle`.
+    /// One week-row segment of a multi-day schedule, as in the member calendar.
+    private func spanRibbon(_ placement: DPCalendarSpanLanes.Placement<ScheduleDTO>) -> some View {
+        let schedule = placement.item
+        return DPCalendarSpanRibbonBand(
+            isTrueStart: placement.isTrueStart,
+            isTrueEnd: placement.isTrueEnd,
+            times: CalendarVisualLogic.spanSegmentTimes(
+                start: schedule.startDateTime,
+                end: schedule.endDateTime,
+                holdsStart: placement.isTrueStart,
+                holdsEnd: placement.isTrueEnd
+            )
+        ) {
+            scheduleTitleLine(schedule)
+        }
+    }
+
+    /// The title and the details mark run as one flow of text, as in the member calendar;
+    /// the time has a chip of its own below.
     private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
         var line = Text(verbatim: schedule.content)
         if !schedule.description.isEmpty || !schedule.attachments.isEmpty {

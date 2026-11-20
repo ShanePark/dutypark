@@ -461,6 +461,43 @@ struct TodoViewModelTests {
     }
 
     @Test
+    func boardStartsAtTheTopAndAddsTodosFromColumnHeaders() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Todo/TodoView.swift"),
+            encoding: .utf8
+        )
+        let rootTabSource = try String(
+            contentsOf: root.appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+        let columnStart = try #require(source.range(of: "private struct TodoKanbanColumn: View"))
+        let cardStart = try #require(source.range(of: "private struct TodoCard: View", range: columnStart.upperBound..<source.endIndex))
+        let column = String(source[columnStart.lowerBound..<cardStart.lowerBound])
+        let headerAdd = try #require(column.range(of: "Button(action: add)"))
+        let cleanup = try #require(column.range(of: "if let clearCompleted"))
+        let headerAddButton = String(column[headerAdd.lowerBound..<cleanup.lowerBound])
+
+        #expect(!source.contains(".toolbar {"))
+        #expect(!source.contains("DPHelpButton"))
+        #expect(!source.contains("\"todo.add\""))
+        #expect(!source.contains("showingHelp"))
+        #expect(rootTabSource.contains("primaryTab(.todo) {"))
+        #expect(headerAddButton.contains(".frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)"))
+        #expect(headerAddButton.contains(".accessibilityIdentifier(\"todo.column.\\(status.rawValue).add\")"))
+        // Opening the create sheet is one routine event, even when it also switches columns.
+        let addClosureStart = try #require(source.range(of: "add: {"))
+        let addClosureEnd = try #require(
+            source.range(of: "clearCompleted:", range: addClosureStart.upperBound..<source.endIndex)
+        )
+        let addClosure = String(source[addClosureStart.upperBound..<addClosureEnd.lowerBound])
+        #expect(addClosure.contains("presentCreate()"))
+        #expect(!addClosure.contains("selectStatus("))
+    }
+
+    @Test
     func completedCleanupSymbolIsAvailableOnSupportedIOS() {
         #expect(
             UIImage(systemName: "paintbrush.fill") != nil,
@@ -954,18 +991,8 @@ struct TodoViewModelTests {
             "todo.confirm.discardMessage",
             "todo.confirm.discardAction",
             "todo.drag.dropHere",
-            "todo.drag.hint",
             "todo.error.load",
             "todo.error.clearCompleted",
-            "todo.help.open",
-            "todo.help.title",
-            "todo.help.kanban.body",
-            "todo.help.todo.body",
-            "todo.help.progress.body",
-            "todo.help.done.body",
-            "todo.help.tips.title",
-            "todo.help.tip.1",
-            "todo.help.tip.5",
             "todo.success.clearCompletedTitle",
             "common.close",
             "common.edit",

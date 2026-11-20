@@ -1038,7 +1038,7 @@ private extension ScheduleDTO {
     var homeDisplayContent: String {
         var text = content
         if totalDays > 1 {
-            text += " [\(daysFromStart)/\(totalDays)]"
+            text += " (\(daysFromStart)/\(totalDays))"
         }
         if isTagged {
             text += " (by \(owner))"

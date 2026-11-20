@@ -46,7 +46,7 @@ final class AttachmentMenuVisualUITests: XCTestCase {
             "Todo screen did not become ready"
         )
 
-        let addButton = app.buttons["todo.add"]
+        let addButton = app.buttons["todo.column.IN_PROGRESS.add"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 10))
         XCTAssertTrue(addButton.isHittable)
         addButton.tap()

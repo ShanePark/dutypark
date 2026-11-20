@@ -61,14 +61,25 @@ const {
 } = useGuideContent()
 
 const sectionState = ref<Record<string, boolean>>({
-  dashboard: true,
+  start: true,
+  dashboard: false,
   calendar: false,
+  todo: false,
   team: false,
   friends: false,
+  notifications: false,
+  support: false,
   settings: false,
+  member: false,
+  ios: false,
 })
+type GuideTab = 'guide' | 'releaseNotes'
+const TABS: { value: GuideTab; labelKey: string }[] = [
+  { value: 'guide', labelKey: 'guide.tabs.guide' },
+  { value: 'releaseNotes', labelKey: 'guide.tabs.releaseNotes' },
+]
+const activeTab = ref<GuideTab>('guide')
 const releaseNotesPageSize = 5
-const isReleaseNotesOpen = ref(false)
 const visibleReleaseNotesCount = ref(releaseNotesPageSize)
 
 const categoryClassMap: Record<ReleaseNoteCategory, string> = {
@@ -130,13 +141,6 @@ function toggleSection(id: string) {
   sectionState.value[id] = !(section?.isOpen ?? false)
 }
 
-function toggleReleaseNotes() {
-  isReleaseNotesOpen.value = !isReleaseNotesOpen.value
-  if (!isReleaseNotesOpen.value) {
-    visibleReleaseNotesCount.value = releaseNotesPageSize
-  }
-}
-
 async function loadMoreReleaseNotes() {
   const loadedCount = releaseNotesContent.value?.items.length ?? 0
   if (visibleReleaseNotesCount.value < loadedCount) {
@@ -163,14 +167,10 @@ async function retryLoadingMoreReleaseNotes() {
 }
 
 function openAllSections() {
-  isReleaseNotesOpen.value = true
-  visibleReleaseNotesCount.value = releaseNotesPageSize
   sectionState.value = Object.fromEntries(guideSections.value.map(section => [section.id, true]))
 }
 
 function closeAllSections() {
-  isReleaseNotesOpen.value = false
-  visibleReleaseNotesCount.value = releaseNotesPageSize
   sectionState.value = Object.fromEntries(guideSections.value.map(section => [section.id, false]))
 }
 
@@ -186,7 +186,7 @@ watch(
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <div class="mb-8">
+    <div class="mb-6">
       <router-link
         v-if="!authStore.isLoggedIn"
         to="/"
@@ -210,7 +210,24 @@ watch(
         </div>
       </div>
 
-      <div v-if="guideContent" class="flex gap-2">
+      <div role="tablist" class="grid grid-cols-2 gap-1 rounded-xl bg-dp-bg-tertiary p-1">
+        <button
+          v-for="tab in TABS"
+          :key="tab.value"
+          type="button"
+          role="tab"
+          :aria-selected="activeTab === tab.value"
+          class="min-h-11 rounded-lg px-2 py-2 text-sm transition-colors"
+          :class="activeTab === tab.value
+            ? 'bg-dp-accent-soft text-dp-accent font-bold shadow-sm ring-1 ring-dp-accent-border'
+            : 'font-medium text-dp-text-secondary hover:bg-dp-bg-hover'"
+          @click="activeTab = tab.value"
+        >
+          {{ t(tab.labelKey) }}
+        </button>
+      </div>
+
+      <div v-if="activeTab === 'guide' && guideContent" class="mt-4 flex gap-2">
         <button
           @click="openAllSections"
           class="px-3 py-1.5 text-sm rounded-lg border transition hover:bg-opacity-80 cursor-pointer border-dp-border-secondary text-dp-text-secondary"
@@ -226,7 +243,7 @@ watch(
       </div>
     </div>
 
-    <div class="space-y-4">
+    <div v-if="activeTab === 'guide'" class="space-y-4">
       <div
         v-if="guideLoading && !guideContent"
         class="flex min-h-40 items-center justify-center rounded-xl border bg-dp-bg-card border-dp-border-primary"
@@ -293,155 +310,149 @@ watch(
           </div>
         </div>
       </section>
+    </div>
 
-      <section class="rounded-xl border shadow-sm overflow-hidden bg-dp-bg-card border-dp-border-primary">
-        <button
-          @click="toggleReleaseNotes"
-          class="w-full px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-opacity-50 transition bg-dp-bg-secondary"
+    <section
+      v-else-if="activeTab === 'releaseNotes'"
+      class="rounded-xl border shadow-sm overflow-hidden bg-dp-bg-card border-dp-border-primary"
+    >
+      <div class="w-full px-5 py-4 flex items-center justify-between bg-dp-bg-secondary">
+        <div class="min-w-0 flex flex-wrap items-center gap-3 text-left">
+          <History class="w-5 h-5 text-dp-accent" />
+          <span class="font-semibold text-dp-text-primary">
+            {{ releaseNotesHeaderTitle }}
+          </span>
+          <span
+            v-if="releaseNotesContent"
+            class="rounded-full border px-2 py-1 text-xs border-dp-border-secondary text-dp-text-secondary"
+          >
+            {{ formatPublicContentLabel(releaseNotesContent.labels.count, {
+              count: releaseNotesContent.totalElements,
+            }) }}
+          </span>
+        </div>
+      </div>
+
+      <div class="p-5">
+        <div
+          v-if="releaseNotesLoading && !releaseNotesContent"
+          class="flex min-h-32 items-center justify-center gap-2 text-sm text-dp-text-secondary"
         >
-          <div class="min-w-0 flex flex-wrap items-center gap-3 text-left">
-            <History class="w-5 h-5 text-dp-accent" />
-            <span class="font-semibold text-dp-text-primary">
-              {{ releaseNotesHeaderTitle }}
-            </span>
-            <span
-              v-if="releaseNotesContent"
-              class="rounded-full border px-2 py-1 text-xs border-dp-border-secondary text-dp-text-secondary"
-            >
-              {{ formatPublicContentLabel(releaseNotesContent.labels.count, {
-                count: releaseNotesContent.totalElements,
-              }) }}
-            </span>
-          </div>
-          <ChevronUp
-            v-if="isReleaseNotesOpen"
-            class="w-5 h-5 shrink-0"
-            :style="{ color: 'var(--dp-text-muted)' }"
-          />
-          <ChevronDown v-else class="w-5 h-5 shrink-0 text-dp-text-muted" />
-        </button>
+          <Loader2 class="h-5 w-5 animate-spin" />
+          {{ t('guide.status.loadingReleaseNotes') }}
+        </div>
 
-        <div v-if="isReleaseNotesOpen" class="p-5">
-          <div
-            v-if="releaseNotesLoading && !releaseNotesContent"
-            class="flex min-h-32 items-center justify-center gap-2 text-sm text-dp-text-secondary"
+        <div
+          v-else-if="releaseNotesError && !releaseNotesContent"
+          class="py-6 text-center"
+        >
+          <p class="mb-4 text-sm text-dp-text-secondary">
+            {{ t('guide.status.releaseNotesLoadFailed') }}
+          </p>
+          <button
+            type="button"
+            class="mx-auto inline-flex min-h-[44px] items-center gap-2 rounded-lg border px-4 py-2 text-sm text-dp-accent border-dp-accent-border hover:bg-dp-accent-soft"
+            @click="retryReleaseNotes"
           >
-            <Loader2 class="h-5 w-5 animate-spin" />
-            {{ t('guide.status.loadingReleaseNotes') }}
-          </div>
+            <RotateCcw class="h-4 w-4" />
+            {{ t('common.actions.retry') }}
+          </button>
+        </div>
+
+        <div v-else class="space-y-3">
+          <article
+            v-for="(note, noteIndex) in visibleReleaseNotes"
+            :key="note.id"
+            class="rounded-lg border p-4 bg-dp-bg-secondary border-dp-border-primary"
+          >
+            <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-semibold text-dp-text-primary">{{ note.version }}</span>
+                <span
+                  v-if="noteIndex === 0"
+                  class="rounded-full border px-2 py-1 text-xs bg-dp-accent-soft text-dp-accent border-dp-accent-border"
+                >
+                  {{ releaseNotesContent?.labels.latest }}
+                </span>
+                <span
+                  class="rounded-full border px-2 py-1 text-xs"
+                  :class="categoryClassMap[note.category]"
+                >
+                  {{ releaseNotesContent?.labels.categoryLabels[note.category] ?? note.category }}
+                </span>
+                <span class="text-xs text-dp-text-muted">{{ formatReleaseDate(note.date) }}</span>
+              </div>
+
+              <a
+                :href="note.url"
+                target="_blank"
+                rel="noreferrer"
+                class="inline-flex min-h-[44px] items-center gap-1.5 self-start text-sm transition-colors text-dp-accent hover:text-dp-accent-hover"
+              >
+                {{ formatPublicContentLabel(releaseNotesContent?.labels.pr ?? '', {
+                  number: note.pr,
+                }) }}
+                <ExternalLink class="w-4 h-4" />
+              </a>
+            </div>
+
+            <h3 class="mb-2 text-base font-semibold text-dp-text-primary">{{ note.title }}</h3>
+            <p class="mb-3 text-sm leading-6 text-dp-text-secondary">{{ note.summary }}</p>
+
+            <ul class="mb-3 ml-5 list-disc space-y-1.5 text-sm leading-6 text-dp-text-secondary">
+              <li v-for="(change, changeIndex) in note.changes" :key="changeIndex">{{ change }}</li>
+            </ul>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs text-dp-text-muted">
+                {{ releaseNotesContent?.labels.areas }}
+              </span>
+              <span
+                v-for="area in note.areas"
+                :key="`${note.id}-${area}`"
+                class="rounded-full border px-2 py-1 text-xs border-dp-border-secondary text-dp-text-secondary"
+              >
+                {{ releaseNotesContent?.labels.areaLabels[area] ?? area }}
+              </span>
+            </div>
+          </article>
 
           <div
-            v-else-if="releaseNotesError && !releaseNotesContent"
-            class="py-6 text-center"
+            v-if="releaseNotesLoadMoreError"
+            class="rounded-lg border p-4 text-center border-dp-danger-border bg-dp-danger-soft"
           >
-            <p class="mb-4 text-sm text-dp-text-secondary">
-              {{ t('guide.status.releaseNotesLoadFailed') }}
+            <p class="mb-3 text-sm text-dp-danger">
+              {{ t('guide.status.releaseNotesLoadMoreFailed') }}
             </p>
             <button
               type="button"
-              class="mx-auto inline-flex min-h-[44px] items-center gap-2 rounded-lg border px-4 py-2 text-sm text-dp-accent border-dp-accent-border hover:bg-dp-accent-soft"
-              @click="retryReleaseNotes"
-            >
-              <RotateCcw class="h-4 w-4" />
-              {{ t('common.actions.retry') }}
-            </button>
-          </div>
-
-          <div v-else class="space-y-3">
-            <article
-              v-for="(note, noteIndex) in visibleReleaseNotes"
-              :key="note.id"
-              class="rounded-lg border p-4 bg-dp-bg-secondary border-dp-border-primary"
-            >
-              <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="font-semibold text-dp-text-primary">{{ note.version }}</span>
-                  <span
-                    v-if="noteIndex === 0"
-                    class="rounded-full border px-2 py-1 text-xs bg-dp-accent-soft text-dp-accent border-dp-accent-border"
-                  >
-                    {{ releaseNotesContent?.labels.latest }}
-                  </span>
-                  <span
-                    class="rounded-full border px-2 py-1 text-xs"
-                    :class="categoryClassMap[note.category]"
-                  >
-                    {{ releaseNotesContent?.labels.categoryLabels[note.category] ?? note.category }}
-                  </span>
-                  <span class="text-xs text-dp-text-muted">{{ formatReleaseDate(note.date) }}</span>
-                </div>
-
-                <a
-                  :href="note.url"
-                  target="_blank"
-                  rel="noreferrer"
-                  class="inline-flex min-h-[44px] items-center gap-1.5 self-start text-sm transition-colors text-dp-accent hover:text-dp-accent-hover"
-                >
-                  {{ formatPublicContentLabel(releaseNotesContent?.labels.pr ?? '', {
-                    number: note.pr,
-                  }) }}
-                  <ExternalLink class="w-4 h-4" />
-                </a>
-              </div>
-
-              <h3 class="mb-2 text-base font-semibold text-dp-text-primary">{{ note.title }}</h3>
-              <p class="mb-3 text-sm leading-6 text-dp-text-secondary">{{ note.summary }}</p>
-
-              <ul class="mb-3 ml-5 list-disc space-y-1.5 text-sm leading-6 text-dp-text-secondary">
-                <li v-for="(change, changeIndex) in note.changes" :key="changeIndex">{{ change }}</li>
-              </ul>
-
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-xs text-dp-text-muted">
-                  {{ releaseNotesContent?.labels.areas }}
-                </span>
-                <span
-                  v-for="area in note.areas"
-                  :key="`${note.id}-${area}`"
-                  class="rounded-full border px-2 py-1 text-xs border-dp-border-secondary text-dp-text-secondary"
-                >
-                  {{ releaseNotesContent?.labels.areaLabels[area] ?? area }}
-                </span>
-              </div>
-            </article>
-
-            <div
-              v-if="releaseNotesLoadMoreError"
-              class="rounded-lg border p-4 text-center border-dp-danger-border bg-dp-danger-soft"
-            >
-              <p class="mb-3 text-sm text-dp-danger">
-                {{ t('guide.status.releaseNotesLoadMoreFailed') }}
-              </p>
-              <button
-                type="button"
-                class="mx-auto inline-flex min-h-[44px] items-center gap-2 rounded-lg border px-4 py-2 text-sm text-dp-danger border-dp-danger-border"
-                :disabled="releaseNotesLoadingMore"
-                @click="retryLoadingMoreReleaseNotes"
-              >
-                <Loader2 v-if="releaseNotesLoadingMore" class="h-4 w-4 animate-spin" />
-                <RotateCcw v-else class="h-4 w-4" />
-                {{ releaseNotesLoadingMore ? t('guide.status.loadingReleaseNotes') : t('common.actions.retry') }}
-              </button>
-            </div>
-
-            <button
-              v-if="hasMoreVisibleReleaseNotes && !releaseNotesLoadMoreError"
-              type="button"
-              class="mx-auto flex min-h-[44px] items-center justify-center rounded-lg border px-4 py-2 text-sm transition hover:bg-dp-bg-hover border-dp-border-secondary text-dp-text-secondary"
+              class="mx-auto inline-flex min-h-[44px] items-center gap-2 rounded-lg border px-4 py-2 text-sm text-dp-danger border-dp-danger-border"
               :disabled="releaseNotesLoadingMore"
-              @click="loadMoreReleaseNotes"
+              @click="retryLoadingMoreReleaseNotes"
             >
-              <Loader2 v-if="releaseNotesLoadingMore" class="mr-2 h-4 w-4 animate-spin" />
-              {{ releaseNotesLoadingMore
-                ? t('guide.status.loadingReleaseNotes')
-                : releaseNotesContent?.labels.loadMore }}
+              <Loader2 v-if="releaseNotesLoadingMore" class="h-4 w-4 animate-spin" />
+              <RotateCcw v-else class="h-4 w-4" />
+              {{ releaseNotesLoadingMore ? t('guide.status.loadingReleaseNotes') : t('common.actions.retry') }}
             </button>
           </div>
-        </div>
-      </section>
-    </div>
 
-    <div v-if="guideContent" class="mt-8 p-4 rounded-lg text-center bg-dp-bg-secondary">
+          <button
+            v-if="hasMoreVisibleReleaseNotes && !releaseNotesLoadMoreError"
+            type="button"
+            class="mx-auto flex min-h-[44px] items-center justify-center rounded-lg border px-4 py-2 text-sm transition hover:bg-dp-bg-hover border-dp-border-secondary text-dp-text-secondary"
+            :disabled="releaseNotesLoadingMore"
+            @click="loadMoreReleaseNotes"
+          >
+            <Loader2 v-if="releaseNotesLoadingMore" class="mr-2 h-4 w-4 animate-spin" />
+            {{ releaseNotesLoadingMore
+              ? t('guide.status.loadingReleaseNotes')
+              : releaseNotesContent?.labels.loadMore }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <div v-if="activeTab === 'guide' && guideContent" class="mt-8 p-4 rounded-lg text-center bg-dp-bg-secondary">
       <p class="text-sm text-dp-text-muted">
         {{ guideContent.footer }}
       </p>

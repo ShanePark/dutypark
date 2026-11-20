@@ -6,6 +6,19 @@ import XCTest
 final class SocialFeatureTests: XCTestCase {
     private let baseURL = URL(string: "https://dutypark.test/api/")!
 
+    /// The server's friend search matches member names only.
+    func testFriendSearchPromptAdvertisesNameSearchOnly() throws {
+        let expected = ["en": "Search by name", "ko": "이름으로 검색"]
+        for (locale, value) in expected {
+            let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try XCTUnwrap(Bundle(url: url))
+            XCTAssertEqual(
+                bundle.localizedString(forKey: "social.search.prompt", value: nil, table: "Social"),
+                value
+            )
+        }
+    }
+
     func testDestructiveConfirmationsUseCenteredSharedPanel() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

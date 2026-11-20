@@ -1,9 +1,10 @@
-<script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useCalendarSpanConnectors } from '@/composables/useCalendarSpanConnectors'
+<script setup lang="ts" generic="TSpan">
+import { computed } from 'vue'
+import { ChevronRight } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
-import { isLightColor } from '@/utils/color'
+import { getTimeChipColors, isLightColor } from '@/utils/color'
 import { getCalendarGridSlice } from '@/utils/calendarGrid'
+import type { CalendarSpanLanes, CalendarSpanSegment } from '@/utils/calendarSpanLanes'
 import type { HolidayDto } from '@/types'
 
 interface CalendarDay {
@@ -25,6 +26,8 @@ interface Props {
   focusedDay?: { year: number; month: number; day: number } | null
   clickable?: boolean
   isDayClickable?: (day: CalendarDay, index: number) => boolean
+  /** Multi-day lanes per source day, from assignCalendarSpanLanes. */
+  spanLanes?: CalendarSpanLanes<TSpan>[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -35,10 +38,14 @@ const props = withDefaults(defineProps<Props>(), {
   focusedDay: null,
   clickable: true,
   isDayClickable: () => true,
+  spanLanes: () => [],
 })
 
-const grid = ref<HTMLElement | null>(null)
-const { paths, gradientPrefix } = useCalendarSpanConnectors(grid)
+defineSlots<{
+  'day-header'?: (props: { day: CalendarDay; index: number }) => unknown
+  'day-content'?: (props: { day: CalendarDay; index: number }) => unknown
+  span?: (props: { segment: CalendarSpanSegment<TSpan> }) => unknown
+}>()
 
 const emit = defineEmits<{
   (e: 'day-click', day: CalendarDay, index: number): void
@@ -127,9 +134,15 @@ function getFillColor(day: CalendarDay): string | null {
   return isCurrentMonth(day) ? dutyColor : fadeOutsideDuty(dutyColor)
 }
 
+// The time chip is a tone-on-tone shade of the fill; without one it falls back
+// to the neutral ink chip in CSS.
 function getDayStyle(day: CalendarDay): Record<string, string> {
   const fill = getFillColor(day)
-  if (fill) return { backgroundColor: fill }
+  if (fill) {
+    const chip = getTimeChipColors(fill)
+    if (!chip) return { backgroundColor: fill }
+    return { backgroundColor: fill, '--calendar-time-bg': chip.background, '--calendar-time-ink': chip.color }
+  }
   return isCurrentMonth(day) ? { backgroundColor: 'var(--dp-calendar-cell-bg)' } : {}
 }
 
@@ -175,20 +188,7 @@ function handleDayClick(day: CalendarDay, index: number) {
 </script>
 
 <template>
-  <div ref="grid" class="calendar-grid mb-2">
-    <svg class="calendar-span-connectors" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient v-for="(line, index) in paths" :id="`${gradientPrefix}-${index}`" :key="index"
-          gradientUnits="userSpaceOnUse" :x1="line.x1" :x2="line.x2" y1="0" y2="0">
-          <stop v-for="(stop, stopIndex) in line.stops" :key="stopIndex" :offset="stop.offset" :stop-color="stop.color" />
-        </linearGradient>
-        <clipPath v-for="(line, index) in paths" :id="`${gradientPrefix}-clip-${index}`" :key="`clip-${index}`" clipPathUnits="userSpaceOnUse">
-          <rect :x="line.clipLeft" y="0" :width="line.clipRight - line.clipLeft" height="100%" />
-        </clipPath>
-      </defs>
-      <path v-for="(line, index) in paths" :key="index" :d="line.path" :stroke="`url(#${gradientPrefix}-${index})`"
-        :stroke-width="line.thickness" :clip-path="`url(#${gradientPrefix}-clip-${index})`" />
-    </svg>
+  <div class="calendar-grid mb-2">
     <div
       v-for="(weekDay, idx) in weekDays"
       :key="weekDay"
@@ -243,17 +243,42 @@ function handleDayClick(day: CalendarDay, index: number) {
         <slot name="day-header" :day="day" :index="getSourceIndex(idx)" />
       </div>
 
-      <div
-        v-for="holiday in (holidays[getSourceIndex(idx)] ?? [])"
-        :key="holiday.localDate + holiday.dateName"
-        class="calendar-day-holiday"
-        :title="holiday.dateName"
-        :style="{ color: getHolidayColor(day, holiday) }"
-      >
-        {{ holiday.dateName }}
-      </div>
+      <div class="calendar-day-body">
+        <!-- A band lives in the first cell of its week segment and reaches over the
+             following cells; they keep an empty lane of the same height beneath it. -->
+        <div v-if="spanLanes[getSourceIndex(idx)]?.length" class="calendar-span-lanes">
+          <div
+            v-for="(lane, laneIndex) in spanLanes[getSourceIndex(idx)]"
+            :key="laneIndex"
+            class="calendar-span-lane"
+          >
+            <div
+              v-if="lane?.isFirstDay"
+              class="calendar-span"
+              :class="{
+                'calendar-span--start': lane.segment.isStart,
+                'calendar-span--end': lane.segment.isEnd,
+              }"
+              :style="{ '--calendar-span-days': lane.segment.days }"
+            >
+              <slot name="span" :segment="lane.segment" />
+              <ChevronRight v-if="!lane.segment.isEnd" class="calendar-span__more" aria-hidden="true" />
+            </div>
+          </div>
+        </div>
 
-      <slot name="day-content" :day="day" :index="getSourceIndex(idx)" />
+        <div
+          v-for="holiday in (holidays[getSourceIndex(idx)] ?? [])"
+          :key="holiday.localDate + holiday.dateName"
+          class="calendar-day-holiday"
+          :title="holiday.dateName"
+          :style="{ color: getHolidayColor(day, holiday) }"
+        >
+          {{ holiday.dateName }}
+        </div>
+
+        <slot name="day-content" :day="day" :index="getSourceIndex(idx)" />
+      </div>
     </div>
   </div>
 </template>
@@ -276,18 +301,6 @@ function handleDayClick(day: CalendarDay, index: number) {
   border-radius: 8px;
   overflow: hidden;
   background: var(--calendar-gutter);
-}
-
-.calendar-span-connectors {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 2;
-  fill: none;
-  stroke-linecap: round;
 }
 
 /* The dark prev/next surface is the page colour, so the header sits on the card instead. */
@@ -314,11 +327,23 @@ function handleDayClick(day: CalendarDay, index: number) {
   --calendar-ink-muted: var(--dp-text-muted);
   --calendar-rule: var(--dp-border-primary);
 
+  /* Each day spans a header row and a body row of its week, shared through
+     subgrid, so the multi-day lanes under the date line up across the week even
+     when one day's header wraps. */
   position: relative;
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  row-gap: 0;
   min-width: 0;
-  min-height: 64px;
   padding: 4px var(--calendar-pad-x) 5px;
   color: var(--calendar-ink);
+}
+
+/* A subgrid ignores its own min-height, so the body carries the tile's minimum. */
+.calendar-day-body {
+  min-width: 0;
+  min-height: 35px;
 }
 
 .calendar-day--on-light {
@@ -488,44 +513,148 @@ function handleDayClick(day: CalendarDay, index: number) {
   overflow-wrap: anywhere;
 }
 
-:slotted(.calendar-item__time) {
-  display: none;
+/* A schedule line clamps only its title, so a long title never hides the time
+   chip that follows it. The title box shrinks to its text, letting a short title
+   share its line with the chip; top alignment keeps an overflow-clipped box from
+   lifting the line's baseline to its bottom edge. */
+:slotted(.calendar-item__line--chip) {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: none;
+  line-clamp: none;
 }
 
-:slotted(.calendar-item__part) {
-  color: var(--calendar-ink-muted);
-  font-size: 0.9em;
+:slotted(.calendar-item__line--chip > .calendar-item__text) {
+  display: -webkit-inline-box;
+  max-width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  vertical-align: top;
+}
+
+/* An atomic pill moves to the next line whole; only a range wider than the
+   line breaks inside it, at the <wbr> after "~". On a duty fill the tile sets a
+   tone-on-tone pair; otherwise the chip is a neutral ink tint. */
+:slotted(.calendar-item__time) {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 1px;
+  padding: 1px 3px;
+  border-radius: 4px;
+  background: var(--calendar-time-bg, color-mix(in srgb, var(--calendar-ink) 8.5%, transparent));
+  color: var(--calendar-time-ink, color-mix(in srgb, var(--calendar-ink) 82%, transparent));
+  font-size: 0.84em;
+  font-weight: 700;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: normal;
+}
+
+:slotted(.calendar-item__time-part) {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+/* Multi-day lanes sit under the date, above every other item of the day. */
+.calendar-span-lanes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.calendar-span-lane {
+  position: relative;
+  height: 16px;
+}
+
+/* One white ribbon per week segment. It spans its days and the gutters between
+   them, is inset with rounded ends only at the schedule's true start and end,
+   and runs square to the row edge where the schedule continues into another
+   week. Clicks fall through to the day underneath. The ribbon is fixed-colour,
+   so it reads the same on any duty fill and in either theme. */
+.calendar-span {
+  --calendar-span-inset: 2px;
+  --calendar-span-radius: 4px;
+  --calendar-span-start: 0px;
+  --calendar-span-end: 0px;
+
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--calendar-span-start) - var(--calendar-pad-x));
+  width: calc(
+    var(--calendar-span-days) * (100% + 2 * var(--calendar-pad-x))
+    + (var(--calendar-span-days) - 1) * var(--calendar-gap)
+    - var(--calendar-span-start) - var(--calendar-span-end)
+  );
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: inset 0 0 0 1px rgba(31, 41, 55, 0.14), 0 1px 2px rgba(31, 41, 55, 0.08);
+  color: #1f2937;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  pointer-events: none;
+  container-type: inline-size;
+}
+
+.calendar-span--start {
+  --calendar-span-start: var(--calendar-span-inset);
+
+  border-top-left-radius: var(--calendar-span-radius);
+  border-bottom-left-radius: var(--calendar-span-radius);
+}
+
+.calendar-span--end {
+  --calendar-span-end: var(--calendar-span-inset);
+
+  border-top-right-radius: var(--calendar-span-radius);
+  border-bottom-right-radius: var(--calendar-span-radius);
+}
+
+:slotted(.calendar-span__title) {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+:slotted(.calendar-span__time) {
+  flex: none;
+  color: rgba(31, 41, 55, 0.62);
+  font-size: 0.84em;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  letter-spacing: normal;
 }
 
-/* A multi-day schedule draws an underline that runs to the tile edges, so the
-   days of one schedule visually join across the week. */
-:slotted(.calendar-item--span) {
-  padding-bottom: 5px;
+/* A one-day mobile segment cannot hold the title and a time, so the title wins. */
+@container (max-width: 7em) {
+  :slotted(.calendar-span__time) {
+    display: none;
+  }
 }
 
-:slotted(.calendar-item--span)::after {
-  content: '';
-  position: absolute;
-  right: calc(-1 * var(--calendar-pad-x));
-  bottom: 0;
-  left: calc(-1 * var(--calendar-pad-x));
-  height: 2.5px;
-  visibility: var(--calendar-span-visibility, visible);
-  background: var(--calendar-ink);
+:slotted(.calendar-span__time--end),
+.calendar-span__more {
+  margin-left: auto;
 }
 
-:slotted(.calendar-item--span-start)::after {
-  left: 0;
-  border-top-left-radius: 2px;
-  border-bottom-left-radius: 2px;
-}
-
-:slotted(.calendar-item--span-end)::after {
-  right: 0;
-  border-top-right-radius: 2px;
-  border-bottom-right-radius: 2px;
+.calendar-span__more {
+  flex: none;
+  width: 0.9em;
+  height: 0.9em;
+  color: rgba(31, 41, 55, 0.5);
+  stroke-width: 2.5;
 }
 
 /* Use the tile's available width: the date and full D-Day label can wrap
@@ -550,8 +679,11 @@ function handleDayClick(day: CalendarDay, index: number) {
   }
 
   .calendar-day {
-    min-height: 84px;
     padding: 7px var(--calendar-pad-x) 8px;
+  }
+
+  .calendar-day-body {
+    min-height: 41px;
   }
 
   .calendar-day-top {
@@ -607,30 +739,34 @@ function handleDayClick(day: CalendarDay, index: number) {
   }
 
   :slotted(.calendar-item__time) {
-    display: inline;
-    margin-right: 4px;
-    color: var(--calendar-ink-muted);
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
+    margin-top: 0;
+    padding: 1px 5px;
+    border-radius: 5px;
   }
 
-  :slotted(.calendar-item--span) {
-    padding-left: 0;
-    padding-bottom: 5px;
+  .calendar-span-lanes {
+    gap: 3px;
+    margin-bottom: 3px;
   }
 
-  :slotted(.calendar-item--span)::before {
-    content: none;
+  .calendar-span-lane {
+    height: 23px;
   }
 
-  :slotted(.calendar-item--span)::after {
-    height: 3px;
+  .calendar-span {
+    --calendar-span-inset: 4px;
+    --calendar-span-radius: 7px;
+
+    gap: 5px;
+    padding: 0 8px;
+    font-size: 12px;
+    letter-spacing: normal;
   }
 }
 
 @media (min-width: 768px) {
-  .calendar-day {
-    min-height: 108px;
+  .calendar-day-body {
+    min-height: 65px;
   }
 }
 </style>

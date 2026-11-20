@@ -97,22 +97,6 @@
         }
       }
     },
-    "guest.guide.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guide"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이용 안내"
-          }
-        }
-      }
-    },
     "guest.hero.scroll": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Scroll to learn more" } },

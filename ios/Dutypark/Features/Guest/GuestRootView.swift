@@ -54,7 +54,7 @@ struct GuestRootView: View {
         case .login:
             LoginView(wrapsInNavigationStack: false)
         case .guide:
-            GuestGuideView()
+            PublicGuideView()
         case .support:
             SupportView()
         case .terms:

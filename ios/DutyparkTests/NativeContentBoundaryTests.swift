@@ -31,7 +31,11 @@ struct NativeContentBoundaryTests {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let guest = try source(
-            "Dutypark/Features/Guest/GuestGuideView.swift",
+            "Dutypark/Features/Guest/GuestRootView.swift",
+            under: iosDirectory
+        )
+        let content = try source(
+            "Dutypark/Features/Settings/PublicContentViews.swift",
             under: iosDirectory
         )
         let settings = try source(
@@ -39,11 +43,10 @@ struct NativeContentBoundaryTests {
             under: iosDirectory
         )
 
-        #expect(guest.contains("PublicGuideView(fallbackTitle:"))
-        #expect(guest.contains("PublicReleaseNotesView()"))
-        #expect(guest.contains("guest.guide.sectionPicker"))
+        #expect(guest.contains("PublicGuideView()"))
+        #expect(content.contains("PublicReleaseNotesView(service: service)"))
+        #expect(content.contains("guide.sectionPicker"))
         #expect(settings.contains("case .guide:\n                PublicGuideView()"))
-        #expect(settings.contains("PublicReleaseNotesView()"))
     }
 
     private func source(_ path: String, under directory: URL) throws -> String {

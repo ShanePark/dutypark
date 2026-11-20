@@ -241,6 +241,9 @@ nonisolated struct DPCalendarDayNumber: View {
                 )
                 .background(Circle().fill(DPCalendarCellStyle.todayColor))
                 .padding(.leading, -1)
+                // The circle overhangs the header by a point each way, so today's header is
+                // as tall as every other and ribbon lanes stay level across the row.
+                .padding(.vertical, -1)
         } else {
             Text(verbatim: String(day))
                 .font(DPFont.bold(size: DPCalendarCellStyle.dayNumberFontSize, relativeTo: .caption))
@@ -297,6 +300,8 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
     /// A border for a selected, highlighted or focused day. It wins over today's ring;
     /// today stays recognisable by the red date circle.
     var highlight: Color?
+    /// The tile's column when it draws a ribbon that reaches over the next tiles of its row.
+    var ribbonColumn: Int?
     @ViewBuilder var accessory: () -> Accessory
     @ViewBuilder var content: () -> Content
 
@@ -341,8 +346,7 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
                 EmptyView()
             }
         }
-        // Today's ring reaches over the gutter, so it must sit above its neighbours.
-        .zIndex(ring == .today ? 2 : ring == .highlight ? 1 : 0)
+        .zIndex(DPCalendarTileRing.zIndex(ring: ring, ribbonColumn: ribbonColumn))
     }
 
     private var ring: DPCalendarTileRing {
@@ -359,6 +363,14 @@ nonisolated enum DPCalendarTileRing: Equatable {
 
     init(isToday: Bool, hasHighlight: Bool) {
         self = hasHighlight ? .highlight : isToday ? .today : .none
+    }
+
+    /// Today's ring reaches over the gutter, so it sits above its neighbours. A tile that
+    /// draws a ribbon over the following tiles sits above all of them, the earlier column
+    /// higher, so each ribbon stays on top of the tiles it crosses.
+    static func zIndex(ring: DPCalendarTileRing, ribbonColumn: Int?) -> Double {
+        if let ribbonColumn { return 3 + Double(6 - ribbonColumn) }
+        return ring == .today ? 2 : ring == .highlight ? 1 : 0
     }
 }
 
@@ -380,112 +392,21 @@ nonisolated struct DPCalendarTodayRing: View {
 }
 
 /// One item line inside a tile (a schedule or a D-Day marker). Items after the first
-/// are separated by a hairline. A multi-day schedule is named on every day and underlined
-/// by a bar that runs to the tile edges, so the days of one schedule join across the week.
-/// The month grid joins measured bars with a curve when surrounding content changes their height.
+/// are separated by a hairline.
 nonisolated struct DPCalendarItemRow<Content: View>: View {
     let showsRule: Bool
     let rule: Color
-    var span: DPCalendarSpan?
-    var spanColor: Color = .clear
-    var spanID: ScheduleID?
-    var spanDay: Int = 1
-    @Environment(\.calendarSpanCellIndex) private var cellIndex
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2.5) {
-            content()
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if let span {
-                spanBar(span)
+        content()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 2)
+            .overlay(alignment: .top) {
+                if showsRule {
+                    Rectangle().fill(rule).frame(height: 1)
+                }
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 2)
-        .padding(.bottom, span == nil ? 2 : 0)
-        .overlay(alignment: .top) {
-            if showsRule {
-                Rectangle().fill(rule).frame(height: 1)
-            }
-        }
-    }
-
-    private func spanBar(_ span: DPCalendarSpan) -> some View {
-        UnevenRoundedRectangle(
-            topLeadingRadius: span.isStart ? 2 : 0,
-            bottomLeadingRadius: span.isStart ? 2 : 0,
-            bottomTrailingRadius: span.isEnd ? 2 : 0,
-            topTrailingRadius: span.isEnd ? 2 : 0
-        )
-        .fill(cellIndex != nil && spanID != nil ? .clear : spanColor)
-        .frame(height: 2.5)
-        .anchorPreference(key: CalendarSpanAnchors.self, value: .bounds) { bounds in
-            guard let spanID, let cellIndex else { return [] }
-            return [CalendarSpanAnchor(id: spanID, index: cellIndex, day: spanDay, span: span, color: spanColor, bounds: bounds)]
-        }
-        .padding(.leading, span.isStart ? 0 : -DPCalendarCellStyle.cellHorizontalPadding)
-        .padding(.trailing, span.isEnd ? 0 : -DPCalendarCellStyle.cellHorizontalPadding)
-        .accessibilityHidden(true)
-    }
-}
-
-/// Where a day sits inside a multi-day schedule.
-nonisolated struct DPCalendarSpan: Equatable {
-    let isStart: Bool
-    let isEnd: Bool
-
-    /// `nil` for a single-day schedule.
-    init?(daysFromStart: Int?, totalDays: Int?) {
-        guard let daysFromStart, let totalDays, totalDays > 1 else { return nil }
-        isStart = daysFromStart == 1
-        isEnd = daysFromStart == totalDays
-    }
-
-    /// The "(n/m)" counter that ends a multi-day title; `nil` for a single-day schedule.
-    static func dayCounterText(daysFromStart: Int?, totalDays: Int?) -> String? {
-        guard let daysFromStart, let totalDays, totalDays > 1 else { return nil }
-        return "(\(daysFromStart)/\(totalDays))"
-    }
-
-    /// Multi-day items lead a calendar cell so their bars sit in the top rows. Among them
-    /// the run that started earlier comes first, then the one that ends later; ties and
-    /// single-day items keep their incoming order.
-    static func orderedForCell<Item>(
-        _ items: [Item],
-        daysFromStart: (Item) -> Int?,
-        totalDays: (Item) -> Int?
-    ) -> [Item] {
-        items.enumerated().sorted { lhs, rhs in
-            let l = (from: daysFromStart(lhs.element) ?? 1, total: totalDays(lhs.element) ?? 1)
-            let r = (from: daysFromStart(rhs.element) ?? 1, total: totalDays(rhs.element) ?? 1)
-            let lSpan = l.total > 1
-            let rSpan = r.total > 1
-            if lSpan != rSpan { return lSpan }
-            if lSpan {
-                if l.from != r.from { return l.from > r.from }
-                let lRemaining = l.total - l.from
-                let rRemaining = r.total - r.from
-                if lRemaining != rRemaining { return lRemaining > rRemaining }
-            }
-            return lhs.offset < rhs.offset
-        }
-        .map(\.element)
-    }
-}
-
-/// A schedule title in a month tile. A multi-day run's muted "(n/m)" day counter follows
-/// the whole title in the same flow of text, so it ends the title's last line; a title too
-/// long for two lines may truncate it.
-enum DPCalendarScheduleTitle {
-    static func text(_ title: Text, daysFromStart: Int?, totalDays: Int?, counterColor: Color) -> Text {
-        guard let counter = DPCalendarSpan.dayCounterText(daysFromStart: daysFromStart, totalDays: totalDays) else {
-            return title
-        }
-        return title + Text(verbatim: " \(counter)")
-            .font(DPFont.bold(size: CalendarTypography.cellMicro, relativeTo: .caption2).monospacedDigit())
-            .tracking(-0.36)
-            .foregroundStyle(counterColor)
     }
 }
 

@@ -3,8 +3,8 @@
   "locales": {
     "ko": {
       "labels": {
-        "title": "변경사항",
-        "count": "총 {count}개의 변경사항",
+        "title": "업데이트 내역",
+        "count": "총 {count}개의 업데이트 내역",
         "loadMore": "더보기",
         "latest": "최신",
         "pr": "PR #{number}",
@@ -40,6 +40,18 @@
         }
       },
       "entries": {
+        "pr-440": {
+          "title": "달력 시간 표시와 화면 정리",
+          "summary": "모바일에서도 달력에 일정 시간이 보이고, 여러 날 이어지는 일정은 한 줄의 띠로 표시됩니다. 할일 보드, 이용 안내, 설정 구성도 함께 다듬었습니다.",
+          "changes": [
+            "달력 일정 시간이 제목 뒤에 근무 색에 맞춘 칩으로 표시되며, 모바일과 iOS 앱에서도 보입니다.",
+            "여러 날 이어지는 일정은 주마다 한 줄의 띠로 이어져 보이고, 시작·종료 시간이 함께 표시됩니다.",
+            "할일 보드는 사용법 안내와 상단 버튼을 없애고 바로 위에서 시작합니다.",
+            "이용 안내를 현재 기능에 맞게 새로 정리했고, 업데이트 내역은 이용 안내의 탭으로 옮겼습니다.",
+            "시간표 공개 설정과 AI 동의는 내 정보로 옮겼고, 약관·버전 정보는 더보기 하단에 모았습니다.",
+            "언어 추천 창이 좁은 화면 밖으로 나가던 문제, 친구 검색 안내 문구, 내 정보 이메일이 잘리던 문제를 고쳤습니다."
+          ]
+        },
         "pr-439": {
           "title": "운영 알림 개선",
           "summary": "서비스 운영자가 받는 내부 알림에서 어떤 변경이 있었는지 더 쉽게 알아볼 수 있습니다. 이용 화면에는 바뀌는 점이 없습니다.",
@@ -2394,7 +2406,7 @@
     },
     "en": {
       "labels": {
-        "title": "Changelog",
+        "title": "Release notes",
         "count": "{count} release notes",
         "loadMore": "Load more",
         "latest": "Latest",
@@ -2431,6 +2443,18 @@
         }
       },
       "entries": {
+        "pr-440": {
+          "title": "Calendar times and a tidier app",
+          "summary": "Schedule times now show in the calendar on phones too, and multi-day schedules appear as one continuous ribbon. The to-do board, guide, and settings layout were tidied up as well.",
+          "changes": [
+            "Schedule times appear as a chip after the title, tinted to match the duty colour, including on mobile and in the iOS app.",
+            "Multi-day schedules run as one ribbon across each week, with their start and end times.",
+            "The to-do board drops its help and header buttons and starts right at the top.",
+            "The guide was rewritten to cover every current feature, and release notes moved into a tab inside it.",
+            "Calendar visibility and AI consent moved to My Info, and terms and version info moved to the bottom of More.",
+            "Fixed the language suggestion running off narrow screens, the friend search hint, and long emails being cut off in My Info."
+          ]
+        },
         "pr-439": {
           "title": "Clearer operator alerts",
           "summary": "Internal alerts sent to the service operator now show what actually changed. Nothing changes in the app itself.",
@@ -4785,6 +4809,21 @@
     }
   },
   "items": [
+    {
+      "id": "pr-440",
+      "version": "2026.11.21",
+      "date": "2026-11-21",
+      "pr": 440,
+      "url": "https://github.com/ShanePark/dutypark/pull/440",
+      "category": "improvement",
+      "areas": [
+        "calendar",
+        "todo",
+        "guide",
+        "profile",
+        "ui"
+      ]
+    },
     {
       "id": "pr-439",
       "version": "2026.11.19",

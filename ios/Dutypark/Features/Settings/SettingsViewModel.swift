@@ -82,12 +82,13 @@ nonisolated struct SettingsLoadPlan: Equatable, Sendable {
         dutyPattern: true
     )
 
-    /// Friends back the calendar visibility audience preview and policies back the
-    /// information section.
-    static let settings = SettingsLoadPlan(friends: true, policies: true)
+    /// Policies back the terms and privacy pages that deep links open from Settings.
+    static let settings = SettingsLoadPlan(policies: true)
 
+    /// Friends back the calendar visibility audience preview.
     static let myInfo = SettingsLoadPlan(
         familyMembers: true,
+        friends: true,
         managers: true,
         managedAccounts: true,
         sessions: true,

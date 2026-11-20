@@ -1,7 +1,7 @@
 import Testing
 @testable import Dutypark
 
-/// A team calendar cell lists multi-day schedules before single-day ones.
+/// A team calendar cell lists its single-day schedules; multi-day ones ride in the ribbon lanes.
 struct TeamCalendarCellOrderTests {
     private func schedule(_ name: String, daysFromStart: Int?, totalDays: Int?) -> TeamScheduleDTO {
         TeamScheduleDTO(
@@ -24,7 +24,7 @@ struct TeamCalendarCellOrderTests {
     }
 
     @Test
-    func multiDaySchedulesComeFirstStartedEarlierThenEndingLater() {
+    func theCellListsOnlySingleDaySchedulesInTheirIncomingOrder() {
         let schedules = [
             schedule("s1", daysFromStart: 1, totalDays: 1),
             schedule("s2", daysFromStart: 1, totalDays: 2),
@@ -33,8 +33,8 @@ struct TeamCalendarCellOrderTests {
             schedule("s5", daysFromStart: 1, totalDays: 5),
         ]
 
-        let ordered = TeamCalendarCellSchedules.ordered(schedules).map(\.content)
+        let listed = TeamCalendarCellSchedules.singleDay(schedules).map(\.content)
 
-        #expect(ordered == ["s4", "s5", "s2", "s1", "s3"])
+        #expect(listed == ["s1", "s3"])
     }
 }

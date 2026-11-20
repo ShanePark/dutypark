@@ -175,20 +175,18 @@ describe('todo board mobile drag navigation', () => {
     expect(script).toContain('selectedTodo.value = updatedTodo')
   })
 
-  it('explains that list cards change status from detail or by dragging', () => {
-    expect(ko.todoBoard.help.whatIsKanbanText).toContain('상세 화면에서 상태를 변경')
-    expect(ko.todoBoard.help.whatIsKanbanText).toContain('드래그')
-    expect(ko.todoBoard.help.whatIsKanbanText).not.toContain('상태 버튼')
-    expect(ko.todoBoard.help.tips.drag).toContain('상세 화면에서 상태를 변경')
-    expect(ko.todoBoard.help.tips.drag).toContain('드래그')
-    expect(ko.todoBoard.help.tips.drag).not.toContain('상태 버튼')
-
-    expect(en.todoBoard.help.whatIsKanbanText).toContain('detail view')
-    expect(en.todoBoard.help.whatIsKanbanText).toContain('drag')
-    expect(en.todoBoard.help.whatIsKanbanText).not.toContain('status button')
-    expect(en.todoBoard.help.tips.drag).toContain('detail view')
-    expect(en.todoBoard.help.tips.drag).toContain('drag')
-    expect(en.todoBoard.help.tips.drag).not.toContain('status button')
+  it('starts with the status tabs, without a page header or help entry point', () => {
+    expect(template).not.toContain('<PageHeader')
+    expect(template).not.toContain('<HelpButton')
+    expect(template).not.toContain('<HelpModal')
+    expect(template.indexOf('<div class="todo-board-container">'))
+      .toBeLessThan(template.indexOf('class="todo-board-tabs"'))
+    expect(template.slice(
+      template.indexOf('<div class="todo-board-container">') + '<div class="todo-board-container">'.length,
+      template.indexOf('class="todo-board-tabs"'),
+    ).trim()).toBe('<div')
+    expect('help' in ko.todoBoard).toBe(false)
+    expect('help' in en.todoBoard).toBe(false)
   })
 
   it('blocks competing status changes for the same todo while its request is pending', () => {

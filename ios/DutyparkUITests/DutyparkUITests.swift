@@ -99,12 +99,6 @@ final class DutyparkUITests: XCTestCase {
         let notificationBell = app.buttons["notifications.bell"]
         XCTAssertTrue(notificationBell.waitForExistence(timeout: 10))
         assertMinimumTouchTarget(notificationBell)
-
-        primaryTab("tab.todo", in: app).tap()
-        let todoAdd = app.buttons["todo.add"]
-        XCTAssertTrue(todoAdd.waitForExistence(timeout: 10))
-        assertMinimumTouchTarget(todoAdd)
-        assertNoUnexpectedAlert(in: app, context: "Todo toolbar")
     }
 
     @MainActor
@@ -117,7 +111,7 @@ final class DutyparkUITests: XCTestCase {
             app.descendants(matching: .any)["screen.todo"].waitForExistence(timeout: 10)
         )
 
-        let addButton = app.buttons["todo.add"]
+        let addButton = app.buttons["todo.column.IN_PROGRESS.add"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 10))
         addButton.tap()
 

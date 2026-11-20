@@ -145,6 +145,7 @@ nonisolated enum PublicContentPresentation {
         "palette": "paintpalette.fill",
         "sun": "sun.max.fill",
         "bell": "bell.badge.fill",
+        "pin": "pin.fill",
         "trash": "trash.fill",
         "camera": "camera.fill",
         "shield": "shield.checkered",
@@ -186,22 +187,22 @@ extension PublicGuideContent {
             locale: locale,
             title: "이용 안내",
             description: "Dutypark의 주요 기능과 사용 방법을 안내합니다.",
-            footer: "더 궁금한 점이 있으시면 관리자에게 문의해주세요.",
+            footer: "더 궁금한 점이 있으면 더보기 > 문의·지원으로 문의해주세요.",
             actions: PublicGuideActions(expandAll: "모두 펼치기", collapseAll: "모두 접기"),
             sections: [
                 PublicGuideSection(
-                    id: "dashboard",
-                    title: "대시보드 (홈)",
-                    summary: "오늘의 근무와 일정을 한눈에 확인합니다.",
-                    icon: "home",
+                    id: "start",
+                    title: "시작하기",
+                    summary: "Dutypark는 근무표와 일정, 할 일을 친구·가족·팀과 함께 관리하는 캘린더입니다.",
+                    icon: "phone",
                     tone: "accent",
                     cards: [
                         PublicGuideCard(
-                            id: "today",
-                            title: "오늘의 정보 확인",
-                            icon: "calendar",
-                            tone: "accent",
-                            items: ["오늘 날짜와 요일을 확인할 수 있습니다."]
+                            id: "login",
+                            title: "로그인과 가입",
+                            icon: "lock",
+                            tone: "neutral",
+                            items: ["카카오, 네이버, Apple 계정으로 로그인합니다."]
                         )
                     ]
                 )

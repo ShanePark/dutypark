@@ -252,15 +252,40 @@ nonisolated enum CalendarVisualLogic {
             !(totalDays == 1 && sameDateTime(start, end))
 
         if showStartTime && showEndTime {
-            return "(\(startClock.text)~\(endClock.text))"
+            return "\(startClock.text)~\(endClock.text)"
         }
         if showStartTime {
-            return "(\(startClock.text))"
+            return startClock.text
         }
         if showEndTime {
-            return "(~\(endClock.text))"
+            return "~\(endClock.text)"
         }
         return nil
+    }
+
+    /// A multi-day ribbon segment shows the start time only where it holds the true start
+    /// ("14:00~") and the end time only where it holds the true end ("~18:00"); midnight is
+    /// the no-explicit-time sentinel.
+    static func spanSegmentTimes(
+        start: LocalDateTimeValue,
+        end: LocalDateTimeValue,
+        holdsStart: Bool,
+        holdsEnd: Bool
+    ) -> CalendarSpanSegmentTimes {
+        let startClock = holdsStart ? scheduleClock(from: start) : nil
+        let endClock = holdsEnd ? scheduleClock(from: end) : nil
+        return CalendarSpanSegmentTimes(
+            start: startClock.flatMap { $0.isMidnight ? nil : "\($0.text)~" },
+            end: endClock.flatMap { $0.isMidnight ? nil : "~\($0.text)" }
+        )
+    }
+
+    /// A month tile's time line may wrap only right after a range's "~" ("12:00~" / "13:00").
+    /// Digits, ":" and "~" offer no break opportunity of their own, so without the zero-width
+    /// space a narrow tile would break the time wherever the width ran out, even inside "12:00".
+    static func wrappableScheduleTime(_ time: String) -> String {
+        guard let tilde = time.firstIndex(of: "~"), tilde != time.startIndex else { return time }
+        return time.replacingCharacters(in: tilde...tilde, with: "~\u{200B}")
     }
 
     /// The day detail follows the web schedule list: equal times collapse to one time, an
@@ -376,6 +401,11 @@ nonisolated enum CalendarVisualLogic {
 
 /// Type sizes for the dense calendar surface, kept in one place so the
 /// 375-point layout stays compact without falling below the mobile web scale.
+nonisolated struct CalendarSpanSegmentTimes: Equatable {
+    let start: String?
+    let end: String?
+}
+
 nonisolated enum CalendarTypography {
     static let weekday = DPCalendarCellStyle.weekdayFontSize
     static let dayNumber = DPCalendarCellStyle.dayNumberFontSize

@@ -386,6 +386,17 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertTrue(source.contains("LazyHStack(alignment: .top, spacing: DPSpacing.small)"))
     }
 
+    /// A multi-day schedule's day counter reads the same as the calendar day detail.
+    func testHomeMultiDayScheduleCounterMatchesTheDayDetailFormat() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+
+        XCTAssertTrue(source.contains("text += \" (\\(daysFromStart)/\\(totalDays))\""))
+        XCTAssertFalse(
+            source.contains("[\\(daysFromStart)/\\(totalDays)]"),
+            "Home must not use the bracketed day counter"
+        )
+    }
+
     private nonisolated static func duty(type: String?) -> DutyDTO {
         DutyDTO(
             year: 2026,

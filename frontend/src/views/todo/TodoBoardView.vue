@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Sortable from 'sortablejs'
 import type { MoveEvent, SortableEvent } from 'sortablejs'
-import { ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus, BrushCleaning } from '@lucide/vue'
+import { ListTodo, Clock, CheckCircle2, Plus, BrushCleaning } from '@lucide/vue'
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
 import { reportApi } from '@/api/report'
@@ -11,11 +11,6 @@ import { useSwal } from '@/composables/useSwal'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
-import HelpButton from '@/components/common/HelpButton.vue'
-import HelpModal from '@/components/common/HelpModal.vue'
-import HelpNote from '@/components/common/HelpNote.vue'
-import HelpSection from '@/components/common/HelpSection.vue'
-import PageHeader from '@/components/common/PageHeader.vue'
 import KanbanColumn from '@/components/todo/KanbanColumn.vue'
 import KanbanCard from '@/components/todo/KanbanCard.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
@@ -28,8 +23,6 @@ const { t } = useI18n()
 const { showSuccess, showError, confirm, confirmDelete, toastSuccess } = useSwal()
 const contentFilterStore = useContentFilterStore()
 const dragClickGuard = useDragClickGuard()
-
-const isHelpModalOpen = ref(false)
 
 const board = ref<TodoBoard | null>(null)
 const boardScroller = ref<HTMLElement | null>(null)
@@ -783,13 +776,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="todo-board-container">
-    <PageHeader :title="t('header.menu.todo')" :icon="ListTodo" class="shrink-0">
-      <HelpButton
-        :label="t('todoBoard.help.openAriaLabel')"
-        @click="isHelpModalOpen = true"
-      />
-    </PageHeader>
-
     <div class="todo-board-tabs" role="tablist" :aria-label="t('todoBoard.statusTabsAriaLabel')">
       <button
         v-for="tab in statusTabs"
@@ -960,47 +946,6 @@ onBeforeUnmount(() => {
       @submit="handleReportSubmit"
     />
 
-    <HelpModal
-      :is-open="isHelpModalOpen"
-      :title="t('todoBoard.help.title')"
-      @close="isHelpModalOpen = false"
-    >
-      <!-- The blocks describe the board and its three columns rather than steps to
-           follow in order, so they stay unnumbered. -->
-      <HelpSection
-        :icon="LayoutGrid"
-        :title="t('todoBoard.help.whatIsKanbanTitle')"
-        :text="t('todoBoard.help.whatIsKanbanText')"
-      />
-      <HelpSection
-        :icon="ListTodo"
-        :title="t('todoBoard.help.todoTitle')"
-        :text="t('todoBoard.help.todoText')"
-      />
-      <HelpSection
-        :icon="Clock"
-        :title="t('todoBoard.help.inProgressTitle')"
-        :text="t('todoBoard.help.inProgressText')"
-      />
-      <HelpSection
-        :icon="CheckCircle2"
-        :title="t('todoBoard.help.doneTitle')"
-        :text="t('todoBoard.help.doneText')"
-      />
-
-      <HelpNote
-        :icon="Lightbulb"
-        tone="warning"
-        :title="t('todoBoard.help.tipsTitle')"
-        :messages="[
-          t('todoBoard.help.tips.drag'),
-          t('todoBoard.help.tips.reorder'),
-          t('todoBoard.help.tips.details'),
-          t('todoBoard.help.tips.dueDate'),
-          t('todoBoard.help.tips.attachments'),
-        ]"
-      />
-    </HelpModal>
   </div>
 </template>
 

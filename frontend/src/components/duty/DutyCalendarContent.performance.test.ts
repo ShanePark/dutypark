@@ -9,7 +9,7 @@ vi.mock('@/i18n', () => ({ getCurrentLocale: () => 'ko' }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'ko' }, t: (key: string) => key }) }))
 vi.mock('@lucide/vue', () => {
   const icon = defineComponent({ setup: () => () => h('span') })
-  return { Flag: icon, MessageSquareText: icon, CheckSquare: icon }
+  return { Flag: icon, MessageSquareText: icon, CheckSquare: icon, ChevronRight: icon }
 })
 vi.mock('@/components/common/ProfileAvatar.vue', () => ({
   default: defineComponent({
@@ -37,7 +37,7 @@ type CalendarProps = {
 }
 const apps: Array<ReturnType<typeof mountHost>['app']> = []
 
-function makeSchedule(id: string, daysFromStart = 1): Schedule {
+function makeSchedule(id: string, daysFromStart = 1, totalDays = 1): Schedule {
   return {
     id, content: `Schedule ${id}`, startDateTime: '2026-09-01T09:30', endDateTime: '2026-09-03T17:45',
     visibility: 'FRIENDS', isMine: false, isTagged: true, owner: 'Owner',
@@ -46,7 +46,7 @@ function makeSchedule(id: string, daysFromStart = 1): Schedule {
       { id: 1, name: 'Viewer' }, { id: 2, name: 'Alpha' },
       { id: 3, name: 'Bravo' }, { id: 4, name: 'Charlie' },
     ],
-    daysFromStart, totalDays: 3,
+    daysFromStart, totalDays,
   }
 }
 
@@ -279,18 +279,87 @@ describe('calendar derived display data', () => {
     expect(ddayButtons(root).map(node => node.props.title)).toEqual(['Second', 'Normalized'])
   })
 
-  it('lists multi-day schedules before single-day ones in a calendar cell', () => {
+  it('draws a multi-day schedule as one band per week row instead of a cell item', () => {
     const props = makeProps(0)
-    const single = { ...makeSchedule('single'), totalDays: 1 }
-    const startsToday = makeSchedule('starts-today', 1)
-    const startedEarlier = makeSchedule('started-earlier', 2)
-    props.schedulesByDays = [[single, startsToday, startedEarlier]]
+    props.schedulesByDays = []
+    // Thursday 3 Sep 14:00 to Sunday 6 Sep 18:00 crosses into the next week row.
+    for (let day = 1; day <= 4; day++) {
+      props.schedulesByDays[4 + day] = [{
+        ...makeSchedule('trip', day, 4),
+        startDateTime: '2026-09-03T14:00', endDateTime: '2026-09-06T18:00',
+      }]
+    }
+    props.schedulesByDays[6]!.push(makeSchedule('single'))
     const root = mountCalendar(props)
-    const titles = findHostNodes(calendarDayCells(root)[0]!, node =>
-      String(node.props.class ?? '').split(' ').includes('calendar-item__text'))
-    expect(titles.map(node => hostText(node).split('Schedule ')[1])).toEqual([
-      'started-earlier (2/3)', 'starts-today (1/3)', 'single',
-    ])
+    const hasClass = (node: HostNode, name: string) => String(node.props.class ?? '').split(' ').includes(name)
+    const cells = calendarDayCells(root)
+    const lanes = (cell: HostNode) => findHostNodes(cell, node => hasClass(node, 'calendar-span-lane'))
+    const bands = (cell: HostNode) => findHostNodes(cell, node => hasClass(node, 'calendar-span'))
+    const visible = (node: HostNode) => node.children
+      .filter(child => child.type !== '#comment' && !(child.type === '#text' && !child.text))
+      .map(child => hasClass(child, 'calendar-span__more') ? '›' : hostText(child))
+
+    expect(cells.slice(4, 10).map(cell => lanes(cell).length)).toEqual([0, 1, 1, 1, 1, 0])
+    expect(cells.slice(4, 10).map(cell => bands(cell).length)).toEqual([0, 1, 0, 1, 0, 0])
+    const [thisWeek] = bands(cells[5]!)
+    const [nextWeek] = bands(cells[7]!)
+    expect(thisWeek!.props.style).toEqual({ '--calendar-span-days': 2 })
+    expect(hasClass(thisWeek!, 'calendar-span--start')).toBe(true)
+    expect(hasClass(thisWeek!, 'calendar-span--end')).toBe(false)
+    expect(visible(thisWeek!)).toEqual(['Schedule trip', '14:00~', '›'])
+    expect(nextWeek!.props.style).toEqual({ '--calendar-span-days': 2 })
+    expect(hasClass(nextWeek!, 'calendar-span--start')).toBe(false)
+    expect(hasClass(nextWeek!, 'calendar-span--end')).toBe(true)
+    expect(visible(nextWeek!)).toEqual(['Schedule trip', '~18:00'])
+
+    // The cell list keeps only single-day schedules, and no day counter is drawn.
+    const itemTitles = findHostNodes(root, node => hasClass(node, 'calendar-item__text')).map(hostText)
+    expect(itemTitles).toEqual(['Schedule single'])
+    expect(hostText(root)).not.toMatch(/\(\d\/\d\)/)
+  })
+
+  it('leaves midnight boundaries of a multi-day band without times and hides bands in batch edit', async () => {
+    const props = reactive(makeProps(0))
+    props.schedulesByDays = [1, 2].map(day => [{
+      ...makeSchedule('overnight', day, 2), startDateTime: '2026-09-01T00:00', endDateTime: '2026-09-02T00:00',
+    }])
+    const root = mountCalendar(props)
+    const band = findHostNode(root, node => String(node.props.class ?? '').split(' ').includes('calendar-span'))!
+    expect(hostText(band)).toBe('Schedule overnight')
+
+    props.batchEditMode = true
+    await nextTick()
+    expect(findHostNode(root, node => String(node.props.class ?? '').split(' ').includes('calendar-span-lane'))).toBeNull()
+  })
+
+  it('ends the title line with a time chip that breaks only after the tilde', () => {
+    const props = makeProps(0)
+    const range = makeSchedule('range')
+    const startOnly = { ...makeSchedule('start-only'), endDateTime: '2026-09-01T09:30' }
+    const endOnly = { ...makeSchedule('end-only'), startDateTime: '2026-09-01T00:00' }
+    const allDay = { ...makeSchedule('all-day'), startDateTime: '2026-09-01T00:00', endDateTime: '2026-09-01T00:00' }
+    props.schedulesByDays = [[range, startOnly, endOnly, allDay]]
+    const root = mountCalendar(props)
+    const hasClass = (node: HostNode, name: string) => String(node.props.class ?? '').split(' ').includes(name)
+    const items = findHostNodes(calendarDayCells(root)[0]!, node => hasClass(node, 'calendar-item'))
+    const lines = items.map(item => item.children.find(child => hasClass(child, 'calendar-item__line'))!)
+    // Only the title is clamped; the chip is its sibling inside the line, so a long title never hides it.
+    const chips = lines.map(line => line.children.filter(child => hasClass(child, 'calendar-item__time')))
+    expect(items.map(item => item.children.filter(child => hasClass(child, 'calendar-item__time')).length)).toEqual([0, 0, 0, 0])
+    expect(chips.map(found => found.length)).toEqual([1, 1, 1, 0])
+    for (const index of [0, 1, 2]) {
+      const children = lines[index]!.children.filter(child => child.type !== '#comment' && !(child.type === '#text' && !child.text))
+      expect(children.map(child => child.type === '#text' ? child.text : child.props.class)).toEqual([
+        'calendar-item__text', ' ', 'calendar-item__time',
+      ])
+    }
+    const shape = (node: HostNode) => node.children
+      // Fragment anchors are empty text nodes; they never affect layout.
+      .filter(child => child.type !== '#comment' && !(child.type === '#text' && !child.text))
+      .map(child => child.type === 'wbr' ? '<wbr>' : hostText(child))
+    expect(shape(chips[0]![0]!)).toEqual(['09:30~', '<wbr>', '17:45'])
+    expect(shape(chips[1]![0]!)).toEqual(['09:30'])
+    expect(shape(chips[2]![0]!)).toEqual(['~17:45'])
   })
 
   it('shows every due todo of a day without an overflow count', () => {
@@ -317,7 +386,6 @@ describe('calendar derived display data', () => {
     expect(buildDisplayTagMembers).toHaveBeenCalledTimes(2)
     expect(tagNames(root)).toContain('Different')
     expect(tagNames(root)).not.toContain('Viewer')
-    expect(hostText(root)).toContain('(2/3)')
 
     props.schedulesByDays[0]![0]!.tags![1]!.name = 'Renamed'
     props.schedulesByDays[0]![0]!.taggedByMember!.profilePhotoVersion = 2

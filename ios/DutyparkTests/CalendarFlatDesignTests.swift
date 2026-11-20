@@ -111,70 +111,16 @@ struct CalendarFlatDesignTests {
         #expect(CalendarVisualLogic.cellTodoTitle("장보기") == "장보기")
         #expect(CalendarVisualLogic.cellTodoTitle("여섯글자제목") == "여섯글자제목")
         #expect(CalendarVisualLogic.cellTodoTitle("일곱글자의제목") == "일곱글자의제…")
-        #expect(DPCalendarSpan(daysFromStart: 1, totalDays: 1) == nil)
-        #expect(DPCalendarSpan(daysFromStart: nil, totalDays: 3) == nil)
-        let start = DPCalendarSpan(daysFromStart: 1, totalDays: 3)
-        #expect(start?.isStart == true && start?.isEnd == false)
-        let end = DPCalendarSpan(daysFromStart: 3, totalDays: 3)
-        #expect(end?.isStart == false && end?.isEnd == true)
     }
 
+    /// A multi-day schedule is a ribbon in its week row's lanes, drawn before every other
+    /// item of the tile; the old underline, its connectors and the "(n/m)" counter are gone
+    /// from month tiles. The day detail keeps its counter.
     @Test
-    func aMultiDayTitleIsDrawnOnEveryDayAboveAnUnderline() throws {
+    func aMultiDayScheduleIsARibbonAboveEveryOtherItemInEveryMonthCell() throws {
         let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
-        #expect(!style.contains("showsTitle"), "Every day of a run names the schedule")
-        #expect(!style.contains("dpCalendarWeekdayIndex"), "Tiles no longer pass their column to items")
-        let row = try declaration(named: "nonisolated struct DPCalendarItemRow<Content: View>: View", in: style)
-        let title = try #require(row.range(of: "content()")).lowerBound
-        let bar = try #require(row.range(of: "spanBar(span)")).lowerBound
-        #expect(title < bar, "The run's bar is drawn under the title")
-
-        let cells = [
-            try declaration(
-                named: "private struct CalendarDayCell: View",
-                in: source("Dutypark/Features/Calendar/CalendarView.swift")
-            ),
-            try declaration(
-                named: "private struct GuestCalendarDayCell: View",
-                in: source("Dutypark/Features/Guest/GuestPublicCalendarView.swift")
-            ),
-        ]
-        for cell in cells {
-            #expect(cell.contains("DPCalendarSpan.orderedForCell("), "Multi-day schedules lead the cell")
-            #expect(cell.contains(".lineLimit(2)"), "A multi-day title wraps to two lines like any other")
-            #expect(!cell.contains("titleLineLimit"), "Multi-day and single-day titles share one line limit")
-        }
-        let teamCell = try declaration(
-            named: "private struct TeamCalendarDayCell: View",
-            in: source("Dutypark/Features/Team/TeamView.swift")
-        )
-        #expect(teamCell.contains(".lineLimit(2)"), "Team multi-day titles wrap to two lines too")
-    }
-
-    @Test @MainActor
-    func aMultiDayTitleEndsWithItsDayCounterInEveryMonthCell() throws {
-        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 2, totalDays: 6) == "(2/6)")
-        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 6, totalDays: 6) == "(6/6)")
-        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 1, totalDays: 1) == nil)
-        #expect(DPCalendarSpan.dayCounterText(daysFromStart: nil, totalDays: 3) == nil)
-        #expect(DPCalendarSpan.dayCounterText(daysFromStart: 1, totalDays: nil) == nil)
-
-        // The counter flows after the whole title as part of one Text, so it ends the
-        // title's last line instead of being pinned beside its first.
-        let line: Text = DPCalendarScheduleTitle.text(
-            Text(verbatim: "엄마 대전"),
-            daysFromStart: 1,
-            totalDays: 3,
-            counterColor: .gray
-        )
-        _ = line
-
-        let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
-        let title = try declaration(named: "enum DPCalendarScheduleTitle", in: style)
-        #expect(title.contains("DPCalendarSpan.dayCounterText("))
-        #expect(title.contains(".monospacedDigit()"))
-        #expect(!title.contains("HStack"), "The counter is not laid out beside the title")
-        #expect(!title.contains(".fixedSize()"))
+        #expect(!style.contains("spanBar"), "The underline is gone")
+        #expect(!style.contains("DPCalendarScheduleTitle"), "No (n/m) counter in month tiles")
 
         let cells = [
             try declaration(
@@ -191,41 +137,53 @@ struct CalendarFlatDesignTests {
             ),
         ]
         for cell in cells {
-            #expect(cell.contains("DPCalendarScheduleTitle.text("), "Every month cell ends a multi-day title with (n/m)")
+            let lanes = try #require(cell.range(of: "DPCalendarSpanLaneStack("), "Every month cell draws ribbon lanes")
+            let holidays = try #require(cell.range(of: "holiday.dateName"))
+            #expect(lanes.lowerBound < holidays.lowerBound, "Lanes come first, under the date number")
+            #expect(cell.contains("DPCalendarSpanRibbonBand("))
+            #expect(cell.contains("ribbonColumn"), "A tile drawing a ribbon is layered over the tiles it crosses")
+            #expect(cell.contains(".lineLimit(2)"), "Single-day titles still wrap to two lines")
+            #expect(!cell.contains("dayCounter"), "No (n/m) counter in month tiles")
+        }
+
+        let detail = try declaration(
+            named: "private struct DayDetailView: View",
+            in: source("Dutypark/Features/Calendar/CalendarView.swift")
+        )
+        #expect(detail.contains("(\\(schedule.daysFromStart)/\\(schedule.totalDays))"), "The day detail keeps its counter")
+    }
+
+    @Test
+    func everyMonthGridLaysOutRibbonLanesPerWeekRow() throws {
+        let grids = [
+            try declaration(
+                named: "private func calendarMonthBody(",
+                in: source("Dutypark/Features/Calendar/CalendarView.swift")
+            ),
+            try declaration(
+                named: "private var calendarGrid: some View",
+                in: source("Dutypark/Features/Guest/GuestPublicCalendarView.swift")
+            ),
+            try declaration(
+                named: "private func calendarMonthBody(_ page: TeamCalendarMonthPage",
+                in: source("Dutypark/Features/Team/TeamView.swift")
+            ),
+        ]
+        for grid in grids {
+            #expect(grid.contains("DPCalendarSpanLanes.layout("))
+            #expect(grid.contains("spanLanes: spanLanes["))
         }
     }
 
     @Test
-    func multiDaySchedulesLeadACellStartedEarlierThenEndingLater() {
-        struct Item: Equatable {
-            let name: String
-            let daysFromStart: Int?
-            let totalDays: Int?
-        }
-        let items = [
-            Item(name: "single-a", daysFromStart: 1, totalDays: 1),
-            Item(name: "run-today", daysFromStart: 1, totalDays: 3),
-            Item(name: "untyped", daysFromStart: nil, totalDays: nil),
-            Item(name: "run-earlier-short", daysFromStart: 3, totalDays: 3),
-            Item(name: "run-earlier-long", daysFromStart: 3, totalDays: 6),
-            Item(name: "single-b", daysFromStart: 1, totalDays: 1),
-            Item(name: "run-tie-1", daysFromStart: 2, totalDays: 4),
-            Item(name: "run-tie-2", daysFromStart: 2, totalDays: 4),
-        ]
-
-        let ordered = DPCalendarSpan.orderedForCell(items, daysFromStart: \.daysFromStart, totalDays: \.totalDays)
-
-        #expect(ordered.map(\.name) == [
-            "run-earlier-long",
-            "run-earlier-short",
-            "run-tie-1",
-            "run-tie-2",
-            "run-today",
-            "single-a",
-            "untyped",
-            "single-b",
-        ])
-        #expect(DPCalendarSpan.orderedForCell([Item](), daysFromStart: \.daysFromStart, totalDays: \.totalDays).isEmpty)
+    func aTileThatDrawsARibbonSitsAboveTheTilesItCrosses() {
+        #expect(DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: nil) == 0)
+        #expect(DPCalendarTileRing.zIndex(ring: .highlight, ribbonColumn: nil) == 1)
+        #expect(DPCalendarTileRing.zIndex(ring: .today, ribbonColumn: nil) == 2)
+        let monday = DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: 1)
+        let tuesday = DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: 2)
+        #expect(monday > tuesday, "An earlier ribbon stays above a later tile that draws its own")
+        #expect(DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: 6) > 2, "A ribbon tile is above today's ring")
     }
 
     @Test
@@ -252,7 +210,7 @@ struct CalendarFlatDesignTests {
         let cell = try declaration(named: "private struct GuestCalendarDayCell: View", in: guest)
         #expect(cell.contains("DPCalendarDayTile("))
         #expect(cell.contains("DPCalendarItemRow("))
-        #expect(cell.contains("DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays)"))
+        #expect(cell.contains("DPCalendarSpanLaneStack(lanes: spanLanes, column: weekday)"))
         #expect(!cell.contains("prefix("), "Every schedule and D-Day is drawn")
         #expect(!cell.contains("opacity("), "Out-of-month days are faded by colour, not opacity")
 

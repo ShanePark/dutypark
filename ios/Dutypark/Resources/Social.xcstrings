@@ -188,7 +188,7 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Previous" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이전" } }
     } },
     "social.search.prompt" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Search by name or email" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름 또는 이메일로 검색" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Search by name" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름으로 검색" } }
     } },
     "social.search.title" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Add friend" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 추가" } }

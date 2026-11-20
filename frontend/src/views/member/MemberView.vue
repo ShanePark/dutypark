@@ -27,6 +27,8 @@ import { sessionClientName } from '@/components/common/sessionClient'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import DutyPatternCard from '@/components/member/DutyPatternCard.vue'
+import CalendarVisibilityCard from '@/components/member/CalendarVisibilityCard.vue'
+import AiScheduleConsentCard from '@/components/member/AiScheduleConsentCard.vue'
 import SocialAccountConnectionModal from '@/components/member/SocialAccountConnectionModal.vue'
 import AccountDeletionModal from '@/components/member/AccountDeletionModal.vue'
 import type { AccountDeletionCompletionResult } from '@/utils/accountDeletionFlow'
@@ -794,6 +796,10 @@ onMounted(async () => {
       </section>
 
       <DutyPatternCard />
+
+      <CalendarVisibilityCard v-if="memberInfo" v-model="memberInfo.calendarVisibility" />
+
+      <AiScheduleConsentCard />
 
       <!-- Manager Delegation Section -->
       <section class="rounded-xl shadow-sm p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">

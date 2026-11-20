@@ -24,7 +24,7 @@ import { useSwal } from '@/composables/useSwal'
 import { useCalendarMonthSwipe } from '@/composables/useCalendarMonthSwipe'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import { isLightColor } from '@/utils/color'
-import { orderForCalendarCell } from '@/utils/calendarScheduleOrder'
+import { assignCalendarSpanLanes } from '@/utils/calendarSpanLanes'
 import { extractApiError, resolveApiErrorMessage } from '@/utils/resolveApiError'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
@@ -116,6 +116,11 @@ const selectedDay = ref({
 })
 
 const teamSchedules = ref<TeamScheduleDto[][]>([])
+// Multi-day schedules are drawn as lane bands across the week; cells list the rest.
+const teamSpanLanes = computed(() =>
+  assignCalendarSpanLanes(teamSchedules.value, schedule => JSON.stringify([schedule.teamId, schedule.id])))
+const teamCellSchedules = computed(() => teamSchedules.value.map(schedules =>
+  schedules.filter(schedule => (schedule.totalDays ?? 0) <= 1)))
 
 const shift = ref<(DutyByShift & { isMyGroup: boolean })[]>([])
 
@@ -639,23 +644,22 @@ onMounted(() => {
             :holidays="holidaysByDays"
             :get-duty-color="getDutyColor"
             :selected-day="selectedDay"
+            :span-lanes="teamSpanLanes"
             @day-click="selectDay"
           >
+            <!-- Team schedules are whole days, so their bands carry no times. -->
+            <template #span="{ segment }">
+              <span class="calendar-span__title">{{ segment.item.content }}</span>
+            </template>
             <template #day-content="{ index }">
-              <div v-if="teamSchedules[index]?.length" class="calendar-items">
+              <div v-if="teamCellSchedules[index]?.length" class="calendar-items">
                 <div
-                  v-for="schedule in orderForCalendarCell(teamSchedules[index] ?? [])"
+                  v-for="schedule in teamCellSchedules[index]"
                   :key="schedule.id"
                   class="calendar-item"
-                  :data-calendar-span-key="(schedule.totalDays ?? 0) > 1 ? JSON.stringify([schedule.teamId, schedule.id]) : undefined"
-                  :data-calendar-span-part="schedule.daysFromStart"
-                  :class="(schedule.totalDays ?? 0) > 1 ? ['calendar-item--span', {
-                    'calendar-item--span-start': schedule.daysFromStart === 1,
-                    'calendar-item--span-end': schedule.daysFromStart === schedule.totalDays,
-                  }] : null"
                 >
                   <div class="calendar-item__line">
-                    <span class="calendar-item__text">{{ schedule.content }}<span v-if="(schedule.totalDays ?? 0) > 1" class="calendar-item__part"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</span></span>
+                    <span class="calendar-item__text">{{ schedule.content }}</span>
                   </div>
                 </div>
               </div>

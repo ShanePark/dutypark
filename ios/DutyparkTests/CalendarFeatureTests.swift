@@ -200,7 +200,7 @@ final class CalendarFeatureTests: XCTestCase {
                 daysFromStart: 1,
                 totalDays: 1
             ),
-            "(12:40~13:30)"
+            "12:40~13:30"
         )
         XCTAssertEqual(
             CalendarVisualLogic.calendarScheduleTimeText(
@@ -209,7 +209,7 @@ final class CalendarFeatureTests: XCTestCase {
                 daysFromStart: 1,
                 totalDays: 1
             ),
-            "(12:40)"
+            "12:40"
         )
         XCTAssertEqual(
             CalendarVisualLogic.calendarScheduleTimeText(
@@ -218,7 +218,7 @@ final class CalendarFeatureTests: XCTestCase {
                 daysFromStart: 1,
                 totalDays: 3
             ),
-            "(12:40)"
+            "12:40"
         )
         XCTAssertNil(
             CalendarVisualLogic.calendarScheduleTimeText(
@@ -235,7 +235,7 @@ final class CalendarFeatureTests: XCTestCase {
                 daysFromStart: 3,
                 totalDays: 3
             ),
-            "(~13:30)"
+            "~13:30"
         )
         XCTAssertEqual(
             CalendarVisualLogic.calendarScheduleTimeText(
@@ -244,7 +244,7 @@ final class CalendarFeatureTests: XCTestCase {
                 daysFromStart: 1,
                 totalDays: 1
             ),
-            "(~13:30)"
+            "~13:30"
         )
         XCTAssertNil(
             CalendarVisualLogic.calendarScheduleTimeText(
@@ -253,6 +253,16 @@ final class CalendarFeatureTests: XCTestCase {
                 daysFromStart: 1,
                 totalDays: 1
             )
+        )
+    }
+
+    func testCellScheduleTimeMayWrapOnlyAfterTheRangeTilde() {
+        XCTAssertEqual(CalendarVisualLogic.wrappableScheduleTime("12:00~13:00"), "12:00~\u{200B}13:00")
+        XCTAssertEqual(CalendarVisualLogic.wrappableScheduleTime("12:00"), "12:00")
+        XCTAssertEqual(
+            CalendarVisualLogic.wrappableScheduleTime("~13:00"),
+            "~13:00",
+            "A leading tilde stays with its time"
         )
     }
 
@@ -325,10 +335,30 @@ final class CalendarFeatureTests: XCTestCase {
             named: "private struct CalendarDayCell: View",
             in: calendarSource
         )
-        // The narrow month tile shows the title without the time, as the mobile web does;
-        // a multi-day counter is appended by DPCalendarScheduleTitle, not in the title line itself.
+        // The month tile's title line reads title and details mark; multi-day schedules are
+        // ribbons and carry no (n/m) counter in the tile.
         XCTAssertTrue(calendarDayCell.contains("var line = Text(verbatim: schedule.content)"))
         XCTAssertFalse(calendarDayCell.contains("dayCounter"))
+        // The time chip sits on its own line under the title so the title's two-line limit
+        // can never clip it; it starts at the row's leading edge, before the tags.
+        let cellTitleLine = try Self.declaration(
+            named: "private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text",
+            in: calendarDayCell
+        )
+        XCTAssertFalse(cellTitleLine.contains("calendarScheduleTimeText"), "The title line carries no time")
+        let cellItem = try Self.declaration(
+            named: "private func scheduleItem(_ schedule: ScheduleDTO) -> some View",
+            in: calendarDayCell
+        )
+        let cellTitle = try XCTUnwrap(cellItem.range(of: "scheduleTitleLine(schedule)"))
+        let cellTimeSource = try XCTUnwrap(cellItem.range(of: "CalendarVisualLogic.calendarScheduleTimeText("))
+        let cellTimeLine = try XCTUnwrap(cellItem.range(
+            of: "DPCalendarScheduleTime(time: time, dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)"
+        ))
+        let cellTags = try XCTUnwrap(cellItem.range(of: "DPMemberTagChips("))
+        XCTAssertLessThan(cellTitle.lowerBound, cellTimeSource.lowerBound)
+        XCTAssertLessThan(cellTimeSource.lowerBound, cellTimeLine.lowerBound)
+        XCTAssertLessThan(cellTimeLine.lowerBound, cellTags.lowerBound, "The time line sits between the title and the tags")
 
         let dayDetail = try Self.declaration(
             named: "private struct DayDetailView: View",
@@ -343,14 +373,26 @@ final class CalendarFeatureTests: XCTestCase {
             .deletingLastPathComponent()
             .appending(path: "Dutypark/Features/Guest/GuestPublicCalendarView.swift")
         let guestSource = try String(contentsOf: guestSourceURL, encoding: .utf8)
-        // The guest tile matches the member tile: the title without the time, and no
-        // counter folded into the title text.
+        // The guest tile matches the member tile: the title line, then the time chip on its
+        // own line, and no counter folded into the title text.
         let guestDayCell = try Self.declaration(
             named: "private struct GuestCalendarDayCell: View",
             in: guestSource
         )
         XCTAssertTrue(guestDayCell.contains("var line = Text(verbatim: schedule.content)"))
         XCTAssertFalse(guestDayCell.contains("dayCounter"))
+        let guestTitleLine = try Self.declaration(
+            named: "private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text",
+            in: guestDayCell
+        )
+        XCTAssertFalse(guestTitleLine.contains("calendarScheduleTimeText"), "The title line carries no time")
+        let guestTitle = try XCTUnwrap(guestDayCell.range(of: "scheduleTitleLine(schedule)"))
+        let guestTimeSource = try XCTUnwrap(guestDayCell.range(of: "CalendarVisualLogic.calendarScheduleTimeText("))
+        let guestTimeLine = try XCTUnwrap(guestDayCell.range(
+            of: "DPCalendarScheduleTime(time: time, dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)"
+        ))
+        XCTAssertLessThan(guestTitle.lowerBound, guestTimeSource.lowerBound)
+        XCTAssertLessThan(guestTimeSource.lowerBound, guestTimeLine.lowerBound, "The time line sits under the title")
         let guestDetail = try Self.declaration(
             named: "private struct GuestCalendarDayDetailView: View",
             in: guestSource

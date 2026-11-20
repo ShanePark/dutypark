@@ -286,7 +286,7 @@ function handleFriendRailClick(event: MouseEvent) {
 function printSchedule(schedule: { content: string; totalDays: number; daysFromStart: number; isTagged: boolean; owner: string }) {
   let text = schedule.content
   if (schedule.totalDays > 1) {
-    text = `${text} [${schedule.daysFromStart}/${schedule.totalDays}]`
+    text = `${text} (${schedule.daysFromStart}/${schedule.totalDays})`
   }
   if (schedule.isTagged) {
     text = `${text} (by ${schedule.owner})`
