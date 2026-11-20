@@ -4,15 +4,24 @@ import SwiftUI
 ///
 /// The capsule is centred on the container and never shrinks. Each side gets the same room
 /// beside it, whatever the other side holds, so the capsule stays put across screens whose
-/// side items differ.
+/// side items differ. The container reaches `marginOutset` past the bar's margin on each side;
+/// the leading item starts at the container's edge, the trailing item stays at the margin.
 nonisolated struct DPMonthHeaderPlacement: Equatable, Sendable {
     /// Gap kept between a side item and the capsule.
     static let capsuleSpacing: CGFloat = 2
+
+    /// How far the header reaches into the bar's 16pt margin: down to the `DPSpacing.small`
+    /// (8pt) inset of the content below, so the leading item lines up with it instead of
+    /// crowding the capsule. The bar still drops touches inside its margin, so a control in a
+    /// side item keeps clear of the outset. A literal because the design tokens are main-actor
+    /// isolated.
+    static let marginOutset: CGFloat = 8
 
     let capsuleMinX: CGFloat
     let sideWidth: CGFloat
     let leadingWidth: CGFloat
     let trailingWidth: CGFloat
+    let trailingMaxX: CGFloat
 
     init(
         containerWidth: CGFloat,
@@ -23,7 +32,8 @@ nonisolated struct DPMonthHeaderPlacement: Equatable, Sendable {
         capsuleMinX = (containerWidth - capsuleWidth) / 2
         sideWidth = max((containerWidth - capsuleWidth) / 2 - Self.capsuleSpacing, 0)
         leadingWidth = min(leadingIdealWidth, sideWidth)
-        trailingWidth = min(trailingIdealWidth, sideWidth)
+        trailingWidth = min(trailingIdealWidth, max(sideWidth - Self.marginOutset, 0))
+        trailingMaxX = containerWidth - Self.marginOutset
     }
 }
 
@@ -67,8 +77,12 @@ private struct DPMonthHeaderLayout: Layout {
         let idealWidth = capsule.width
             + 2 * (max(leading.width, trailing.width) + DPMonthHeaderPlacement.capsuleSpacing)
         let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? idealWidth
-        // Never narrower than the capsule: the bar ignores touches past the item's frame.
-        return CGSize(width: max(width, capsule.width), height: capsule.height)
+        // Never narrower than the capsule: the bar ignores touches past the item's frame. The
+        // outset widens the frame on both sides, and the bar keeps the wider item centred.
+        return CGSize(
+            width: max(width, capsule.width) + 2 * DPMonthHeaderPlacement.marginOutset,
+            height: capsule.height
+        )
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
@@ -92,7 +106,7 @@ private struct DPMonthHeaderLayout: Layout {
             proposal: ProposedViewSize(width: placement.leadingWidth, height: bounds.height)
         )
         subviews[2].place(
-            at: CGPoint(x: bounds.maxX, y: bounds.midY),
+            at: CGPoint(x: bounds.minX + placement.trailingMaxX, y: bounds.midY),
             anchor: .trailing,
             proposal: ProposedViewSize(width: placement.trailingWidth, height: bounds.height)
         )

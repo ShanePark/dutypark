@@ -732,6 +732,8 @@ struct CalendarView: View {
                 .accessibilityLabel(CalendarLocalization.text("calendar.member.back"))
                 .accessibilityValue(model.targetName)
                 .accessibilityIdentifier("calendar.member.back")
+                // The header reaches into the bar's margin, where the bar drops touches.
+                .padding(.leading, DPMonthHeaderPlacement.marginOutset)
             }
             if showsMemberActions {
                 memberActionsMenu

@@ -218,6 +218,53 @@ final class CalendarMonthArrowTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(343 - placement.trailingWidth, placement.capsuleMinX + 193)
     }
 
+    /// The header reaches into the bar's margins so the leading item lines up with the 8pt
+    /// inset content below and leaves a gap before the capsule; the trailing item stays where
+    /// the bar's margin puts it.
+    @MainActor
+    func testTheLeadingSideReachesIntoTheBarMarginWhileTheTrailingSideStays() {
+        let outset = DPMonthHeaderPlacement.marginOutset
+        let contentInset = DPSpacing.small
+        XCTAssertEqual(outset, 16 - contentInset, "The bar's 16pt margin less the content's 8pt inset")
+
+        let proposed: CGFloat = 343
+        let capsuleWidth: CGFloat = 193
+        let placement = DPMonthHeaderPlacement(
+            containerWidth: proposed + 2 * outset,
+            capsuleWidth: capsuleWidth,
+            leadingIdealWidth: 70,
+            trailingIdealWidth: 36
+        )
+        XCTAssertEqual(placement.capsuleMinX + capsuleWidth / 2, (proposed + 2 * outset) / 2)
+        XCTAssertEqual(placement.leadingWidth, 70)
+        XCTAssertEqual(
+            placement.capsuleMinX - placement.leadingWidth,
+            outset + (proposed - capsuleWidth) / 2 - 70,
+            "The whole outset turns into room between the leading item and the capsule"
+        )
+        XCTAssertEqual(placement.trailingMaxX, proposed + outset, "The trailing item ends where the bar's margin begins")
+        XCTAssertEqual(placement.trailingWidth, 36)
+
+        let crowded = DPMonthHeaderPlacement(
+            containerWidth: proposed + 2 * outset,
+            capsuleWidth: capsuleWidth,
+            leadingIdealWidth: 240,
+            trailingIdealWidth: 240
+        )
+        XCTAssertEqual(crowded.leadingWidth, crowded.sideWidth)
+        XCTAssertEqual(crowded.capsuleMinX - crowded.leadingWidth, DPMonthHeaderPlacement.capsuleSpacing)
+        XCTAssertEqual(crowded.trailingWidth, crowded.sideWidth - outset)
+        XCTAssertGreaterThan(crowded.trailingMaxX - crowded.trailingWidth, crowded.capsuleMinX + capsuleWidth)
+    }
+
+    /// The bar drops touches inside its own margin even where the header covers it, so the
+    /// pushed calendar's back chevron stays clear of the outset.
+    func testTheBackChevronStaysClearOfTheBarMargin() throws {
+        let calendar = try Self.source("Dutypark/Features/Calendar/CalendarView.swift")
+        let identityBar = try Self.declaration(named: "private var memberIdentityBar: some View", in: calendar)
+        XCTAssertTrue(identityBar.contains(".padding(.leading, DPMonthHeaderPlacement.marginOutset)"))
+    }
+
     func testANarrowHeaderGivesTheSidesNoRoomButKeepsTheCapsuleWhole() {
         let placement = DPMonthHeaderPlacement(
             containerWidth: 150,
