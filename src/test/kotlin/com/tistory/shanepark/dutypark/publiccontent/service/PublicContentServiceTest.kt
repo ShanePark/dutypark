@@ -32,11 +32,25 @@ class PublicContentServiceTest {
         assertThat(guide.contentVersion).isEqualTo(sha256("public-content/guide.json"))
         assertThat(service.getGuide("en").contentVersion).isEqualTo(guide.contentVersion)
         assertThat(guide.sections.map { it.id })
-            .containsExactly("dashboard", "calendar", "team", "friends", "settings")
+            .containsExactly(
+                "start",
+                "dashboard",
+                "calendar",
+                "todo",
+                "team",
+                "friends",
+                "notifications",
+                "support",
+                "settings",
+                "member",
+                "ios",
+            )
         assertThat(guide.sections.first().cards.map { it.id })
-            .containsExactly("today", "friends")
-        assertThat(guide.sections.sumOf { it.cards.size }).isEqualTo(30)
-        assertThat(guide.sections.sumOf { section -> section.cards.sumOf { it.items.size } }).isEqualTo(105)
+            .containsExactly("login", "navigation", "guide")
+        assertThat(guide.sections.first { it.id == "settings" }.cards.map { it.id })
+            .containsExactly("theme", "push", "language")
+        assertThat(guide.sections.sumOf { it.cards.size }).isEqualTo(59)
+        assertThat(guide.sections.sumOf { section -> section.cards.sumOf { it.items.size } }).isEqualTo(185)
     }
 
     @Test
@@ -54,6 +68,10 @@ class PublicContentServiceTest {
         assertThat(settings.tone).isEqualTo("muted")
         assertThat(settings.cards.first { it.id == "theme" }.icon).isEqualTo("sun")
         assertThat(settings.cards.first { it.id == "theme" }.tone).isEqualTo("warning")
+
+        val calendar = guide.sections.first { it.id == "calendar" }
+        assertThat(calendar.cards.first { it.id == "pin" }.icon).isEqualTo("pin")
+        assertThat(calendar.cards.first { it.id == "pin" }.tone).isEqualTo("warning")
 
         assertThat(guide.sections.flatMap { section ->
             listOf(section.icon) + section.cards.map { it.icon }

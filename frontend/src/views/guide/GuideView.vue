@@ -61,11 +61,17 @@ const {
 } = useGuideContent()
 
 const sectionState = ref<Record<string, boolean>>({
-  dashboard: true,
+  start: true,
+  dashboard: false,
   calendar: false,
+  todo: false,
   team: false,
   friends: false,
+  notifications: false,
+  support: false,
   settings: false,
+  member: false,
+  ios: false,
 })
 const releaseNotesPageSize = 5
 const isReleaseNotesOpen = ref(false)
