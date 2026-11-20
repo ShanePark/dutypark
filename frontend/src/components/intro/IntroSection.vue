@@ -114,7 +114,7 @@ const features = computed<Feature[]>(() => [
   gap: 0.125rem;
 }
 
-/* The header's mobile suggestion offset does not apply to this right-aligned control. */
+/* This control sits at the viewport's right edge, so the suggestion opens from it and stays narrower than the screen. */
 .intro-controls :deep(.locale-suggestion) {
   right: 0;
   max-width: calc(100vw - 2rem);

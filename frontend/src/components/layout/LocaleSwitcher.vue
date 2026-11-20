@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, ChevronDown, Languages, Sparkles, X } from '@lucide/vue'
 import { getLocaleNativeLabel } from '@/i18n'
@@ -12,6 +12,10 @@ const isOpen = ref(false)
 const isSuggestionDismissedLocally = ref(false)
 const switcherRef = ref<HTMLDivElement | null>(null)
 const isSaving = ref(false)
+const suggestionRef = ref<HTMLDivElement | null>(null)
+const suggestionShift = ref(0)
+
+const SUGGESTION_VIEWPORT_GUTTER = 16
 
 const localeOptions = computed(() => {
   return localeStore.supportedLocales.map((value) => ({
@@ -25,6 +29,32 @@ const detectedLocaleLabel = computed(() => getLocaleNativeLabel(localeStore.dete
 const showSuggestion = computed(() => {
   return localeStore.shouldSuggestLocale && !isOpen.value && !isSuggestionDismissedLocally.value
 })
+
+const suggestionStyle = computed(() => {
+  return suggestionShift.value ? { transform: `translateX(${suggestionShift.value}px)` } : undefined
+})
+
+// The switcher's distance from the viewport edge depends on where it is mounted (header with or
+// without a session, intro page), so the right-aligned suggestion is clamped after it renders.
+function keepSuggestionOnScreen() {
+  const suggestion = suggestionRef.value
+  if (!suggestion) {
+    return
+  }
+
+  const rect = suggestion.getBoundingClientRect()
+  const left = rect.left - suggestionShift.value
+  const right = rect.right - suggestionShift.value
+  const viewportWidth = document.documentElement.clientWidth
+  const overflowRight = right - (viewportWidth - SUGGESTION_VIEWPORT_GUTTER)
+  let shift = overflowRight > 0 ? -overflowRight : 0
+  if (left + shift < SUGGESTION_VIEWPORT_GUTTER) {
+    shift = SUGGESTION_VIEWPORT_GUTTER - left
+  }
+  suggestionShift.value = shift
+}
+
+watch(showSuggestion, keepSuggestionOnScreen, { flush: 'post' })
 
 function toggleDropdown() {
   isOpen.value = !isOpen.value
@@ -86,10 +116,13 @@ function handleClickOutside(event: MouseEvent) {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('resize', keepSuggestionOnScreen)
+  keepSuggestionOnScreen()
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('resize', keepSuggestionOnScreen)
 })
 </script>
 
@@ -107,7 +140,9 @@ onUnmounted(() => {
 
     <div
       v-if="showSuggestion"
+      ref="suggestionRef"
       class="locale-suggestion absolute right-0 top-full mt-2 w-[18rem] max-w-[calc(100vw-1.5rem)] sm:w-80 rounded-2xl shadow-lg border z-50 p-3"
+      :style="suggestionStyle"
     >
       <div class="flex items-start gap-3">
         <div class="locale-suggestion-icon-shell flex-shrink-0">
@@ -193,7 +228,7 @@ onUnmounted(() => {
 
 .locale-suggestion {
   right: 0;
-  width: min(18rem, calc(100vw - 1rem));
+  width: min(18rem, calc(100vw - 2rem));
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--dp-bg-card) 92%, var(--dp-accent-bg)) 0%, var(--dp-bg-card) 100%);
   border-color: color-mix(in srgb, var(--dp-border-primary) 70%, var(--dp-accent) 30%);
@@ -237,12 +272,6 @@ onUnmounted(() => {
 .locale-suggestion-close:hover {
   color: var(--dp-text-primary);
   background-color: var(--dp-bg-tertiary);
-}
-
-@media (max-width: 639px) {
-  .locale-suggestion {
-    right: -9.5rem;
-  }
 }
 
 .locale-dropdown-item {
