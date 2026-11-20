@@ -206,6 +206,35 @@ struct SettingsFeatureTests {
         #expect(!model.noticeIsError)
     }
 
+    /// A long email must stay fully readable on narrow screens, so it may break right
+    /// after the `@` instead of mid-domain.
+    @Test
+    func myInfoEmailCanWrapRightAfterTheAtSign() {
+        #expect(MyInfoEmailDisplay.wrappable("test@duty.park") == "test@\u{200B}duty.park")
+        #expect(MyInfoEmailDisplay.wrappable("no-at-sign") == "no-at-sign")
+    }
+
+    @Test
+    func myInfoBasicInfoValuesWrapInsteadOfTruncating() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Settings/MyInfoView.swift"),
+            encoding: .utf8
+        )
+        let start = try #require(source.range(of: "private func memberInfoRow("))
+        let end = try #require(
+            source.range(of: "private func socialRow(", range: start.upperBound..<source.endIndex)
+        )
+        let row = source[start.upperBound..<end.lowerBound]
+
+        #expect(!row.contains(".lineLimit(1)"), "A one-line value truncates a long email")
+        #expect(row.contains(".fixedSize(horizontal: false, vertical: true)"))
+        #expect(row.contains("HStack(alignment: .firstTextBaseline"), "Labels stay on the value's first line")
+        #expect(source.contains("MyInfoEmailDisplay.wrappable(email)"))
+    }
+
     @Test
     func managedAccountSwitchKeepsTheConfirmationOpenOnFailure() throws {
         let root = URL(fileURLWithPath: #filePath)

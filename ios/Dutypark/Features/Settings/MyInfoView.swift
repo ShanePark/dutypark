@@ -14,6 +14,13 @@ nonisolated struct MyInfoAccountActionVisibility {
     }
 }
 
+/// Lets a long email wrap after the `@` instead of mid-domain on narrow screens.
+nonisolated enum MyInfoEmailDisplay {
+    static func wrappable(_ email: String) -> String {
+        email.replacingOccurrences(of: "@", with: "@\u{200B}")
+    }
+}
+
 /// Account-owned settings: the member profile, the duty pattern, the calendar visibility
 /// and AI time parsing consent stored on the account, managers and managed accounts,
 /// sessions, linked social logins and the account actions. Preferences that are not tied
@@ -381,7 +388,7 @@ struct MyInfoView: View {
                     memberInfoRow("person", "settings.profile.name", model.member?.name ?? "-")
                     memberInfoRow("building.2", "settings.profile.team", model.member?.team ?? "-")
                     if let email = model.member?.email {
-                        memberInfoRow("envelope", "settings.profile.email", email)
+                        memberInfoRow("envelope", "settings.profile.email", MyInfoEmailDisplay.wrappable(email))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -849,7 +856,7 @@ struct MyInfoView: View {
     }
 
     private func memberInfoRow(_ icon: String, _ labelKey: String, _ value: String) -> some View {
-        HStack(spacing: DPSpacing.small) {
+        HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
             Image(systemName: icon)
                 .frame(width: DPSize.iconSmall)
                 .foregroundStyle(DPColor.textSecondary)
@@ -860,7 +867,7 @@ struct MyInfoView: View {
             Text(value)
                 .font(DPTypography.bodyMedium)
                 .foregroundStyle(DPColor.textPrimary)
-                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
