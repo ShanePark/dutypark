@@ -1610,7 +1610,7 @@ export default {
   },
   friendSearchModal: {
     title: '친구 찾기',
-    searchPlaceholder: '이름 또는 팀명으로 검색',
+    searchPlaceholder: '이름으로 검색',
     noTeam: '소속 없음',
     requestFriend: '친구 추가',
     resultsSummary: '{current}/{total} 페이지 · 총 {count}명',

@@ -1705,7 +1705,7 @@ export default {
   },
   friendSearchModal: {
     title: 'Find friends',
-    searchPlaceholder: 'Search by name or team',
+    searchPlaceholder: 'Search by name',
     noTeam: 'No team',
     requestFriend: 'Add friend',
     resultsSummary: 'Page {current} of {total} · {count} results',
