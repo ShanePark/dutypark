@@ -85,6 +85,26 @@ struct InformationArchitectureTests {
         )
     }
 
+    @Test("Strings for the removed Settings rows are gone from the catalogs")
+    func removedSettingsRowsLeaveNoStrings() throws {
+        let settings = try source("Dutypark/Resources/Settings.xcstrings")
+        let guest = try source("Dutypark/Features/Guest/Guest.xcstrings")
+
+        for key in [
+            "settings.information.title",
+            "settings.buildInfo.title",
+            "settings.buildInfo.version",
+            "settings.buildInfo.date",
+            "settings.buildInfo.commit",
+        ] {
+            #expect(!settings.contains("\"\(key)\""), "\(key) is no longer shown anywhere")
+        }
+        // The build metadata row in More still formats these two.
+        #expect(settings.contains("\"settings.buildInfo.modified\""))
+        #expect(settings.contains("\"settings.buildInfo.unknown\""))
+        #expect(!guest.contains("\"guest.guide.title\""), "the guest guide now uses settings.guide")
+    }
+
     @Test("Social sign-in status uses the web wording")
     func socialConnectedLabelMatchesWeb() {
         #expect(SettingsLocalization.string("settings.social.connected", locale: .korean) == "연동됨")

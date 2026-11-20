@@ -371,22 +371,6 @@
         }
       }
     },
-    "settings.information.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Information"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "안내"
-          }
-        }
-      }
-    },
     "settings.language": {
       "localizations": {
         "en": {
@@ -1121,70 +1105,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "업데이트 내역"
-          }
-        }
-      }
-    },
-    "settings.buildInfo.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Build details"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "빌드 정보"
-          }
-        }
-      }
-    },
-    "settings.buildInfo.version": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "버전"
-          }
-        }
-      }
-    },
-    "settings.buildInfo.date": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Built"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "빌드 날짜"
-          }
-        }
-      }
-    },
-    "settings.buildInfo.commit": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Commit"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "커밋"
           }
         }
       }

@@ -2394,7 +2394,7 @@
     },
     "en": {
       "labels": {
-        "title": "Changelog",
+        "title": "Release notes",
         "count": "{count} release notes",
         "loadMore": "Load more",
         "latest": "Latest",

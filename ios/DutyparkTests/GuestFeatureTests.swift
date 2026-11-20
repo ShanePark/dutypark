@@ -101,9 +101,9 @@ final class GuestPublicLinkTests: XCTestCase {
 
             XCTAssertEqual(
                 bundle.localizedString(
-                    forKey: "guest.guide.title",
-                    value: "guest.guide.title",
-                    table: "Guest"
+                    forKey: "settings.guide",
+                    value: "settings.guide",
+                    table: "Settings"
                 ),
                 expectedTitle
             )

@@ -118,6 +118,13 @@ class PublicContentServiceTest {
     }
 
     @Test
+    fun `release notes title matches the guide tab label in each locale`() {
+        assertThat(service.getReleaseNotes("ko", 0, 5).labels.title).isEqualTo("업데이트 내역")
+        assertThat(service.getReleaseNotes("en", 0, 5).labels.title).isEqualTo("Release notes")
+        assertThat(service.getReleaseNotes("en", 0, 5).labels.count).isEqualTo("{count} release notes")
+    }
+
+    @Test
     fun `release notes paginate without reordering`() {
         val firstPage = service.getReleaseNotes(locale = "ko", page = 0, size = 5)
         val secondPage = service.getReleaseNotes(locale = "ko", page = 1, size = 5)
