@@ -11,6 +11,8 @@ import moreView from './more/MoreView.vue?raw'
 const MEMBER_SECTION_MARKERS = [
   'member.profile.sectionTitle',
   'DutyPatternCard',
+  'CalendarVisibilityCard',
+  'AiScheduleConsentCard',
   'member.manager.sectionTitle',
   'member.sessions.sectionTitle',
   'member.sso.sectionTitle',
@@ -19,9 +21,13 @@ const MEMBER_SECTION_MARKERS = [
 ]
 
 const SETTINGS_SECTION_MARKERS = [
-  'member.visibility.sectionTitle',
   'member.theme.sectionTitle',
   'member.push.sectionTitle',
+]
+
+/** Account-stored preferences belong to the account page, not the device settings page. */
+const ACCOUNT_PREFERENCE_MARKERS = [
+  'member.visibility.sectionTitle',
   'aiScheduleConsent.settingsTitle',
 ]
 
@@ -40,6 +46,12 @@ describe('member and settings page split', () => {
     }
   })
 
+  it('keeps account-stored preferences off the settings page', () => {
+    for (const marker of ACCOUNT_PREFERENCE_MARKERS) {
+      expect(settingsView, marker).not.toContain(marker)
+    }
+  })
+
   it('titles each page distinctly', () => {
     expect(memberView).toContain("t('member.pageTitle')")
     expect(settingsView).toContain("t('header.menu.settings')")
@@ -53,6 +65,9 @@ describe('member and settings page split', () => {
 
   it('does not load account-only data on the settings page', () => {
     for (const accountOnlyCall of [
+      'memberApi',
+      'friendApi',
+      'useAiScheduleConsentStore',
       'getManagedMembers',
       'getManagers',
       'getFamilyMembers',
@@ -63,7 +78,7 @@ describe('member and settings page split', () => {
   })
 
   it('does not load preference-only data on the member page', () => {
-    for (const preferenceOnlyCall of ['friendApi', 'usePushNotification', 'useAiScheduleConsentStore']) {
+    for (const preferenceOnlyCall of ['usePushNotification', 'useThemeStore']) {
       expect(memberView, preferenceOnlyCall).not.toContain(preferenceOnlyCall)
     }
   })

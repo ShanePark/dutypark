@@ -39,7 +39,7 @@ final class RootMenuGuideNavigationUITests: XCTestCase {
     }
 
     @MainActor
-    func testSettingsGuideLinkOpensNativeGuideScreen() {
+    func testGuideReleaseNotesSegmentOpensNativeReleaseNotes() {
         let app = launchApp()
         defer { app.terminate() }
 
@@ -52,34 +52,18 @@ final class RootMenuGuideNavigationUITests: XCTestCase {
         XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
         moreTab.tap()
 
-        let settingsRow = app.buttons["more.settings"]
-        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
-        settingsRow.tap()
+        let guideAction = app.buttons["more.guide"]
+        XCTAssertTrue(guideAction.waitForExistence(timeout: 10))
+        guideAction.tap()
 
-        let settings = app.scrollViews["screen.settings"].firstMatch
-        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        let picker = app.segmentedControls["guide.sectionPicker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 10))
+        picker.buttons["업데이트 내역"].tap()
 
-        let guideLink = app.buttons["사용 가이드"].firstMatch
-        let deadline = Date().addingTimeInterval(20)
-        var swipeCount = 0
-        while Date() < deadline, swipeCount < 12, !guideLink.isHittable {
-            settings.swipeUp(velocity: .fast)
-            swipeCount += 1
-        }
-        XCTAssertTrue(guideLink.isHittable, "Could not reveal the settings guide link")
-        // Tapped at the row centre on purpose: that point sits on the Spacer between the
-        // label and the chevron, which is only hit-testable while the row keeps its
-        // explicit content shape.
-        guideLink.tap()
-
-        let guideScreen = app.descendants(matching: .any)["screen.nativeGuide"]
-        let appeared = guideScreen.waitForExistence(timeout: 10)
-        capture("settings-guide-after-tap", in: app)
-        XCTAssertTrue(appeared, "screen.nativeGuide never appeared from the settings link")
-        XCTAssertTrue(
-            app.buttons["guide.expandAll"].waitForExistence(timeout: 10),
-            "The guide screen never rendered its content"
-        )
+        let releaseNotes = app.descendants(matching: .any)["screen.nativeReleaseNotes"]
+        let appeared = releaseNotes.waitForExistence(timeout: 10)
+        capture("guide-release-notes-after-tap", in: app)
+        XCTAssertTrue(appeared, "screen.nativeReleaseNotes never appeared from the guide segment")
     }
 
     @MainActor

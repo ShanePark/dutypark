@@ -112,6 +112,16 @@ onMounted(async () => {
         <span class="flex-1 text-left text-sm font-medium">{{ t('member.logout') }}</span>
       </button>
     </section>
+
+    <footer class="mt-6 flex items-center justify-center gap-1 text-xs text-dp-text-muted">
+      <router-link to="/terms" class="more-footer-link inline-flex min-h-11 items-center rounded px-2">
+        {{ t('policy.terms.title') }}
+      </router-link>
+      <span aria-hidden="true">·</span>
+      <router-link to="/privacy" class="more-footer-link inline-flex min-h-11 items-center rounded px-2">
+        {{ t('policy.privacy.title') }}
+      </router-link>
+    </footer>
   </div>
 </template>
 
@@ -132,5 +142,19 @@ onMounted(async () => {
 .more-menu-item--danger:hover {
   background-color: var(--dp-danger-bg);
   color: var(--dp-danger-hover);
+}
+
+.more-footer-link {
+  transition: color 0.15s ease;
+}
+
+.more-footer-link:hover {
+  color: var(--dp-text-secondary);
+  text-decoration: underline;
+}
+
+.more-footer-link:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
 }
 </style>

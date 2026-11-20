@@ -366,7 +366,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사용 가이드"
+            "value": "이용 안내"
           }
         }
       }
@@ -399,6 +399,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "언어"
+          }
+        }
+      }
+    },
+    "settings.language.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언어 설정"
           }
         }
       }
@@ -1488,7 +1504,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "연결됨"
+            "value": "연동됨"
           }
         }
       }

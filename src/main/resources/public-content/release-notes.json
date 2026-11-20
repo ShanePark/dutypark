@@ -3,8 +3,8 @@
   "locales": {
     "ko": {
       "labels": {
-        "title": "변경사항",
-        "count": "총 {count}개의 변경사항",
+        "title": "업데이트 내역",
+        "count": "총 {count}개의 업데이트 내역",
         "loadMore": "더보기",
         "latest": "최신",
         "pr": "PR #{number}",

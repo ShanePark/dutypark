@@ -1732,12 +1732,16 @@ export default {
     dismissForDays: '{days}일간 보지 않기',
   },
   guide: {
+    tabs: {
+      guide: '이용 안내',
+      releaseNotes: '업데이트 내역',
+    },
     status: {
       loadingGuide: '이용 안내를 불러오는 중...',
       guideLoadFailed: '이용 안내를 불러오지 못했습니다.',
-      loadingReleaseNotes: '릴리스 노트를 불러오는 중...',
-      releaseNotesLoadFailed: '릴리스 노트를 불러오지 못했습니다.',
-      releaseNotesLoadMoreFailed: '릴리스 노트를 더 불러오지 못했습니다.',
+      loadingReleaseNotes: '업데이트 내역을 불러오는 중...',
+      releaseNotesLoadFailed: '업데이트 내역을 불러오지 못했습니다.',
+      releaseNotesLoadMoreFailed: '업데이트 내역을 더 불러오지 못했습니다.',
     },
   },
   admin: {

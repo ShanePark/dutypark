@@ -98,7 +98,7 @@ class PublicContentServiceTest {
         assertThat(page.items.first().id).isEqualTo(latestMetadata.id)
         assertThat(page.items.first().title).isEqualTo(latestCopy.title)
         assertThat(page.labels.categoryLabels["feature"]).isEqualTo("기능")
-        assertThat(page.labels.count).isEqualTo("총 {count}개의 변경사항")
+        assertThat(page.labels.count).isEqualTo("총 {count}개의 업데이트 내역")
         assertThat(page.labels.loadMore).isEqualTo("더보기")
         assertThat(page.labels.pr).isEqualTo("PR #{number}")
         assertThat(page.labels.areas).isEqualTo("영역")

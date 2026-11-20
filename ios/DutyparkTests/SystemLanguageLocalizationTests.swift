@@ -32,7 +32,7 @@ struct SystemLanguageLocalizationTests {
             "친구관리",
             "알림",
             "이용 안내",
-            "문의하기",
+            "문의·지원",
             "설정",
             "로그아웃",
         ])

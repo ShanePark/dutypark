@@ -1,14 +1,58 @@
 import SwiftUI
 
+/// The guide and the release notes share one entry, with a segment to switch between
+/// them, for signed-in members and guests alike.
 struct PublicGuideView: View {
-    @StateObject private var model: PublicGuideViewModel
-    @State private var expandedSections: Set<String> = []
+    @State private var section: Section = .guide
     private let fallbackTitle: String
+    private let service: any PublicContentServicing
 
     init(
         fallbackTitle: String = SettingsLocalization.string("settings.guide"),
         service: any PublicContentServicing = PublicContentService()
     ) {
+        self.fallbackTitle = fallbackTitle
+        self.service = service
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("", selection: $section) {
+                Text(SettingsLocalization.string("settings.guide"))
+                    .tag(Section.guide)
+                Text(SettingsLocalization.string("settings.releaseNotes"))
+                    .tag(Section.releaseNotes)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, DPSpacing.medium)
+            .padding(.vertical, DPSpacing.small)
+            .onChange(of: section) { _, _ in
+                DPHapticCenter.shared.emit(.selection)
+            }
+            .accessibilityIdentifier("guide.sectionPicker")
+
+            switch section {
+            case .guide:
+                PublicGuideContentView(fallbackTitle: fallbackTitle, service: service)
+            case .releaseNotes:
+                PublicReleaseNotesView(service: service)
+            }
+        }
+        .background(DPColor.backgroundSecondary)
+    }
+
+    private enum Section: Hashable {
+        case guide
+        case releaseNotes
+    }
+}
+
+private struct PublicGuideContentView: View {
+    @StateObject private var model: PublicGuideViewModel
+    @State private var expandedSections: Set<String> = []
+    private let fallbackTitle: String
+
+    init(fallbackTitle: String, service: any PublicContentServicing) {
         self.fallbackTitle = fallbackTitle
         _model = StateObject(wrappedValue: PublicGuideViewModel(service: service))
     }

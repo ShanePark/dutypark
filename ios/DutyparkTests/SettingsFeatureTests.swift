@@ -259,7 +259,7 @@ struct SettingsFeatureTests {
 
     @Test
     func localizationHelpersResolveEverySupportedLanguage() {
-        #expect(SettingsLocalization.string("settings.guide", locale: .korean) == "사용 가이드")
+        #expect(SettingsLocalization.string("settings.guide", locale: .korean) == "이용 안내")
         #expect(SettingsLocalization.string("settings.guide", locale: .english) == "Guide")
         #expect(GuestLocalization.text("guest.retry", locale: .korean) == "다시 시도")
         #expect(GuestLocalization.text("guest.retry", locale: .english) == "Try again")

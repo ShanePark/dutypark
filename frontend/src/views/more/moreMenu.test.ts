@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MORE_MENU_PATHS, MORE_PROFILE_PATH, buildMoreMenuGroups } from './moreMenu'
 import friendsView from '../member/FriendsView.vue?raw'
 import memberView from '../member/MemberView.vue?raw'
+import moreView from './MoreView.vue?raw'
 import notificationListView from '../notification/NotificationListView.vue?raw'
 import settingsView from '../settings/SettingsView.vue?raw'
 import supportView from '../support/SupportView.vue?raw'
@@ -90,5 +91,17 @@ describe('more sub-page back navigation', () => {
       expect(header, path).toContain('show-back')
       expect(header, path).toContain('back-fallback="/more"')
     }
+  })
+})
+
+describe('more page footer', () => {
+  it('ends the page with quiet links to the terms and the privacy policy', () => {
+    const footer = moreView.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? ''
+
+    expect(footer).toContain('to="/terms"')
+    expect(footer).toContain("t('policy.terms.title')")
+    expect(footer).toContain('to="/privacy"')
+    expect(footer).toContain("t('policy.privacy.title')")
+    expect(moreView.indexOf('<footer')).toBeGreaterThan(moreView.indexOf("t('member.logout')"))
   })
 })

@@ -1827,6 +1827,10 @@ export default {
     dismissForDays: 'Hide for {days} days',
   },
   guide: {
+    tabs: {
+      guide: 'Guide',
+      releaseNotes: 'Release notes',
+    },
     status: {
       loadingGuide: 'Loading guide...',
       guideLoadFailed: 'Failed to load the guide.',

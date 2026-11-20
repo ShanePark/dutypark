@@ -48,6 +48,8 @@ vi.mock('@/components/common/SessionTokenList.vue', () => empty)
 vi.mock('@/components/common/ProfilePhotoUploader.vue', () => empty)
 vi.mock('@/components/common/ProfileAvatar.vue', () => empty)
 vi.mock('@/components/member/DutyPatternCard.vue', () => empty)
+vi.mock('@/components/member/CalendarVisibilityCard.vue', () => empty)
+vi.mock('@/components/member/AiScheduleConsentCard.vue', () => empty)
 vi.mock('@/components/member/AccountDeletionModal.vue', () => ({ default: defineComponent({
   props: ['isOpen'], setup: props => () => h('account-deletion', { open: props.isOpen }),
 }) }))

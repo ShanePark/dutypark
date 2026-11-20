@@ -117,18 +117,53 @@ struct MoreView: View {
                 ) { _, group in
                     section(group)
                 }
-                if let versionText = MoreAppVersion.displayText {
-                    Text(verbatim: versionText)
-                        .font(DPTypography.caption)
-                        .foregroundStyle(DPColor.textMuted)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, DPSpacing.small)
-                        .accessibilityIdentifier("more.appVersion")
-                }
+                footer
             }
             .padding(DPSpacing.medium)
         }
         .background(DPColor.backgroundSecondary)
+    }
+
+    /// Service documents and the build stay reachable without competing with the menu.
+    private var footer: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: DPSpacing.extraSmall) {
+                footerLink("guest.policy.terms", identifier: "more.terms") {
+                    GuestPolicyView(type: .terms)
+                }
+                Text(verbatim: "·")
+                    .accessibilityHidden(true)
+                footerLink("guest.policy.privacy", identifier: "more.privacy") {
+                    GuestPolicyView(type: .privacy)
+                }
+            }
+            if let versionText = MoreAppVersion.displayText {
+                Text(verbatim: versionText)
+                    .accessibilityIdentifier("more.appVersion")
+            }
+        }
+        .font(DPTypography.caption)
+        .foregroundStyle(DPColor.textMuted)
+        .frame(maxWidth: .infinity)
+        .padding(.top, DPSpacing.small)
+    }
+
+    private func footerLink<Destination: View>(
+        _ titleKey: String,
+        identifier: String,
+        @ViewBuilder destination: () -> Destination
+    ) -> some View {
+        NavigationLink(destination: destination) {
+            Text(GuestLocalization.text(titleKey))
+                .padding(.horizontal, DPSpacing.small)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture().onEnded {
+            DPHapticCenter.shared.emit(.routine)
+        })
+        .accessibilityIdentifier(identifier)
     }
 
     private func section(_ items: [MoreMenuItem]) -> some View {

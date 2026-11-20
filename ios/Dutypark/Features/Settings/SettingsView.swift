@@ -28,11 +28,8 @@ nonisolated enum SettingsDeepLink {
 struct SettingsView: View {
     @StateObject private var model = SettingsViewModel()
     @StateObject private var push = APNsRegistrationManager.shared
-    @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
     @Environment(\.openURL) private var openURL
-    @State private var showVisibility = false
-    @State private var showAIConsentConfirmation = false
     @Binding private var destination: SettingsDestination?
 
     init(destination: Binding<SettingsDestination?> = .constant(nil)) {
@@ -40,39 +37,17 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        Group {
-            if model.member == nil, model.isLoading || !model.didAttemptMemberLoad {
-                ProgressView(SettingsLocalization.string("settings.loading"))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if model.member == nil {
-                ContentUnavailableView {
-                    Label(
-                        SettingsLocalization.string("settings.error.load"),
-                        systemImage: "exclamationmark.triangle"
-                    )
-                } actions: {
-                    Button(SettingsLocalization.string("settings.action.retry")) {
-                        Task { await model.load(.settings) }
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: DPSpacing.medium) {
-                        visibilitySection
-                        appearanceSection
-                        pushSection
-                        aiConsentSection
-                        informationSection
-                    }
-                    .padding(.horizontal, DPSpacing.medium)
-                    .padding(.top, DPSpacing.large)
-                    .padding(.bottom, DPSpacing.extraLarge)
-                }
-                .background(DPColor.backgroundSecondary)
-                .refreshable { await model.load(.settings) }
+        ScrollView {
+            LazyVStack(spacing: DPSpacing.medium) {
+                appearanceSection
+                pushSection
+                languageSection
             }
+            .padding(.horizontal, DPSpacing.medium)
+            .padding(.top, DPSpacing.large)
+            .padding(.bottom, DPSpacing.extraLarge)
         }
+        .background(DPColor.backgroundSecondary)
         .accessibilityIdentifier("screen.settings")
         .task {
             await model.load(.settings)
@@ -86,57 +61,6 @@ struct SettingsView: View {
 #endif
         }
         .task { await push.resumeRegistration() }
-        .task(id: model.member?.id) {
-            guard let memberID = model.member?.id else { return }
-            await aiConsent.load(for: memberID)
-        }
-        .fullScreenCover(isPresented: $showVisibility) {
-            DPModalOverlay(
-                onDismiss: { showVisibility = false },
-                closeOnBackdrop: !model.isWorking,
-                canDismiss: !model.isWorking
-            ) { availableSize, dismiss in
-                VisibilitySettingsModal(
-                    model: model,
-                    maximumHeight: availableSize.height,
-                    dismiss: dismiss
-                )
-            }
-        }
-        .fullScreenCover(isPresented: $showAIConsentConfirmation) {
-            if let memberID = model.member?.id {
-                DPModalOverlay(
-                    onDismiss: { showAIConsentConfirmation = false },
-                    canDismiss: !aiConsent.isUpdating
-                ) { availableSize, dismiss in
-                    AIScheduleConsentActivationModal(
-                        store: aiConsent,
-                        memberID: memberID,
-                        maximumHeight: availableSize.height,
-                        dismiss: dismiss
-                    )
-                }
-            }
-        }
-        .alert(SettingsLocalization.string("settings.notice.title"), isPresented: noticeBinding) {
-            Button(SettingsLocalization.string("settings.action.confirm")) {
-                model.noticeKey = nil
-            }
-        } message: {
-            if let key = model.noticeKey {
-                SettingsLocalization.text(key)
-            }
-        }
-        .alert(SettingsLocalization.string("settings.notice.title"), isPresented: aiConsentErrorBinding) {
-            Button(SettingsLocalization.string("settings.action.confirm")) {
-                aiConsent.dismissError()
-            }
-        } message: {
-            if let key = aiConsent.errorKey {
-                SettingsLocalization.text(key)
-            }
-        }
-        .disabled(model.isWorking)
         .navigationDestination(item: $destination) { destination in
             switch destination {
             case .guide:
@@ -146,39 +70,6 @@ struct SettingsView: View {
             case .privacy:
                 DeepLinkedPolicyView(type: .privacy, model: model)
             }
-        }
-    }
-
-    private var visibilitySection: some View {
-        SettingsCard(title: "settings.visibility.title", icon: "eye") {
-            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                SettingsLocalization.text("settings.visibility.current")
-                    .font(DPTypography.body)
-                    .foregroundStyle(DPColor.textPrimary)
-                SettingsLocalization.text("settings.visibility.description")
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textSecondary)
-            }
-            Button {
-                DPHapticCenter.shared.emit(.routine)
-                withoutPresentationAnimation { showVisibility = true }
-            } label: {
-                HStack(spacing: DPSpacing.small) {
-                    Circle()
-                        .fill(visibilityColor(model.member?.calendarVisibility ?? .friends))
-                        .frame(width: 8, height: 8)
-                    SettingsLocalization.text(visibilityLabelKey(model.member?.calendarVisibility ?? .friends))
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .font(DPTypography.bodyMedium)
-                .foregroundStyle(DPColor.textPrimary)
-                .padding(.horizontal, DPSpacing.medium)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
-            }
-            .buttonStyle(.plain)
         }
     }
 
@@ -261,165 +152,10 @@ struct SettingsView: View {
         }
     }
 
-    private var aiConsentSection: some View {
-        SettingsCard(title: "settings.aiConsent.title", icon: "sparkles") {
-            Button(action: toggleAIConsent) {
-                HStack(spacing: DPSpacing.medium) {
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        SettingsLocalization.text("settings.aiConsent.toggle")
-                            .font(DPTypography.bodyMedium)
-                            .foregroundStyle(DPColor.textPrimary)
-                        SettingsLocalization.text("settings.aiConsent.description")
-                            .font(DPTypography.supporting)
-                            .foregroundStyle(DPColor.textSecondary)
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: DPSpacing.small)
-                    if aiConsent.isLoading || aiConsent.isUpdating {
-                        ProgressView()
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                            .accessibilityLabel(SettingsLocalization.string("settings.aiConsent.updating"))
-                    } else {
-                        SettingsSwitch(isOn: aiConsent.isEnabled)
-                    }
-                }
-                .padding(.horizontal, DPSpacing.compact)
-                .frame(minHeight: 64)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(aiConsent.isLoading || aiConsent.isUpdating || aiConsent.response == nil)
-            .accessibilityLabel(SettingsLocalization.string("settings.aiConsent.toggle"))
-            .accessibilityValue(SettingsLocalization.string(
-                aiConsent.isEnabled ? "settings.accessibility.on" : "settings.accessibility.off"
-            ))
-            .accessibilityAddTraits(.isButton)
-
-            SettingsLocalization.text("settings.aiConsent.dataFlow")
-                .font(DPTypography.supporting)
-                .foregroundStyle(DPColor.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if aiConsent.response?.needsRenewal == true {
-                Label(SettingsLocalization.string("settings.aiConsent.renewalRequired"), systemImage: "exclamationmark.circle")
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.warning)
-            }
-
-            if aiConsent.response == nil, !aiConsent.isLoading {
-                Button(SettingsLocalization.string("settings.action.retry")) {
-                    guard let memberID = model.member?.id else { return }
-                    Task { await aiConsent.load(for: memberID, force: true) }
-                }
-                .buttonStyle(DPOutlineButtonStyle())
-            }
-
-            settingsNavigationLink("settings.aiConsent.policy", icon: "doc.text") {
-                AIScheduleConsentPolicyView(
-                    store: aiConsent,
-                    memberID: model.member?.id
-                )
-            }
-        }
-    }
-
-    private var informationSection: some View {
-        SettingsCard(title: "settings.information.title", icon: "info.circle") {
+    private var languageSection: some View {
+        SettingsCard(title: "settings.language.title", icon: "globe") {
             languageRow
-            if model.loadedSections.contains(.policies) {
-                settingsNavigationLink("settings.policy.terms") {
-                    PolicyView(titleKey: "settings.policy.terms", policy: model.policies?.terms)
-                }
-                settingsNavigationLink("settings.policy.privacy") {
-                    PolicyView(titleKey: "settings.policy.privacy", policy: model.policies?.privacy)
-                }
-            }
-            if model.policyLoadFailed {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label(
-                        SettingsLocalization.string("settings.policy.loadError"),
-                        systemImage: "exclamationmark.triangle"
-                    )
-                    .foregroundStyle(.secondary)
-                    Button(SettingsLocalization.string("settings.action.retry")) {
-                        Task { await model.reloadPolicies() }
-                    }
-                    .frame(minHeight: 44)
-                }
-            }
-            settingsNavigationLink("settings.guide", icon: "book") {
-                PublicGuideView()
-            }
-            settingsNavigationLink("settings.releaseNotes", icon: "clock.arrow.circlepath") {
-                PublicReleaseNotesView()
-            }
-            if let buildMetadata = AppBuildMetadata.current {
-                buildMetadataSection(buildMetadata)
-            }
         }
-    }
-
-    private func buildMetadataSection(_ metadata: AppBuildMetadata) -> some View {
-        VStack(alignment: .leading, spacing: DPSpacing.small) {
-            Divider()
-                .overlay(DPColor.borderPrimary)
-            Text(SettingsLocalization.string("settings.buildInfo.title"))
-                .font(DPTypography.caption)
-                .foregroundStyle(DPColor.textMuted)
-            buildMetadataRow(
-                labelKey: "settings.buildInfo.version",
-                value: metadata.versionText,
-                identifier: "settings.buildInfo.version"
-            )
-            if let dateText = metadata.dateText {
-                buildMetadataRow(
-                    labelKey: "settings.buildInfo.date",
-                    value: dateText,
-                    identifier: "settings.buildInfo.date"
-                )
-            }
-            if let commitText = metadata.commitText(locale: AppLocalization.locale) {
-                buildMetadataRow(
-                    labelKey: "settings.buildInfo.commit",
-                    value: commitText,
-                    identifier: "settings.buildInfo.commit"
-                )
-            }
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("settings.buildInfo")
-    }
-
-    private func buildMetadataRow(
-        labelKey: String,
-        value: String,
-        identifier: String
-    ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
-            SettingsLocalization.text(labelKey)
-                .font(DPTypography.caption)
-                .foregroundStyle(DPColor.textMuted)
-            Spacer(minLength: DPSpacing.small)
-            Text(verbatim: value)
-                .font(DPTypography.caption)
-                .foregroundStyle(DPColor.textSecondary)
-                .multilineTextAlignment(.trailing)
-                .textSelection(.enabled)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier(identifier)
-    }
-
-    private var visibilityBinding: Binding<Visibility> {
-        Binding(
-            get: { model.member?.calendarVisibility ?? .friends },
-            set: { value in
-                guard model.member?.calendarVisibility != value else { return }
-                DPHapticCenter.shared.emit(.selection)
-                Task { await model.updateVisibility(value) }
-            }
-        )
     }
 
     private var pushBinding: Binding<Bool> {
@@ -438,37 +174,6 @@ struct SettingsView: View {
                 }
             }
         )
-    }
-
-    private var aiConsentErrorBinding: Binding<Bool> {
-        Binding(
-            get: { aiConsent.errorKey != nil && !showAIConsentConfirmation },
-            set: { if !$0 { aiConsent.dismissError() } }
-        )
-    }
-
-    private func toggleAIConsent() {
-        guard let memberID = model.member?.id else { return }
-        if aiConsent.isEnabled {
-            DPHapticCenter.shared.emit(.selection)
-            Task { _ = await aiConsent.revoke(for: memberID) }
-            return
-        }
-
-        switch AIScheduleConsentSettingsActivationPolicy.decision(response: aiConsent.response) {
-        case .showAgreement:
-            aiConsent.dismissError()
-            showAIConsentConfirmation = true
-        case let .grant(policyVersion):
-            aiConsent.dismissError()
-            DPHapticCenter.shared.emit(.selection)
-            Task {
-                _ = await aiConsent.grant(for: memberID, policyVersion: policyVersion)
-            }
-        case .unavailable:
-            aiConsent.reportLoadFailure()
-            DPHapticCenter.shared.emit(.warning)
-        }
     }
 
     /// iOS owns the per-app language, so this row mirrors the resolved language and
@@ -505,86 +210,6 @@ struct SettingsView: View {
         })
         .accessibilityIdentifier("settings.language")
     }
-
-    private var noticeBinding: Binding<Bool> {
-        Binding(
-            get: { model.noticeKey != nil },
-            set: {
-                if !$0 {
-                    model.noticeKey = nil
-                }
-            }
-        )
-    }
-
-    private func visibilityAudience(
-        title: String,
-        emptyKey: String,
-        people: [FriendDTO]
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                SettingsLocalization.text(title)
-                Text("\(people.count)")
-            }
-            if people.isEmpty {
-                SettingsLocalization.text(emptyKey).foregroundStyle(DPColor.warning)
-            } else {
-                let visibleNames = people.prefix(3).map(\.name).joined(separator: ", ")
-                let remaining = max(0, people.count - 3)
-                Text(remaining > 0 ? "\(visibleNames) +\(remaining)" : visibleNames)
-                    .foregroundStyle(DPColor.textMuted)
-                    .lineLimit(1)
-            }
-        }
-        .font(DPTypography.caption)
-    }
-
-    private func settingsNavigationLink<Destination: View>(
-        _ titleKey: String,
-        icon: String? = nil,
-        @ViewBuilder destination: () -> Destination
-    ) -> some View {
-        NavigationLink(destination: destination) {
-            HStack(spacing: DPSpacing.small) {
-                if let icon { Image(systemName: icon) }
-                SettingsLocalization.text(titleKey)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(DPColor.textMuted)
-            }
-            .font(DPTypography.body)
-            .foregroundStyle(DPColor.textPrimary)
-            .frame(minHeight: DPSize.minimumTouchTarget)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .simultaneousGesture(TapGesture().onEnded {
-            DPHapticCenter.shared.emit(.routine)
-        })
-    }
-
-    private func visibilityLabelKey(_ visibility: Visibility) -> String {
-        switch visibility {
-        case .publicAccess: "settings.visibility.public"
-        case .friends: "settings.visibility.friends"
-        case .family: "settings.visibility.family"
-        case .privateAccess: "settings.visibility.private"
-        case .unknown: "settings.visibility.friends"
-        }
-    }
-
-    private func visibilityColor(_ visibility: Visibility) -> Color {
-        switch visibility {
-        case .publicAccess: DPColor.success
-        case .friends: DPColor.accent
-        case .family: DPColor.warning
-        case .privateAccess: DPColor.danger
-        case .unknown: DPColor.accent
-        }
-    }
-
 }
 
 nonisolated struct SettingsDestructiveActionGate: Equatable, Sendable {
@@ -986,7 +611,7 @@ struct SettingsModalActions<Content: View>: View {
     }
 }
 
-private struct VisibilitySettingsModal: View {
+struct VisibilitySettingsModal: View {
     @ObservedObject var model: SettingsViewModel
     let maximumHeight: CGFloat
     let dismiss: () -> Void
@@ -1150,7 +775,7 @@ nonisolated enum AIScheduleConsentActivationPolicy {
     }
 }
 
-private struct AIScheduleConsentActivationModal: View {
+struct AIScheduleConsentActivationModal: View {
     @ObservedObject var store: AIScheduleParsingConsentStore
     let memberID: Int64
     let maximumHeight: CGFloat
@@ -1278,7 +903,7 @@ private struct AIScheduleConsentActivationModal: View {
     }
 }
 
-private struct AIScheduleConsentPolicyView: View {
+struct AIScheduleConsentPolicyView: View {
     @ObservedObject var store: AIScheduleParsingConsentStore
     let memberID: Int64?
 

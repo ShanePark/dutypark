@@ -10,7 +10,7 @@ final class LongFormPolicyReadabilityUITests: XCTestCase {
         let app = launchApp()
         defer { app.terminate() }
 
-        openSettings(in: app)
+        openMyInfo(in: app)
         openPolicy(named: "AI 시간 인식 정책 자세히 보기", in: app)
 
         let aiHeading = app.descendants(matching: .any)["dp.longForm.heading.0"]
@@ -22,7 +22,7 @@ final class LongFormPolicyReadabilityUITests: XCTestCase {
         XCTAssertTrue(aiLongParagraph.exists)
         assertFitsScreen(aiLongParagraph, in: app)
         XCTAssertGreaterThan(aiLongParagraph.frame.height, 60)
-        capture("settings-ai-policy-readable-ios-after")
+        capture("my-info-ai-policy-readable-ios-after")
     }
 
     @MainActor
@@ -90,6 +90,17 @@ final class LongFormPolicyReadabilityUITests: XCTestCase {
     }
 
     @MainActor
+    private func openMyInfo(in app: XCUIApplication) {
+        XCTAssertTrue(app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20))
+        primaryMoreTab(in: app).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10))
+        let myInfoEntry = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoEntry.waitForExistence(timeout: 10))
+        myInfoEntry.tap()
+        XCTAssertTrue(app.scrollViews["screen.myInfo"].firstMatch.waitForExistence(timeout: 10))
+    }
+
+    @MainActor
     private func primaryMoreTab(
         in app: XCUIApplication,
         timeout: TimeInterval = 10
@@ -112,12 +123,12 @@ final class LongFormPolicyReadabilityUITests: XCTestCase {
 
     @MainActor
     private func openPolicy(named name: String, in app: XCUIApplication) {
-        let settings = app.scrollViews["screen.settings"].firstMatch
+        let screen = app.scrollViews["screen.myInfo"].firstMatch
         let policyLink = app.buttons[name].firstMatch
         let deadline = Date().addingTimeInterval(20)
         var swipeCount = 0
         while Date() < deadline, swipeCount < 10, !policyLink.isHittable {
-            settings.swipeUp(velocity: .fast)
+            screen.swipeUp(velocity: .fast)
             swipeCount += 1
         }
         XCTAssertTrue(policyLink.isHittable, "Could not reveal policy link: \(name)")

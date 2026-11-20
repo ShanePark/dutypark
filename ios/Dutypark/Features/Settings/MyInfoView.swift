@@ -14,15 +14,17 @@ nonisolated struct MyInfoAccountActionVisibility {
     }
 }
 
-/// Account-owned settings: the member profile, the duty pattern, managers and managed
-/// accounts, sessions, linked social logins and the account actions. Preferences that
-/// are not tied to the account identity stay in `SettingsView`.
+/// Account-owned settings: the member profile, the duty pattern, the calendar visibility
+/// and AI time parsing consent stored on the account, managers and managed accounts,
+/// sessions, linked social logins and the account actions. Preferences that are not tied
+/// to the account identity stay in `SettingsView`.
 struct MyInfoView: View {
     @EnvironmentObject private var session: SessionStore
     @StateObject private var model = SettingsViewModel()
     // Account deletion unregisters the device, so the account screen keeps the push
     // manager even though the notification preferences live in `SettingsView`.
     @StateObject private var push = APNsRegistrationManager.shared
+    @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @State private var oauthClient = MobileOAuthClient()
     @State private var appleSignInClient = AppleSignInClient()
     @State private var selectedPhoto: PhotosPickerItem?
@@ -31,6 +33,8 @@ struct MyInfoView: View {
     @State private var showPhotoLibrary = false
     @State private var showCamera = false
     @State private var showPattern = false
+    @State private var showVisibility = false
+    @State private var showAIConsentConfirmation = false
     @State private var showPassword = false
     @State private var showAuxiliary = false
     @State private var showAccountDeletion = false
@@ -77,6 +81,8 @@ struct MyInfoView: View {
                     LazyVStack(spacing: DPSpacing.medium) {
                         profileSection
                         patternSection
+                        visibilitySection
+                        aiConsentSection
                         if model.loadedSections.isSuperset(of: [.family, .managers]) {
                             managerSection
                         }
@@ -101,6 +107,10 @@ struct MyInfoView: View {
         }
         .accessibilityIdentifier("screen.myInfo")
         .task { await model.load(.myInfo) }
+        .task(id: model.member?.id) {
+            guard let memberID = model.member?.id else { return }
+            await aiConsent.load(for: memberID)
+        }
         .onChange(of: isImpersonating) { _, isImpersonating in
             guard isImpersonating else { return }
             socialManagementPresentation = nil
@@ -157,6 +167,34 @@ struct MyInfoView: View {
                     maximumHeight: availableSize.height
                 ) {
                     dismiss()
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showVisibility) {
+            DPModalOverlay(
+                onDismiss: { showVisibility = false },
+                closeOnBackdrop: !model.isWorking,
+                canDismiss: !model.isWorking
+            ) { availableSize, dismiss in
+                VisibilitySettingsModal(
+                    model: model,
+                    maximumHeight: availableSize.height,
+                    dismiss: dismiss
+                )
+            }
+        }
+        .fullScreenCover(isPresented: $showAIConsentConfirmation) {
+            if let memberID = model.member?.id {
+                DPModalOverlay(
+                    onDismiss: { showAIConsentConfirmation = false },
+                    canDismiss: !aiConsent.isUpdating
+                ) { availableSize, dismiss in
+                    AIScheduleConsentActivationModal(
+                        store: aiConsent,
+                        memberID: memberID,
+                        maximumHeight: availableSize.height,
+                        dismiss: dismiss
+                    )
                 }
             }
         }
@@ -263,6 +301,15 @@ struct MyInfoView: View {
             } else if let photoNoticeMessage {
                 Text(verbatim: photoNoticeMessage)
             } else if let key = model.noticeKey {
+                SettingsLocalization.text(key)
+            }
+        }
+        .alert(SettingsLocalization.string("settings.notice.title"), isPresented: aiConsentErrorBinding) {
+            Button(SettingsLocalization.string("settings.action.confirm")) {
+                aiConsent.dismissError()
+            }
+        } message: {
+            if let key = aiConsent.errorKey {
                 SettingsLocalization.text(key)
             }
         }
@@ -387,6 +434,170 @@ struct MyInfoView: View {
                     withoutPresentationAnimation { showPattern = true }
                 }
             }
+        }
+    }
+
+    private var visibilitySection: some View {
+        SettingsCard(title: "settings.visibility.title", icon: "eye") {
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                SettingsLocalization.text("settings.visibility.current")
+                    .font(DPTypography.body)
+                    .foregroundStyle(DPColor.textPrimary)
+                SettingsLocalization.text("settings.visibility.description")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textSecondary)
+            }
+            Button {
+                DPHapticCenter.shared.emit(.routine)
+                withoutPresentationAnimation { showVisibility = true }
+            } label: {
+                HStack(spacing: DPSpacing.small) {
+                    Circle()
+                        .fill(visibilityColor(model.member?.calendarVisibility ?? .friends))
+                        .frame(width: 8, height: 8)
+                    SettingsLocalization.text(visibilityLabelKey(model.member?.calendarVisibility ?? .friends))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(DPColor.textPrimary)
+                .padding(.horizontal, DPSpacing.medium)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var aiConsentSection: some View {
+        SettingsCard(title: "settings.aiConsent.title", icon: "sparkles") {
+            Button(action: toggleAIConsent) {
+                HStack(spacing: DPSpacing.medium) {
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        SettingsLocalization.text("settings.aiConsent.toggle")
+                            .font(DPTypography.bodyMedium)
+                            .foregroundStyle(DPColor.textPrimary)
+                        SettingsLocalization.text("settings.aiConsent.description")
+                            .font(DPTypography.supporting)
+                            .foregroundStyle(DPColor.textSecondary)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: DPSpacing.small)
+                    if aiConsent.isLoading || aiConsent.isUpdating {
+                        ProgressView()
+                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                            .accessibilityLabel(SettingsLocalization.string("settings.aiConsent.updating"))
+                    } else {
+                        SettingsSwitch(isOn: aiConsent.isEnabled)
+                    }
+                }
+                .padding(.horizontal, DPSpacing.compact)
+                .frame(minHeight: 64)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(aiConsent.isLoading || aiConsent.isUpdating || aiConsent.response == nil)
+            .accessibilityLabel(SettingsLocalization.string("settings.aiConsent.toggle"))
+            .accessibilityValue(SettingsLocalization.string(
+                aiConsent.isEnabled ? "settings.accessibility.on" : "settings.accessibility.off"
+            ))
+            .accessibilityAddTraits(.isButton)
+
+            SettingsLocalization.text("settings.aiConsent.dataFlow")
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if aiConsent.response?.needsRenewal == true {
+                Label(SettingsLocalization.string("settings.aiConsent.renewalRequired"), systemImage: "exclamationmark.circle")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.warning)
+            }
+
+            if aiConsent.response == nil, !aiConsent.isLoading {
+                Button(SettingsLocalization.string("settings.action.retry")) {
+                    guard let memberID = model.member?.id else { return }
+                    Task { await aiConsent.load(for: memberID, force: true) }
+                }
+                .buttonStyle(DPOutlineButtonStyle())
+            }
+
+            NavigationLink {
+                AIScheduleConsentPolicyView(
+                    store: aiConsent,
+                    memberID: model.member?.id
+                )
+            } label: {
+                HStack(spacing: DPSpacing.small) {
+                    Image(systemName: "doc.text")
+                    SettingsLocalization.text("settings.aiConsent.policy")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DPColor.textMuted)
+                }
+                .font(DPTypography.body)
+                .foregroundStyle(DPColor.textPrimary)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture().onEnded {
+                DPHapticCenter.shared.emit(.routine)
+            })
+        }
+    }
+
+    private var aiConsentErrorBinding: Binding<Bool> {
+        Binding(
+            get: { aiConsent.errorKey != nil && !showAIConsentConfirmation },
+            set: { if !$0 { aiConsent.dismissError() } }
+        )
+    }
+
+    private func toggleAIConsent() {
+        guard let memberID = model.member?.id else { return }
+        if aiConsent.isEnabled {
+            DPHapticCenter.shared.emit(.selection)
+            Task { _ = await aiConsent.revoke(for: memberID) }
+            return
+        }
+
+        switch AIScheduleConsentSettingsActivationPolicy.decision(response: aiConsent.response) {
+        case .showAgreement:
+            aiConsent.dismissError()
+            showAIConsentConfirmation = true
+        case let .grant(policyVersion):
+            aiConsent.dismissError()
+            DPHapticCenter.shared.emit(.selection)
+            Task {
+                _ = await aiConsent.grant(for: memberID, policyVersion: policyVersion)
+            }
+        case .unavailable:
+            aiConsent.reportLoadFailure()
+            DPHapticCenter.shared.emit(.warning)
+        }
+    }
+
+    private func visibilityLabelKey(_ visibility: Visibility) -> String {
+        switch visibility {
+        case .publicAccess: "settings.visibility.public"
+        case .friends: "settings.visibility.friends"
+        case .family: "settings.visibility.family"
+        case .privateAccess: "settings.visibility.private"
+        case .unknown: "settings.visibility.friends"
+        }
+    }
+
+    private func visibilityColor(_ visibility: Visibility) -> Color {
+        switch visibility {
+        case .publicAccess: DPColor.success
+        case .friends: DPColor.accent
+        case .family: DPColor.warning
+        case .privateAccess: DPColor.danger
+        case .unknown: DPColor.accent
         }
     }
 
