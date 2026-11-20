@@ -85,9 +85,24 @@ describe('CalendarGrid flat month layout', () => {
     expect(hasClass(outside, 'calendar-day--outside')).toBe(true)
     expect(outside.props.style).not.toMatchObject({ backgroundColor: '#9DDBDE' })
     expect(outside.props.style).not.toHaveProperty('opacity')
-    // Duty tiles look the same in light and dark, so the fade is a fixed hex with fixed ink.
-    expect(outside.props.style).toEqual({ backgroundColor: '#c4e9eb' })
+    // Duty tiles look the same in light and dark, so the fade is a fixed hex with fixed ink,
+    // and its time chip is a tone-on-tone shade of that fade.
+    expect(outside.props.style).toEqual({
+      backgroundColor: '#c4e9eb', '--calendar-time-bg': '#a3d1d3', '--calendar-time-ink': '#104649',
+    })
     expect(hasClass(outside, 'calendar-day--on-light')).toBe(true)
+  })
+
+  it('leaves the neutral time chip to tiles without a fill or with a fill too dark for the tone-on-tone pair', async () => {
+    const empty = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays(null), currentYear: 2026, currentMonth: 11,
+    })))
+    const dark = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays(null), currentYear: 2026, currentMonth: 11, getDutyColor: () => '#334155',
+    })))
+    await nextTick()
+    expect(dayCells(empty.root)[0]!.props.style).toEqual({ backgroundColor: 'var(--dp-calendar-cell-bg)' })
+    expect(dayCells(dark.root)[0]!.props.style).toEqual({ backgroundColor: '#334155' })
   })
 })
 

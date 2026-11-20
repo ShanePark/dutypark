@@ -47,22 +47,24 @@ describe('team self-service creation', () => {
     expect(createModal).toContain('id="new-team-description"')
   })
 
-  it('shows every team schedule of a day in its calendar cell', () => {
+  it('shows every single-day team schedule of a day in its calendar cell', () => {
     const dayContent = teamView.slice(
       teamView.indexOf('<template #day-content'),
       teamView.indexOf('</CalendarGrid>'),
     )
 
-    expect(dayContent).toContain('v-for="schedule in orderForCalendarCell(teamSchedules[index] ?? [])"')
-    expect(dayContent).not.toMatch(/teamSchedules\[index\]\.slice\(/)
-    expect(dayContent).not.toMatch(/\+\{\{ teamSchedules\[index\]\.length/)
+    expect(teamView).toContain('schedules.filter(schedule => (schedule.totalDays ?? 0) <= 1)')
+    expect(dayContent).toContain('v-for="schedule in teamCellSchedules[index]"')
+    expect(dayContent).not.toMatch(/teamCellSchedules\[index\]\.slice\(/)
+    expect(dayContent).not.toMatch(/\+\{\{ teamCellSchedules\[index\]\.length/)
   })
 
-  it('ends a multi-day team schedule title with its day counter', () => {
-    expect(teamView).toContain(
-      '<span class="calendar-item__text">{{ schedule.content }}<span v-if="(schedule.totalDays ?? 0) > 1" class="calendar-item__part"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</span></span>',
-    )
-    expect(teamView).not.toContain('calendar-item__line--split')
+  it('draws multi-day team schedules as week bands without a day counter', () => {
+    expect(teamView).toContain(':span-lanes="teamSpanLanes"')
+    expect(teamView).toContain('assignCalendarSpanLanes(teamSchedules.value, schedule => JSON.stringify([schedule.teamId, schedule.id]))')
+    expect(teamView).toMatch(/<template #span="\{ segment \}">\s*<span class="calendar-span__title">\{\{ segment\.item\.content \}\}<\/span>/)
+    expect(teamView).not.toContain('calendar-item__part')
+    expect(teamView).not.toContain('calendar-item--span')
   })
 
   it('does not expose a join-request action', () => {

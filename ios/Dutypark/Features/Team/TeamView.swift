@@ -538,7 +538,14 @@ struct TeamView: View {
     }
 
     private func calendarMonthBody(_ page: TeamCalendarMonthPage, isInteractive: Bool) -> some View {
-        LazyVGrid(
+        let firstIndex = page.visibleIndices.first ?? 0
+        let spanLanes = DPCalendarSpanLanes.layout(
+            page.visibleIndices.map { page.schedules.indices.contains($0) ? page.schedules[$0] : [] },
+            id: \.id,
+            daysFromStart: \.daysFromStart,
+            totalDays: \.totalDays
+        )
+        return LazyVGrid(
             columns: Array(repeating: GridItem(.flexible(), spacing: DPCalendarCellStyle.gutterWidth), count: 7),
             spacing: DPCalendarCellStyle.gutterWidth
         ) {
@@ -555,15 +562,14 @@ struct TeamView: View {
                             ? page.schedules[index]
                             : [],
                         weekdayIndex: index % 7,
+                        spanLanes: spanLanes[index - firstIndex],
                         isSelected: day == page.selectedDay
                     ) {
                         guard !isSwipingMonth, !isSlidingMonth, !viewModel.isLoading else { return }
                         Task { await viewModel.selectDay(at: index) }
                     }
-                    .environment(\.calendarSpanCellIndex, index - (page.visibleIndices.first ?? 0))
                 }
         }
-        .calendarSpanConnections()
         .background(DPCalendarCellStyle.gutterColor)
         .background {
             GeometryReader { proxy in
@@ -889,9 +895,10 @@ private struct TeamMemberAvatar: View {
 }
 
 nonisolated enum TeamCalendarCellSchedules {
-    // Multi-day schedules lead the cell, matching the personal calendar.
-    static func ordered(_ schedules: [TeamScheduleDTO]) -> [TeamScheduleDTO] {
-        DPCalendarSpan.orderedForCell(schedules, daysFromStart: \.daysFromStart, totalDays: \.totalDays)
+    /// Multi-day schedules ride in the ribbon lanes, as in the personal calendar; the tile
+    /// lists the rest in their incoming order.
+    static func singleDay(_ schedules: [TeamScheduleDTO]) -> [TeamScheduleDTO] {
+        schedules.filter { !DPCalendarSpanLanes.isSpan(daysFromStart: $0.daysFromStart, totalDays: $0.totalDays) }
     }
 }
 
@@ -902,6 +909,7 @@ private struct TeamCalendarDayCell: View {
     let holidays: [HolidayDTO]
     let schedules: [TeamScheduleDTO]
     let weekdayIndex: Int
+    let spanLanes: [DPCalendarSpanLanes.Placement<TeamScheduleDTO>?]
     let isSelected: Bool
     let action: () -> Void
 
@@ -914,11 +922,15 @@ private struct TeamCalendarDayCell: View {
                 isCurrentMonth: isCurrentMonth,
                 isToday: isToday,
                 hasHoliday: !holidays.isEmpty,
-                highlight: isSelected ? DPColor.accent : nil
+                highlight: isSelected ? DPColor.accent : nil,
+                ribbonColumn: ribbonColumn
             ) {
                 EmptyView()
             } content: {
                 VStack(alignment: .leading, spacing: 0) {
+                    DPCalendarSpanLaneStack(lanes: spanLanes, column: weekdayIndex) { placement in
+                        spanRibbon(placement)
+                    }
                     ForEach(Array(holidays.enumerated()), id: \.offset) { _, holiday in
                         Text(verbatim: holiday.dateName)
                             .font(DPFont.light(size: 10, relativeTo: .caption2))
@@ -928,26 +940,45 @@ private struct TeamCalendarDayCell: View {
                             .lineLimit(1)
                     }
                     // Every schedule is drawn; the tile grows instead of hiding any behind a count.
-                    ForEach(Array(TeamCalendarCellSchedules.ordered(schedules).enumerated()), id: \.offset) { index, schedule in
-                        let span = DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays)
-                        DPCalendarItemRow(showsRule: index > 0, rule: rule, span: span, spanColor: ink, spanID: schedule.id, spanDay: schedule.daysFromStart ?? 1) {
-                            DPCalendarScheduleTitle.text(
-                                Text(verbatim: schedule.content),
-                                daysFromStart: schedule.daysFromStart,
-                                totalDays: schedule.totalDays,
-                                counterColor: mutedInk
-                            )
-                            .font(DPFont.light(size: 10, relativeTo: .caption2))
-                            .tracking(-0.3)
-                            .foregroundStyle(ink)
-                            .lineLimit(2)
+                    ForEach(Array(TeamCalendarCellSchedules.singleDay(schedules).enumerated()), id: \.offset) { index, schedule in
+                        DPCalendarItemRow(showsRule: index > 0, rule: rule) {
+                            Text(verbatim: schedule.content)
+                                .font(DPFont.light(size: 10, relativeTo: .caption2))
+                                .tracking(-0.3)
+                                .foregroundStyle(ink)
+                                .lineLimit(2)
                         }
                     }
                 }
             }
         }
         .buttonStyle(.plain)
+        // The tile's own layer stays inside the button, so the button carries it into the grid.
+        .zIndex(DPCalendarTileRing.zIndex(
+            ring: DPCalendarTileRing(isToday: isToday, hasHighlight: isSelected),
+            ribbonColumn: ribbonColumn
+        ))
         .accessibilityLabel(Text(verbatim: "\(day.year)-\(day.month)-\(day.day)"))
+    }
+
+    private var ribbonColumn: Int? {
+        DPCalendarSpanLanes.startsRibbon(spanLanes, column: weekdayIndex) ? weekdayIndex : nil
+    }
+
+    private func spanRibbon(_ placement: DPCalendarSpanLanes.Placement<TeamScheduleDTO>) -> some View {
+        let schedule = placement.item
+        return DPCalendarSpanRibbonBand(
+            isTrueStart: placement.isTrueStart,
+            isTrueEnd: placement.isTrueEnd,
+            times: CalendarVisualLogic.spanSegmentTimes(
+                start: schedule.startDateTime,
+                end: schedule.endDateTime,
+                holdsStart: placement.isTrueStart,
+                holdsEnd: placement.isTrueEnd
+            )
+        ) {
+            Text(verbatim: schedule.content)
+        }
     }
 
     private var isToday: Bool {

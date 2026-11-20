@@ -11,7 +11,7 @@ import type { HolidayDto } from '@/types'
 import type { CalendarDay, DutyType, Schedule, OtherDuty, LocalDDay, DutyDay, TodoDueItem } from '@/views/duty/dutyViewTypes'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
 import { canOpenCalendarDay } from '@/utils/calendarDayOpening'
-import { orderForCalendarCell } from '@/utils/calendarScheduleOrder'
+import { assignCalendarSpanLanes } from '@/utils/calendarSpanLanes'
 import { useCalendarMonthSwipe } from '@/composables/useCalendarMonthSwipe'
 
 const props = defineProps<{
@@ -160,7 +160,26 @@ function formatScheduleTime(schedule: Schedule) {
   return ''
 }
 
-const cellSchedulesByDays = computed(() => props.schedulesByDays.map(orderForCalendarCell))
+// Splits a full range after its "~" so a narrow cell wraps there and nowhere else.
+function getScheduleTimeParts(schedule: Schedule): string[] {
+  const time = formatScheduleTime(schedule)
+  const breakAt = time.indexOf('~') + 1
+  return breakAt > 1 ? [time.slice(0, breakAt), time.slice(breakAt)] : [time]
+}
+
+// "HH:mm" of a multi-day schedule's start or end; midnight reads as a whole day and shows nothing.
+function formatSpanClock(dateTime: string) {
+  const date = new Date(dateTime)
+  if (date.getHours() === 0 && date.getMinutes() === 0) return ''
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+}
+
+// Multi-day schedules are drawn as lane bands across the week; cells list the rest.
+const spanLanesByDays = computed(() => (props.batchEditMode
+  ? []
+  : assignCalendarSpanLanes(props.schedulesByDays, schedule => JSON.stringify([schedule.id, schedule.startDateTime]))))
+const cellSchedulesByDays = computed(() => props.schedulesByDays.map(schedules =>
+  schedules.filter(schedule => schedule.totalDays <= 1)))
 
 function hasScheduleDetails(schedule: Schedule) {
   return !!(schedule.description || schedule.attachments?.length)
@@ -251,8 +270,29 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
         :focused-day="focusedCalendarDay"
         :clickable="isCalendarMonthLoaded && (!batchEditMode || canEdit)"
         :is-day-clickable="isDayClickable"
+        :span-lanes="spanLanesByDays"
         @day-click="(day, index) => emit('day-click', day, index)"
       >
+        <template #span="{ segment }">
+          <span class="calendar-span__title"><VisibilityHintIcon
+            v-if="shouldShowPrivateVisibility(segment.item)"
+            :visibility="segment.item.visibility"
+            size="xs"
+            class="calendar-visibility-hint mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
+          />{{ segment.item.contentWithoutTime || segment.item.content }}<MessageSquareText
+            v-if="hasScheduleDetails(segment.item)"
+            class="calendar-schedule-detail-icon"
+          /></span>
+          <span
+            v-if="segment.isStart && formatSpanClock(segment.item.startDateTime)"
+            class="calendar-span__time"
+          >{{ formatSpanClock(segment.item.startDateTime) }}~</span>
+          <span
+            v-if="segment.isEnd && formatSpanClock(segment.item.endDateTime)"
+            class="calendar-span__time calendar-span__time--end"
+          >~{{ formatSpanClock(segment.item.endDateTime) }}</span>
+        </template>
+
         <template #day-header="{ day }">
           <span
             v-if="!batchEditMode && calcDDayForDay(day)"
@@ -332,23 +372,20 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               v-for="schedule in cellSchedulesByDays[index]"
               :key="schedule.id"
               class="calendar-item"
-              :data-calendar-span-key="schedule.totalDays > 1 ? JSON.stringify([schedule.id, schedule.startDateTime]) : undefined"
-              :data-calendar-span-part="schedule.daysFromStart"
-              :class="schedule.totalDays > 1 ? ['calendar-item--span', {
-                'calendar-item--span-start': schedule.daysFromStart === 1,
-                'calendar-item--span-end': schedule.daysFromStart === schedule.totalDays,
-              }] : null"
             >
-              <div class="calendar-item__line">
+              <div class="calendar-item__line calendar-item__line--chip">
                 <span class="calendar-item__text"><VisibilityHintIcon
                   v-if="shouldShowPrivateVisibility(schedule)"
                   :visibility="schedule.visibility"
                   size="xs"
                   class="calendar-visibility-hint mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
-                /><span v-if="formatScheduleTime(schedule)" class="calendar-item__time">{{ formatScheduleTime(schedule) }}</span>{{ schedule.contentWithoutTime || schedule.content }}<MessageSquareText
+                />{{ schedule.contentWithoutTime || schedule.content }}<MessageSquareText
                   v-if="hasScheduleDetails(schedule)"
                   class="calendar-schedule-detail-icon"
-                /><span v-if="schedule.totalDays > 1" class="calendar-item__part"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</span></span>
+                /></span> <span v-if="formatScheduleTime(schedule)" class="calendar-item__time"><template
+                  v-for="(part, partIndex) in getScheduleTimeParts(schedule)"
+                  :key="partIndex"
+                ><wbr v-if="partIndex > 0"><span class="calendar-item__time-part">{{ part }}</span></template></span>
               </div>
               <div
                 v-if="getDisplayTagMembers(schedule).length"
@@ -525,6 +562,11 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   outline: 2px solid var(--dp-accent);
   outline-offset: 1px;
   border-radius: 3px;
+}
+
+/* Bands let clicks through to the day underneath; the hint keeps its tooltip. */
+.calendar-span__title .calendar-visibility-hint {
+  pointer-events: auto;
 }
 
 @media (min-width: 640px) {

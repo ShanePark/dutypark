@@ -50,10 +50,8 @@ struct CalendarMonthCellGrid<Item: Identifiable, Cell: View>: View {
         ) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 content(index, item)
-                    .environment(\.calendarSpanCellIndex, index)
             }
         }
-        .calendarSpanConnections()
     }
 }
 
@@ -1214,6 +1212,12 @@ struct CalendarView: View {
         let days = Array(page.days[range])
 
         let openDDay: ((DDayDTO) -> Void)? = isInteractive ? { openDDayDetail($0) } : nil
+        let spanLanes = DPCalendarSpanLanes.layout(
+            days.map(\.schedules),
+            id: \.id,
+            daysFromStart: \.daysFromStart,
+            totalDays: \.totalDays
+        )
 
         return CalendarMonthCellGrid(items: days) { index, day in
                 let opensDetail = isInteractive
@@ -1221,6 +1225,7 @@ struct CalendarView: View {
                 let cell = CalendarDayCell(
                     day: day,
                     weekday: index % 7,
+                    spanLanes: spanLanes[index],
                     highlighted: model.highlightedDate == day.cell.date,
                     pinnedDDay: model.pinnedDDay,
                     hidesDetails: model.isQuickDutyEditing,
@@ -2002,6 +2007,7 @@ private struct CalendarMemberAvatar: View {
 private struct CalendarDayCell: View {
     let day: CalendarDayContent
     let weekday: Int
+    let spanLanes: [DPCalendarSpanLanes.Placement<ScheduleDTO>?]
     let highlighted: Bool
     let pinnedDDay: DDayDTO?
     let hidesDetails: Bool
@@ -2019,7 +2025,8 @@ private struct CalendarDayCell: View {
             isCurrentMonth: isCurrentMonth,
             isToday: isToday && !hidesDetails,
             hasHoliday: !hidesDetails && !day.holidays.isEmpty,
-            highlight: highlightBorder
+            highlight: highlightBorder,
+            ribbonColumn: !hidesDetails && DPCalendarSpanLanes.startsRibbon(spanLanes, column: weekday) ? weekday : nil
         ) {
             if let pinnedDDay, !hidesDetails, let label = relativeLabel(pinnedDDay) {
                 Text(verbatim: label)
@@ -2068,6 +2075,9 @@ private struct CalendarDayCell: View {
     // any behind a count.
     private var details: some View {
         VStack(alignment: .leading, spacing: 0) {
+            DPCalendarSpanLaneStack(lanes: spanLanes, column: weekday) { placement in
+                spanRibbon(placement)
+            }
             ForEach(Array(day.holidays.enumerated()), id: \.offset) { _, holiday in
                 Text(verbatim: holiday.dateName)
                     .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
@@ -2090,15 +2100,8 @@ private struct CalendarDayCell: View {
                     dDayMarker(item)
                 }
             }
-            ForEach(Array(cellSchedules.enumerated()), id: \.element.id) { index, schedule in
-                DPCalendarItemRow(
-                    showsRule: index + day.dDays.count > 0,
-                    rule: ruleColor,
-                    span: DPCalendarSpan(daysFromStart: schedule.daysFromStart, totalDays: schedule.totalDays),
-                    spanColor: primaryForeground,
-                    spanID: schedule.id,
-                    spanDay: schedule.daysFromStart
-                ) {
+            ForEach(Array(singleDaySchedules.enumerated()), id: \.element.id) { index, schedule in
+                DPCalendarItemRow(showsRule: index + day.dDays.count > 0, rule: ruleColor) {
                     scheduleItem(schedule)
                 }
             }
@@ -2116,8 +2119,11 @@ private struct CalendarDayCell: View {
     private var dutyColor: String? { day.duty?.dutyColor }
     private var isCurrentMonth: Bool { day.cell.isCurrentMonth }
 
-    private var cellSchedules: [ScheduleDTO] {
-        DPCalendarSpan.orderedForCell(day.schedules, daysFromStart: { $0.daysFromStart }, totalDays: { $0.totalDays })
+    /// Multi-day schedules ride in the ribbon lanes above; the tile lists the rest.
+    private var singleDaySchedules: [ScheduleDTO] {
+        day.schedules.filter {
+            !DPCalendarSpanLanes.isSpan(daysFromStart: $0.daysFromStart, totalDays: $0.totalDays)
+        }
     }
 
     private var isOnFill: Bool {
@@ -2170,18 +2176,22 @@ private struct CalendarDayCell: View {
                 if showsPrivateBadge(schedule) {
                     DPCalendarLockBadge(onFill: isOnFill)
                 }
-                DPCalendarScheduleTitle.text(
-                    scheduleTitleLine(schedule),
-                    daysFromStart: schedule.daysFromStart,
-                    totalDays: schedule.totalDays,
-                    counterColor: secondaryForeground
-                )
-                .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
-                .tracking(-0.3)
-                .lineSpacing(1)
-                .foregroundStyle(primaryForeground)
-                .lineLimit(2)
-                .truncationMode(.tail)
+                scheduleTitleLine(schedule)
+                    .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
+                    .tracking(-0.3)
+                    .lineSpacing(1)
+                    .foregroundStyle(primaryForeground)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+            }
+
+            if let time = CalendarVisualLogic.calendarScheduleTimeText(
+                start: schedule.startDateTime,
+                end: schedule.endDateTime,
+                daysFromStart: schedule.daysFromStart,
+                totalDays: schedule.totalDays
+            ) {
+                DPCalendarScheduleTime(time: time, dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
             }
 
             if !tags.isEmpty {
@@ -2203,8 +2213,31 @@ private struct CalendarDayCell: View {
         isMyCalendar && !schedule.isTagged && schedule.visibility == .privateAccess
     }
 
-    /// A narrow tile shows the title without the time, which belongs to the day detail;
-    /// a multi-day run's day counter is appended by `DPCalendarScheduleTitle`.
+    /// One week-row segment of a multi-day schedule, with the same private badge and
+    /// details mark as a single-day item.
+    private func spanRibbon(_ placement: DPCalendarSpanLanes.Placement<ScheduleDTO>) -> some View {
+        let schedule = placement.item
+        return DPCalendarSpanRibbonBand(
+            isTrueStart: placement.isTrueStart,
+            isTrueEnd: placement.isTrueEnd,
+            times: CalendarVisualLogic.spanSegmentTimes(
+                start: schedule.startDateTime,
+                end: schedule.endDateTime,
+                holdsStart: placement.isTrueStart,
+                holdsEnd: placement.isTrueEnd
+            )
+        ) {
+            HStack(spacing: 2) {
+                if showsPrivateBadge(schedule) {
+                    DPCalendarLockBadge(onFill: true)
+                }
+                scheduleTitleLine(schedule)
+            }
+        }
+    }
+
+    /// The title and the details mark run as one flow of text; the time has a chip of its
+    /// own below.
     private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
         var line = Text(verbatim: schedule.content)
         if !schedule.description.isEmpty || !schedule.attachments.isEmpty {

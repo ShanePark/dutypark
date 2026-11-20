@@ -22,52 +22,56 @@ function expectTwoLineClamp(body: string) {
   expect(body).not.toContain('white-space: nowrap')
 }
 
-// Every day of a multi-day schedule shows its title, tags, and one bottom bar,
-// with the same two-line title clamp as single-day items. Measured connectors
-// bridge baseline differences caused by holidays, wrapping, and tags.
-describe('multi-day schedule styling', () => {
-  it('keeps SVG runs decorative and preserves measurable CSS fallbacks', () => {
-    const overlay = ruleBody(baseBlock, '.calendar-span-connectors')
-    expect(overlay).toContain('position: absolute')
-    expect(overlay).toContain('pointer-events: none')
-    expect(template).toContain('aria-hidden="true" focusable="false"')
-    const underline = ruleBody(baseBlock, ':slotted(.calendar-item--span)::after')
-    expect(underline).toContain('visibility: var(--calendar-span-visibility, visible)')
-    expect(underline).not.toContain('display: none')
+// A multi-day schedule is one white ribbon per week row, drawn in a lane under
+// the date so its days line up across the week.
+describe('multi-day schedule bands', () => {
+  it('aligns lanes across a week through a shared header row', () => {
+    const day = ruleBody(baseBlock, '.calendar-day')
+    expect(day).toContain('grid-row: span 2')
+    expect(day).toContain('grid-template-rows: subgrid')
+    // A subgrid ignores its own min-height, so the body keeps the tile minimum.
+    expect(day).not.toContain('min-height')
+    expect(ruleBody(baseBlock, '.calendar-day-body')).toContain('min-height')
+    expect(template.indexOf('class="calendar-span-lanes"')).toBeGreaterThan(template.indexOf('class="calendar-day-top"'))
+    expect(template.indexOf('class="calendar-span-lanes"')).toBeLessThan(template.indexOf('class="calendar-day-holiday"'))
   })
 
-  it('shows the title and tags on every day at every width', () => {
-    expect(style).not.toContain('clip-path')
-    expect(style).not.toContain('calendar-day--week-start')
-    expect(template).not.toContain('calendar-day--week-start')
-    expect(mobileBlock).not.toContain('.calendar-item__tags')
+  it('sizes lanes and ribbons per breakpoint', () => {
+    expect(ruleBody(baseBlock, '.calendar-span-lane')).toContain('height: 16px')
+    expect(ruleBody(desktopBlock, '.calendar-span-lane')).toContain('height: 23px')
+    expect(ruleBody(baseBlock, '.calendar-span')).toContain('--calendar-span-inset: 2px')
+    expect(ruleBody(baseBlock, '.calendar-span')).toContain('--calendar-span-radius: 4px')
+    expect(ruleBody(desktopBlock, '.calendar-span')).toContain('--calendar-span-inset: 4px')
+    expect(ruleBody(desktopBlock, '.calendar-span')).toContain('--calendar-span-radius: 7px')
   })
 
-  it('draws the joining bar only at the bottom of the item', () => {
-    const body = ruleBody(baseBlock, ':slotted(.calendar-item--span)::after')
-    expect(body).toContain('bottom: 0')
-    expect(style).not.toMatch(/calendar-item--span\)::after \{[^}]*top:/)
+  it('bridges the gutters and squares the edges where the schedule continues', () => {
+    const band = style.slice(style.indexOf('.calendar-span {'), style.indexOf('}', style.indexOf('.calendar-span {')))
+    expect(band).toContain('position: absolute')
+    expect(band).toContain('var(--calendar-span-days) * (100% + 2 * var(--calendar-pad-x))')
+    expect(band).toContain('(var(--calendar-span-days) - 1) * var(--calendar-gap)')
+    expect(band).toContain('pointer-events: none')
+    expect(band).toContain('white-space: nowrap')
+    expect(band).toContain('background: rgba(255, 255, 255, 0.84)')
+    expect(band).toContain('box-shadow: inset 0 0 0 1px rgba(31, 41, 55, 0.14), 0 1px 2px rgba(31, 41, 55, 0.08)')
+    expect(band).toContain('color: #1f2937')
+    expect(band).not.toContain('border-radius')
+    expect(ruleBody(baseBlock, '.calendar-span--start')).toContain('border-top-left-radius: var(--calendar-span-radius)')
+    expect(ruleBody(baseBlock, '.calendar-span--end')).toContain('border-bottom-right-radius: var(--calendar-span-radius)')
+    expect(ruleBody(baseBlock, ':slotted(.calendar-span__title)')).toContain('text-overflow: ellipsis')
   })
 
-  it('wraps a multi-day title to two lines like any other title', () => {
-    expectTwoLineClamp(ruleBody(baseBlock, ':slotted(.calendar-item__line)'))
-    expect(style).not.toContain('.calendar-item__line--split')
-    expect(style).not.toContain('.calendar-item--span .calendar-item__line')
-    expect(style).not.toContain('.calendar-item--span .calendar-item__text')
+  it('drops the times before the title in a segment too narrow for both', () => {
+    const band = style.slice(style.indexOf('.calendar-span {'), style.indexOf('}', style.indexOf('.calendar-span {')))
+    expect(band).toContain('container-type: inline-size')
+    expect(style).toMatch(/@container \(max-width: 7em\) \{\s*:slotted\(\.calendar-span__time\) \{\s*display: none;/)
   })
 
-  it('flows the day counter inline as the end of the title', () => {
-    expect(style).not.toContain('.calendar-item--span .calendar-item__part')
-    expect(mobileBlock).not.toContain('.calendar-item__part')
-    expect(desktopBlock).not.toContain('.calendar-item__part')
-
-    const part = ruleBody(baseBlock, ':slotted(.calendar-item__part)')
-    expect(part).not.toContain('display')
-    expect(part).not.toContain('flex')
-    // A leading space separates it from the title instead, so a wrapped counter starts flush.
-    expect(part).not.toContain('margin-left')
-    expect(part).toContain('color: var(--calendar-ink-muted)')
-    expect(part).toContain('font-variant-numeric: tabular-nums')
+  it('leaves the old underline, connectors, and day counter behind', () => {
+    expect(style).not.toContain('calendar-item--span')
+    expect(style).not.toContain('calendar-item__part')
+    expect(style).not.toContain('calendar-span-connectors')
+    expect(template).not.toContain('<svg')
   })
 })
 
