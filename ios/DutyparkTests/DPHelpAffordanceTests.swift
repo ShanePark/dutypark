@@ -26,7 +26,6 @@ struct DPHelpAffordanceTests {
             DPHelpChrome.maximumPanelHeight
         )
         let panels: [(name: String, view: AnyView)] = [
-            ("todo", AnyView(TodoHelpModal(maximumHeight: availableHeight, dismiss: {}))),
             ("social", AnyView(SocialHelpModal(maximumHeight: availableHeight, dismiss: {})))
         ]
 

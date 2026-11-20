@@ -2,11 +2,9 @@ import { describe, expect, it } from 'vitest'
 import helpButton from './HelpButton.vue?raw'
 import helpModal from './HelpModal.vue?raw'
 import friendsView from '@/views/member/FriendsView.vue?raw'
-import todoBoardView from '@/views/todo/TodoBoardView.vue?raw'
 
 const helpScreens: Array<[string, string]> = [
   ['friends', friendsView],
-  ['todo board', todoBoardView],
 ]
 
 describe('help affordance', () => {

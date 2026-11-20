@@ -217,7 +217,9 @@ struct RootTabView: View {
                             memberCalendar(route)
                         }
                 }
-                primaryTab(.todo, showsNavigationBar: true) {
+                // The status selector heads the board and adding lives on each column, so
+                // an empty navigation bar would only push the board down.
+                primaryTab(.todo) {
                     TodoView(initialTodoID: todoTarget) {
                         todoTarget = nil
                     }

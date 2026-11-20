@@ -837,26 +837,6 @@ export default {
       untagSuccess: 'TODO tag removed.',
       untagFailed: 'Failed to remove the tag.',
     },
-    help: {
-      openAriaLabel: 'Help',
-      title: 'How to use the to-do board',
-      whatIsKanbanTitle: 'What is a Kanban board?',
-      whatIsKanbanText: 'A Kanban board helps you manage tasks in three stages: To-do, In progress, and Done. Click a card to change its status in the detail view, or drag it to another column.',
-      todoTitle: 'To-do (TODO)',
-      todoText: 'Tasks that have not started yet appear here. Use the + button to add a new task.',
-      inProgressTitle: 'In progress (IN PROGRESS)',
-      inProgressText: 'Tasks you are currently working on appear here. In-progress tasks are also shown on your calendar so you can see today’s priorities at a glance.',
-      doneTitle: 'Done (DONE)',
-      doneText: 'Completed tasks stay here. You can move them back to In progress or To-do if needed.',
-      tipsTitle: 'Tips',
-      tips: {
-        drag: 'Click a card to change its status in the detail view, or drag and drop it to another column.',
-        reorder: 'You can also drag to reorder cards within the same column.',
-        details: 'Click a card to view and edit its details.',
-        dueDate: 'Set a due date to make deadline management easier.',
-        attachments: 'You can attach files when needed.',
-      },
-    },
   },
   auth: {
     login: {

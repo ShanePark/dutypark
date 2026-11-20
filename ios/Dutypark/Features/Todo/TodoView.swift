@@ -463,7 +463,6 @@ struct TodoView: View {
     @State private var selectedTodo: TodoDTO?
     @State private var showingDetail = false
     @State private var showingCreate = false
-    @State private var showingHelp = false
     @State private var completedCleanupConfirmation: TodoCompletedCleanupSelection?
     @State private var isCleaningUpCompleted = false
     @State private var completedCleanupResult: TodoCompletedCleanupResponse?
@@ -535,36 +534,6 @@ struct TodoView: View {
                     .accessibilityHidden(true)
             }
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                DPHelpButton(label: todoLocalized("todo.help.open")) {
-                    withoutPresentationAnimation { showingHelp = true }
-                }
-                .accessibilityIdentifier("todo.help")
-
-                Button {
-                    presentCreate()
-                } label: {
-                    Image(systemName: "plus")
-                        .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityRepresentation {
-                    Button {
-                        presentCreate()
-                    } label: {
-                        Color.clear
-                            .frame(
-                                width: DPSize.minimumTouchTarget + 2,
-                                height: DPSize.minimumTouchTarget + 2
-                            )
-                            .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel(todoLocalized("todo.action.add"))
-                    .accessibilityIdentifier("todo.add")
-                }
-            }
-        }
         .task(id: initialTodoID) {
             if model.board == nil {
                 await model.load(
@@ -629,11 +598,6 @@ struct TodoView: View {
                 onCreated: onTodoChanged,
                 onDismiss: { showingCreate = false }
             )
-        }
-        .fullScreenCover(isPresented: $showingHelp) {
-            DPModalOverlay(onDismiss: { showingHelp = false }) { availableSize, dismiss in
-                TodoHelpModal(maximumHeight: availableSize.height, dismiss: dismiss)
-            }
         }
         .fullScreenCover(isPresented: $showingDetail) {
             if let selectedTodo {
@@ -1076,8 +1040,8 @@ struct TodoView: View {
                                     dragTargetTodoID: dragTargetTodoID,
                                     dragInsertAfter: dragInsertAfter,
                                     add: {
-                                        selectStatus(status)
-                                        withoutPresentationAnimation { showingCreate = true }
+                                        model.selectedStatus = status
+                                        presentCreate()
                                     },
                                     clearCompleted: completedCleanupAction(for: status),
                                     select: { selectStatus(status) },
@@ -1307,6 +1271,7 @@ private struct TodoKanbanColumn: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(todoLocalized("todo.action.add"))
+                .accessibilityIdentifier("todo.column.\(status.rawValue).add")
 
                 if let clearCompleted {
                     Button(action: clearCompleted) {

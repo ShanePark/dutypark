@@ -57,47 +57,6 @@ nonisolated enum TodoConfirmationPolicy {
     }
 }
 
-struct TodoHelpModal: View {
-    let maximumHeight: CGFloat
-    let dismiss: () -> Void
-
-    private let sections: [(icon: String, titleKey: String, bodyKey: String, tint: Color)] = [
-        ("square.grid.2x2", "todo.help.kanban.title", "todo.help.kanban.body", DPColor.accent),
-        ("list.bullet", "todo.help.todo.title", "todo.help.todo.body", DPColor.accent),
-        ("clock", "todo.help.progress.title", "todo.help.progress.body", DPColor.warning),
-        ("checkmark.circle", "todo.help.done.title", "todo.help.done.body", DPColor.success)
-    ]
-
-    private static let tipCount = 5
-
-    var body: some View {
-        DPHelpModal(
-            title: todoLocalized("todo.help.title"),
-            closeLabel: todoLocalized("common.close"),
-            maximumHeight: maximumHeight,
-            dismiss: dismiss
-        ) {
-            // The blocks describe the board and its three columns rather than steps to
-            // follow in order, so they stay unnumbered.
-            ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
-                DPHelpSection(
-                    systemImage: section.icon,
-                    title: todoLocalized(section.titleKey),
-                    message: todoLocalized(section.bodyKey),
-                    tint: section.tint
-                )
-            }
-
-            DPHelpNote(
-                systemImage: "lightbulb",
-                title: todoLocalized("todo.help.tips.title"),
-                tint: DPColor.warning,
-                messages: (1...Self.tipCount).map { todoLocalized("todo.help.tip.\($0)") }
-            )
-        }
-    }
-}
-
 /// Web-style, content-fitting Todo detail panel presented inside `DPModalOverlay`.
 struct TodoDetailModal: View {
     @ObservedObject var model: TodoViewModel
