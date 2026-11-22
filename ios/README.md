@@ -228,6 +228,63 @@ Set `BUILD_NUMBER` to override the generated build number, for example
 canonical file is the single source for the app release version. App Store
 Connect processing continues asynchronously after the upload command succeeds.
 
+### Submit for App Review
+
+`ios/scripts/submit-review.py` (Python 3 standard library and `openssl`) uploads
+an exported `.ipa` with `xcrun altool` using an App Store Connect team API key.
+It then waits for processing and prepares the App Store version. If an editable
+version exists it is reused; otherwise a new one is created. The script then
+replaces the ko/en What's New text, rewrites the first `Version x.y.z …`
+sentence of the App Review notes, attaches the build, and submits it through the
+reviewSubmissions API.
+
+Export the archive to a local `.ipa` first. Use a temporary copy of the export
+options with `destination` set to `export`, written to the path the script
+expects:
+
+```sh
+VERSION=1.3.1 BUILD=20261122
+cp ios/ExportOptions-TestFlight.plist /tmp/ExportOptions-export.plist
+plutil -replace destination -string export /tmp/ExportOptions-export.plist
+xcodebuild -exportArchive \
+  -archivePath "ios/build/testflight/Dutypark-$VERSION-$BUILD.xcarchive" \
+  -exportPath "ios/build/testflight/local-auto-export-$VERSION-$BUILD" \
+  -exportOptionsPlist /tmp/ExportOptions-export.plist -allowProvisioningUpdates
+```
+
+Set `ASC_KEY_ID` and `ASC_ISSUER_ID`, or pass `--key-id` and `--issuer-id`. The
+key is read from `~/.appstoreconnect/private_keys/AuthKey_<key-id>.p8` unless
+`--key-path` is given. Write the What's New text to UTF-8 files. Also write a
+one-sentence review summary of what this release changes, without the leading
+`Version x.y.z` (for example `restores tagged friends on multi-day ribbons.`).
+The script replaces the notes' first sentence with `Version <x.y.z> <summary>`
+and keeps the rest of the notes. Then run:
+
+```sh
+ASC_KEY_ID=<key-id> ASC_ISSUER_ID=<issuer-id> \
+  python3 ios/scripts/submit-review.py \
+  --build-number 20261122 \
+  --whats-new-ko ios/build/testflight/whats-new-1.3.1-ko.txt \
+  --whats-new-en ios/build/testflight/whats-new-1.3.1-en.txt \
+  --review-summary ios/build/testflight/review-summary-1.3.1.txt
+```
+
+The marketing version comes from `Config/Version.xcconfig` and the build number
+defaults to today's KST `YYYYMMDD`. Add `--skip-upload` when the build is
+already uploaded. Add `--dry-run` to print the plan; a dry run makes only read
+requests and does not upload.
+
+If a previous version is still `WAITING_FOR_REVIEW` or `IN_REVIEW`, the script
+asks whether to remove it from review and replace it with the new version and
+build. Only `y` or `yes` continues: it cancels that review submission, waits for the
+version to become editable, and reuses it. Any other answer, or a
+non-interactive run, aborts without changes.
+
+App Store Connect processing usually takes 10–30 minutes after the upload. The
+script polls every 30 seconds for up to 60 minutes and fails on `INVALID` or
+`FAILED` builds. Run the offline tests with
+`python3 -m unittest discover -s ios/scripts/tests`.
+
 ### iOS release tags
 
 Keep the existing `YYYY.MM.DD` release tags and add an annotated
