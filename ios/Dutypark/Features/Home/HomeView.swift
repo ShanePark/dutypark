@@ -54,6 +54,56 @@ enum HomeFriendCardLayout {
     }
 }
 
+/// Stand-in data for laying out the loaded sections, hidden, under the loading
+/// spinner. It matches the most common loaded shape — a duty badge and no
+/// schedules — so the panels keep their height when the real dashboard arrives.
+enum HomeLoadingPlaceholder {
+    private static let duty = DutyDTO(
+        year: 2000,
+        month: 1,
+        day: 1,
+        dutyType: nil,
+        dutyColor: nil,
+        isOff: true,
+        dutyTypeId: nil,
+        source: .pattern
+    )
+
+    static let myDashboard = DashboardMyDetailDTO(
+        member: MemberDTO(
+            id: nil,
+            name: "",
+            email: nil,
+            teamId: nil,
+            team: nil,
+            calendarVisibility: .friends,
+            kakaoId: nil,
+            naverId: nil,
+            appleId: nil,
+            hasPassword: false,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        ),
+        duty: duty,
+        schedules: []
+    )
+
+    static let friend = DashboardFriendDetailDTO(
+        member: MemberPreviewDTO(
+            id: nil,
+            name: " ",
+            teamId: nil,
+            team: nil,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        ),
+        duty: duty,
+        schedules: [],
+        isFamily: false,
+        displayOrder: nil
+    )
+}
+
 struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     @State private var inlineFriendOrder: [MemberID]?
@@ -200,7 +250,12 @@ struct HomeView: View {
             Group {
                 switch viewModel.myState {
                 case .idle, .loading:
-                    loadingState
+                    // Lay out the loaded section, hidden, so the spinner already
+                    // has its height and the friends panel does not jump on load.
+                    myDashboardContent(HomeLoadingPlaceholder.myDashboard)
+                        .hidden()
+                        .accessibilityHidden(true)
+                        .overlay { loadingState }
                 case .failed:
                     errorState(title: "home.error.my") {
                         await viewModel.retryMyDashboard()
@@ -295,7 +350,29 @@ struct HomeView: View {
             Group {
                 switch viewModel.friendsState {
                 case .idle, .loading:
-                    loadingState
+                    // One hidden rail card reserves the loaded rail's height. Its
+                    // width is measured here too, since the card's portrait height
+                    // follows the width the rail will get.
+                    HomeFriendCard(
+                        friend: HomeLoadingPlaceholder.friend,
+                        width: cardWidth,
+                        openCalendar: {},
+                        consumeDragSuppression: { false }
+                    )
+                    .frame(maxWidth: .infinity)
+                    .hidden()
+                    .accessibilityHidden(true)
+                    .background {
+                        GeometryReader { proxy in
+                            Color.clear
+                                .onAppear { railWidth = proxy.size.width }
+                                .onChange(of: proxy.size.width) { _, width in
+                                    railWidth = width
+                                }
+                        }
+                    }
+                    .padding(.vertical, DPSpacing.medium)
+                    .overlay { loadingState }
                 case .failed:
                     errorState(title: "home.error.friends") {
                         await viewModel.retryFriendsDashboard()
