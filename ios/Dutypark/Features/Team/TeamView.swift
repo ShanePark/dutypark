@@ -545,6 +545,16 @@ struct TeamView: View {
             daysFromStart: \.daysFromStart,
             totalDays: \.totalDays
         )
+        let duties = page.visibleIndices.map { index in
+            let day = page.days[index]
+            return page.duties.first { $0.year == day.year && $0.month == day.month && $0.day == day.day }
+        }
+        let ribbonDays = page.visibleIndices.map { index in
+            DPCalendarSpanRibbonDay(
+                dutyColor: duties[index - firstIndex]?.dutyColor,
+                isCurrentMonth: page.days[index].month == page.key.month
+            )
+        }
         return LazyVGrid(
             columns: Array(repeating: GridItem(.flexible(), spacing: DPCalendarCellStyle.gutterWidth), count: 7),
             spacing: DPCalendarCellStyle.gutterWidth
@@ -554,7 +564,7 @@ struct TeamView: View {
                     TeamCalendarDayCell(
                         day: day,
                         currentMonth: page.key.month,
-                        duty: page.duties.first { $0.year == day.year && $0.month == day.month && $0.day == day.day },
+                        duty: duties[index - firstIndex],
                         holidays: page.holidays.indices.contains(index)
                             ? page.holidays[index]
                             : [],
@@ -563,6 +573,7 @@ struct TeamView: View {
                             : [],
                         weekdayIndex: index % 7,
                         spanLanes: spanLanes[index - firstIndex],
+                        weekDays: DPCalendarSpanRibbonDay.week(containing: index - firstIndex, in: ribbonDays),
                         isSelected: day == page.selectedDay
                     ) {
                         guard !isSwipingMonth, !isSlidingMonth, !viewModel.isLoading else { return }
@@ -910,6 +921,7 @@ private struct TeamCalendarDayCell: View {
     let schedules: [TeamScheduleDTO]
     let weekdayIndex: Int
     let spanLanes: [DPCalendarSpanLanes.Placement<TeamScheduleDTO>?]
+    let weekDays: [DPCalendarSpanRibbonDay]
     let isSelected: Bool
     let action: () -> Void
 
@@ -975,7 +987,8 @@ private struct TeamCalendarDayCell: View {
                 end: schedule.endDateTime,
                 holdsStart: placement.isTrueStart,
                 holdsEnd: placement.isTrueEnd
-            )
+            ),
+            days: placement.columns.map { weekDays[$0] }
         ) {
             Text(verbatim: schedule.content)
         }

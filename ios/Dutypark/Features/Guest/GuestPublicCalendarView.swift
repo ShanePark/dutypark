@@ -303,6 +303,9 @@ struct GuestPublicCalendarView: View {
             daysFromStart: \.daysFromStart,
             totalDays: \.totalDays
         )
+        let ribbonDays = visibleCalendarDays.map {
+            DPCalendarSpanRibbonDay(dutyColor: $0.duty?.dutyColor, isCurrentMonth: $0.cell.isCurrentMonth)
+        }
         return VStack(spacing: DPCalendarCellStyle.gutterWidth) {
             DPCalendarWeekdayRow(
                 labels: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map {
@@ -316,7 +319,12 @@ struct GuestPublicCalendarView: View {
                 )
             )
             CalendarMonthCellGrid(items: visibleCalendarDays) { index, day in
-                GuestCalendarDayCell(day: day, weekday: index % 7, spanLanes: spanLanes[index])
+                GuestCalendarDayCell(
+                    day: day,
+                    weekday: index % 7,
+                    spanLanes: spanLanes[index],
+                    weekDays: DPCalendarSpanRibbonDay.week(containing: index, in: ribbonDays)
+                )
                     .onTapGesture {
                         DPHapticCenter.shared.emit(.routine)
                         withoutPresentationAnimation { model.selectedDay = day }
@@ -507,6 +515,7 @@ private struct GuestCalendarDayCell: View {
     let day: GuestCalendarDay
     let weekday: Int
     let spanLanes: [DPCalendarSpanLanes.Placement<ScheduleDTO>?]
+    let weekDays: [DPCalendarSpanRibbonDay]
 
     var body: some View {
         DPCalendarDayTile(
@@ -613,7 +622,8 @@ private struct GuestCalendarDayCell: View {
                 end: schedule.endDateTime,
                 holdsStart: placement.isTrueStart,
                 holdsEnd: placement.isTrueEnd
-            )
+            ),
+            days: placement.columns.map { weekDays[$0] }
         ) {
             scheduleTitleLine(schedule)
         }

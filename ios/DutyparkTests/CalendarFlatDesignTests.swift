@@ -153,6 +153,53 @@ struct CalendarFlatDesignTests {
         #expect(detail.contains("(\\(schedule.daysFromStart)/\\(schedule.totalDays))"), "The day detail keeps its counter")
     }
 
+    /// A multi-day schedule names the same members in its ribbon as a single-day one does
+    /// in its tile, and the ribbon's glass and ink follow the tile it starts in.
+    @Test
+    func theMemberCalendarRibbonCarriesTheScheduleTags() throws {
+        let ribbon = try declaration(
+            named: "private func spanRibbon(_ placement: DPCalendarSpanLanes.Placement<ScheduleDTO>)",
+            in: source("Dutypark/Features/Calendar/CalendarView.swift")
+        )
+        #expect(ribbon.contains("tags: ScheduleTagDisplayPolicy.displayTags(for: schedule, calendarMemberID: calendarMemberID)"))
+        #expect(ribbon.contains("DPCalendarLockBadge(onFill: isOnFill)"), "The badge sits on the tile's tone, not a white bar")
+        #expect(
+            ribbon.contains("titleFloorLeading: showsPrivateBadge(schedule) ? DPCalendarLockBadge.diameter + 2 : 0"),
+            "The badge does not eat into the characters the title keeps"
+        )
+    }
+
+    /// A title squeezed by tags keeps two characters and its ellipsis, not one character.
+    @Test
+    func aSqueezedRibbonTitleKeepsTwoCharactersAndItsEllipsis() throws {
+        let ribbon = try source("Dutypark/Components/DPCalendarSpanRibbon.swift")
+        #expect(ribbon.contains("Text(verbatim: \"가나…\")"))
+        #expect(!ribbon.contains("Text(verbatim: \"가나\")"))
+    }
+
+    /// The band is coloured day by day, so every month grid hands each tile its week row.
+    @Test
+    func everyRibbonIsColouredByTheDaysItCovers() throws {
+        let cells = [
+            try declaration(
+                named: "private struct CalendarDayCell: View",
+                in: source("Dutypark/Features/Calendar/CalendarView.swift")
+            ),
+            try declaration(
+                named: "private struct GuestCalendarDayCell: View",
+                in: source("Dutypark/Features/Guest/GuestPublicCalendarView.swift")
+            ),
+            try declaration(
+                named: "private struct TeamCalendarDayCell: View",
+                in: source("Dutypark/Features/Team/TeamView.swift")
+            ),
+        ]
+        for cell in cells {
+            #expect(cell.contains("let weekDays: [DPCalendarSpanRibbonDay]"))
+            #expect(cell.contains("days: placement.columns.map { weekDays[$0] }"))
+        }
+    }
+
     @Test
     func everyMonthGridLaysOutRibbonLanesPerWeekRow() throws {
         let grids = [

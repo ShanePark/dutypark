@@ -5,6 +5,7 @@ import { isLightColor } from '@/utils/color'
 import { dutyTypeLabel } from '@/utils/dutyAbbreviation'
 import { parseDateOnly } from '@/utils/date'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
+import CalendarSpanTags from '@/components/duty/CalendarSpanTags.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import type { HolidayDto } from '@/types'
@@ -287,6 +288,12 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
             v-if="segment.isStart && formatSpanClock(segment.item.startDateTime)"
             class="calendar-span__time"
           >{{ formatSpanClock(segment.item.startDateTime) }}~</span>
+          <CalendarSpanTags
+            v-if="getDisplayTagMembers(segment.item).length"
+            :tags="getDisplayTagMembers(segment.item)"
+            :title="segment.item.contentWithoutTime || segment.item.content"
+            :format-label="getCalendarTagLabel"
+          />
           <span
             v-if="segment.isEnd && formatSpanClock(segment.item.endDateTime)"
             class="calendar-span__time calendar-span__time--end"

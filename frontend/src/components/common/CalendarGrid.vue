@@ -146,6 +146,47 @@ function getDayStyle(day: CalendarDay): Record<string, string> {
   return isCurrentMonth(day) ? { backgroundColor: 'var(--dp-calendar-cell-bg)' } : {}
 }
 
+// White glass over a tile: strong on light fills, faint on dark ones; empty
+// tiles take the theme's tint (--calendar-span-empty-*).
+function getSpanGlass(day: CalendarDay): string {
+  const fill = getFillColor(day)
+  if (fill) return `color-mix(in srgb, #fff ${isLightColor(fill) ? 45 : 10}%, ${fill})`
+  const tile = isCurrentMonth(day) ? 'var(--dp-calendar-cell-bg)' : 'var(--calendar-surface)'
+  return `color-mix(in srgb, var(--calendar-span-empty-tint) var(--calendar-span-empty-glass), ${tile})`
+}
+
+// The ink of a covered day, as the tile's ink classes would set it.
+function getSpanInk(day: CalendarDay): string {
+  const fill = getFillColor(day)
+  if (!fill) return 'var(--dp-text-primary)'
+  return isLightColor(fill) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
+}
+
+// The band is opaque so the gutters it crosses never show through: each day's
+// stretch is the glass over that day's tile, and the gutter after a day takes
+// that day's colour. Stops are in band coordinates, where one day plus its
+// gutter is (band width + insets + gap) / days.
+function getSpanStyle(firstIndex: number, days: number): Record<string, string | number> {
+  const covered = visibleDays.value.slice(firstIndex, firstIndex + days)
+  const glasses = covered.map(getSpanGlass)
+  const perDay: Record<string, string> = {}
+  covered.forEach((coveredDay, n) => { perDay[`--calendar-span-ink-${n}`] = getSpanInk(coveredDay) })
+  glasses.forEach((glass, n) => { perDay[`--calendar-span-glass-${n}`] = glass })
+  const day = `(100% + var(--calendar-span-start) + var(--calendar-span-end) + var(--calendar-gap)) / ${days}`
+  const edge = (n: number) => `calc(${n} * ${day} - var(--calendar-span-start))`
+  const stops = glasses.map((glass, n) =>
+    `${glass} ${n === 0 ? '0' : edge(n)} ${n === glasses.length - 1 ? '100%' : edge(n + 1)}`)
+  return {
+    '--calendar-span-days': days,
+    '--calendar-span-fill': `linear-gradient(to right, ${stops.join(', ')})`,
+    // Tags read the ink and glass of the day each one sits over (CalendarSpanTags);
+    // the end time and chevron always sit on the last day.
+    ...perDay,
+    '--calendar-span-end-ink': getSpanInk(covered[covered.length - 1]!),
+    '--calendar-span-ring': glasses[glasses.length - 1]!,
+  }
+}
+
 // Slot content reads --calendar-ink* so its text stays legible on any fill.
 function getInkClass(day: CalendarDay): string | null {
   const fill = getFillColor(day)
@@ -259,7 +300,7 @@ function handleDayClick(day: CalendarDay, index: number) {
                 'calendar-span--start': lane.segment.isStart,
                 'calendar-span--end': lane.segment.isEnd,
               }"
-              :style="{ '--calendar-span-days': lane.segment.days }"
+              :style="getSpanStyle(idx, lane.segment.days)"
             >
               <slot name="span" :segment="lane.segment" />
               <ChevronRight v-if="!lane.segment.isEnd" class="calendar-span__more" aria-hidden="true" />
@@ -292,6 +333,10 @@ function handleDayClick(day: CalendarDay, index: number) {
   --calendar-today: var(--dp-danger-hover);
   --calendar-gap: 2px;
   --calendar-pad-x: 3px;
+  /* White glass would vanish on a light empty tile, so it takes a faint ink tint. */
+  --calendar-span-empty-tint: var(--dp-text-primary);
+  --calendar-span-empty-glass: 6%;
+  --calendar-span-empty-edge: color-mix(in srgb, var(--dp-text-primary) 10%, transparent);
 
   position: relative;
   display: grid;
@@ -304,6 +349,12 @@ function handleDayClick(day: CalendarDay, index: number) {
 }
 
 /* The dark prev/next surface is the page colour, so the header sits on the card instead. */
+:global(.dark .calendar-grid) {
+  --calendar-span-empty-tint: #fff;
+  --calendar-span-empty-glass: 10%;
+  --calendar-span-empty-edge: rgb(255 255 255 / 16%);
+}
+
 :global(.dark) .calendar-grid {
   --calendar-header-surface: var(--dp-calendar-cell-bg);
 }
@@ -570,16 +621,19 @@ function handleDayClick(day: CalendarDay, index: number) {
   height: 16px;
 }
 
-/* One white ribbon per week segment. It spans its days and the gutters between
-   them, is inset with rounded ends only at the schedule's true start and end,
-   and runs square to the row edge where the schedule continues into another
-   week. Clicks fall through to the day underneath. The ribbon is fixed-colour,
-   so it reads the same on any duty fill and in either theme. */
+/* One soft-glass ribbon per week segment. It spans its days and the gutters
+   between them, is inset with rounded ends only at the schedule's true start
+   and end, and runs square to the row edge where the schedule continues into
+   another week. Clicks fall through to the day underneath. Its fill is glass
+   over each covered day (getSpanStyle). Its edge and title follow the tile it
+   starts in; each tag follows the tile under it, and the end time and chevron
+   the tile it ends in. */
 .calendar-span {
   --calendar-span-inset: 2px;
   --calendar-span-radius: 4px;
   --calendar-span-start: 0px;
   --calendar-span-end: 0px;
+  --calendar-span-edge: rgb(255 255 255 / 60%);
 
   position: absolute;
   z-index: 2;
@@ -596,15 +650,23 @@ function handleDayClick(day: CalendarDay, index: number) {
   gap: 3px;
   padding: 0 4px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: inset 0 0 0 1px rgba(31, 41, 55, 0.14), 0 1px 2px rgba(31, 41, 55, 0.08);
-  color: #1f2937;
+  background: var(--calendar-span-fill);
+  box-shadow: inset 0 0 0 1px var(--calendar-span-edge);
+  color: var(--calendar-ink);
   font-size: 10px;
   line-height: 1.2;
   letter-spacing: -0.03em;
   white-space: nowrap;
   pointer-events: none;
   container-type: inline-size;
+}
+
+.calendar-day--on-dark .calendar-span {
+  --calendar-span-edge: rgb(255 255 255 / 16%);
+}
+
+.calendar-day:not(.calendar-day--on-light):not(.calendar-day--on-dark) .calendar-span {
+  --calendar-span-edge: var(--calendar-span-empty-edge);
 }
 
 .calendar-span--start {
@@ -630,7 +692,7 @@ function handleDayClick(day: CalendarDay, index: number) {
 
 :slotted(.calendar-span__time) {
   flex: none;
-  color: rgba(31, 41, 55, 0.62);
+  color: color-mix(in srgb, var(--calendar-ink) 62%, transparent);
   font-size: 0.84em;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -649,11 +711,15 @@ function handleDayClick(day: CalendarDay, index: number) {
   margin-left: auto;
 }
 
+:slotted(.calendar-span__time--end) {
+  color: color-mix(in srgb, var(--calendar-span-end-ink) 62%, transparent);
+}
+
 .calendar-span__more {
   flex: none;
   width: 0.9em;
   height: 0.9em;
-  color: rgba(31, 41, 55, 0.5);
+  color: color-mix(in srgb, var(--calendar-span-end-ink) 45%, transparent);
   stroke-width: 2.5;
 }
 

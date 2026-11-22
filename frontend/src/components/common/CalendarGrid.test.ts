@@ -106,6 +106,85 @@ describe('CalendarGrid flat month layout', () => {
   })
 })
 
+describe('CalendarGrid multi-day ribbons', () => {
+  // A ribbon from Monday 2 Nov over a light duty, a dark duty and an empty tile,
+  // one from Tuesday 10 Nov from a dark duty onto a light one, and a one-day
+  // ribbon on an empty December tile.
+  const fills: Record<number, string> = { 2: '#9DDBDE', 3: '#334155', 10: '#334155', 11: '#9DDBDE' }
+  const segment = { item: 'trip', days: 3, isStart: true, isEnd: true }
+  const mixed = { item: 'mixed', days: 2, isStart: true, isEnd: true }
+  const spanLanes = Array.from({ length: 35 }, (_, index) => {
+    if (index >= 1 && index <= 3) return [{ segment, isFirstDay: index === 1 }]
+    if (index === 9 || index === 10) return [{ segment: mixed, isFirstDay: index === 9 }]
+    if (index === 34) return [{ segment: { item: 'next', days: 1, isStart: true, isEnd: true }, isFirstDay: true }]
+    return []
+  })
+  const light = 'color-mix(in srgb, #fff 45%, #9DDBDE)'
+  const dark = 'color-mix(in srgb, #fff 10%, #334155)'
+  const band = (days: number) => {
+    const day = `(100% + var(--calendar-span-start) + var(--calendar-span-end) + var(--calendar-gap)) / ${days}`
+    return (n: number) => `calc(${n} * ${day} - var(--calendar-span-start))`
+  }
+
+  function bands() {
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays(null), currentYear: 2026, currentMonth: 11, spanLanes,
+      getDutyColor: (day: { month: number; day: number }) => (day.month === 11 ? fills[day.day] ?? null : null),
+    })))
+    return findHostNodes(mounted.root, node => hasClass(node, 'calendar-span'))
+  }
+
+  // The band is opaque: each day's stretch is the glass composited over that
+  // day's own tile, and the gutter after a day takes that day's colour, so the
+  // gutters never show through as lines. Empty tiles take a theme tint
+  // (--calendar-span-empty-*), since white glass would vanish on a white tile.
+  it('paints each covered day as glass over its own fill, gutters included', async () => {
+    await nextTick()
+    const [trip] = bands()
+    const empty = 'color-mix(in srgb, var(--calendar-span-empty-tint) var(--calendar-span-empty-glass), var(--dp-calendar-cell-bg))'
+    const edge = band(3)
+    expect(trip!.props.style).toEqual({
+      '--calendar-span-days': 3,
+      '--calendar-span-fill': `linear-gradient(to right, ${light} 0 ${edge(1)}, ${dark} ${edge(1)} ${edge(2)}, ${empty} ${edge(2)} 100%)`,
+      // Each tag takes the ink and ring of the day it sits over; the end time
+      // and chevron sit on the last day.
+      '--calendar-span-ink-0': 'var(--dp-text-on-light)',
+      '--calendar-span-ink-1': 'var(--dp-text-on-dark)',
+      '--calendar-span-ink-2': 'var(--dp-text-primary)',
+      '--calendar-span-glass-0': light,
+      '--calendar-span-glass-1': dark,
+      '--calendar-span-glass-2': empty,
+      '--calendar-span-end-ink': 'var(--dp-text-primary)',
+      '--calendar-span-ring': empty,
+    })
+  })
+
+  it('writes the end of a dark-to-light ribbon in the light tile ink', async () => {
+    await nextTick()
+    const edge = band(2)
+    expect(bands()[1]!.props.style).toEqual({
+      '--calendar-span-days': 2,
+      '--calendar-span-fill': `linear-gradient(to right, ${dark} 0 ${edge(1)}, ${light} ${edge(1)} 100%)`,
+      '--calendar-span-ink-0': 'var(--dp-text-on-dark)',
+      '--calendar-span-ink-1': 'var(--dp-text-on-light)',
+      '--calendar-span-glass-0': dark,
+      '--calendar-span-glass-1': light,
+      '--calendar-span-end-ink': 'var(--dp-text-on-light)',
+      '--calendar-span-ring': light,
+    })
+  })
+
+  it('uses the outside-month surface under an empty tile of another month', async () => {
+    await nextTick()
+    const next = bands()[2]!
+    const outside = 'color-mix(in srgb, var(--calendar-span-empty-tint) var(--calendar-span-empty-glass), var(--calendar-surface))'
+    expect(next.props.style).toMatchObject({
+      '--calendar-span-fill': `linear-gradient(to right, ${outside} 0 100%)`,
+      '--calendar-span-ring': outside,
+    })
+  })
+})
+
 describe('CalendarGrid day states', () => {
   function todayBorders(cell: HostNode) {
     return findHostNodes(cell, node => node.type === 'span' && hasClass(node, 'calendar-day-today-border'))

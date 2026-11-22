@@ -9,7 +9,7 @@ vi.mock('@/i18n', () => ({ getCurrentLocale: () => 'ko' }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'ko' }, t: (key: string) => key }) }))
 vi.mock('@lucide/vue', () => {
   const icon = defineComponent({ setup: () => () => h('span') })
-  return { Flag: icon, MessageSquareText: icon, CheckSquare: icon, ChevronRight: icon }
+  return { Flag: icon, MessageSquareText: icon, CheckSquare: icon, ChevronRight: icon, User: icon }
 })
 vi.mock('@/components/common/ProfileAvatar.vue', () => ({
   default: defineComponent({
@@ -297,20 +297,41 @@ describe('calendar derived display data', () => {
     const bands = (cell: HostNode) => findHostNodes(cell, node => hasClass(node, 'calendar-span'))
     const visible = (node: HostNode) => node.children
       .filter(child => child.type !== '#comment' && !(child.type === '#text' && !child.text))
-      .map(child => hasClass(child, 'calendar-span__more') ? '›' : hostText(child))
+      .map(child => hasClass(child, 'calendar-span__more') ? '›' : hasClass(child, 'calendar-span__tags') ? 'tags' : hostText(child))
+    // Tag widths are measured from a hidden copy of every chip, in display order.
+    const tagLabels = (band: HostNode) => findHostNodes(band, node => hasClass(node, 'span-tags-measure'))
+      .flatMap(measure => findHostNodes(measure, node => hasClass(node, 'span-tag-chip__label')).map(hostText))
 
     expect(cells.slice(4, 10).map(cell => lanes(cell).length)).toEqual([0, 1, 1, 1, 1, 0])
     expect(cells.slice(4, 10).map(cell => bands(cell).length)).toEqual([0, 1, 0, 1, 0, 0])
     const [thisWeek] = bands(cells[5]!)
     const [nextWeek] = bands(cells[7]!)
-    expect(thisWeek!.props.style).toEqual({ '--calendar-span-days': 2 })
+    expect(thisWeek!.props.style).toMatchObject({ '--calendar-span-days': 2 })
     expect(hasClass(thisWeek!, 'calendar-span--start')).toBe(true)
     expect(hasClass(thisWeek!, 'calendar-span--end')).toBe(false)
-    expect(visible(thisWeek!)).toEqual(['Schedule trip', '14:00~', '›'])
-    expect(nextWeek!.props.style).toEqual({ '--calendar-span-days': 2 })
+    expect(visible(thisWeek!)).toEqual(['Schedule trip', '14:00~', 'tags', '›'])
+    expect(nextWeek!.props.style).toMatchObject({ '--calendar-span-days': 2 })
     expect(hasClass(nextWeek!, 'calendar-span--start')).toBe(false)
     expect(hasClass(nextWeek!, 'calendar-span--end')).toBe(true)
-    expect(visible(nextWeek!)).toEqual(['Schedule trip', '~18:00'])
+    expect(visible(nextWeek!)).toEqual(['Schedule trip', 'tags', '~18:00'])
+    // Every segment carries the members a single-day item shows: owner first, the viewer left out.
+    expect(tagLabels(thisWeek!)).toEqual(['Ow…', 'Al…', 'Br…', 'Ch…'])
+    expect(tagLabels(nextWeek!)).toEqual(['Ow…', 'Al…', 'Br…', 'Ch…'])
+    expect(findHostNode(thisWeek!, node => hasClass(node, 'calendar-span__tags'))!.props['aria-hidden']).toBe('true')
+    // The tightest level is measured too: one pill with an avatar and "+N" for the other members.
+    const compactPills = findHostNodes(thisWeek!, node => hasClass(node, 'span-tags-measure'))
+      .flatMap(measure => findHostNodes(measure, node => hasClass(node, 'span-tag-pill--compact')))
+    expect(compactPills.map(pill => [
+      findHostNodes(pill, node => hasClass(node, 'span-tag-avatar')).length,
+      hostText(pill),
+    ])).toEqual([[1, '+3']])
+    // So is the lone avatar with its "+N" badge, whose overhang takes room beside the title.
+    const loneAvatars = findHostNodes(thisWeek!, node => hasClass(node, 'span-tags-measure'))
+      .flatMap(measure => findHostNodes(measure, node => hasClass(node, 'span-tag-lone')))
+    expect(loneAvatars.map(lone => [
+      findHostNodes(lone, node => hasClass(node, 'span-tag-avatar')).length,
+      hostText(findHostNode(lone, node => hasClass(node, 'span-tag-lone__more'))!),
+    ])).toEqual([[1, '+3']])
 
     // The cell list keeps only single-day schedules, and no day counter is drawn.
     const itemTitles = findHostNodes(root, node => hasClass(node, 'calendar-item__text')).map(hostText)
@@ -323,8 +344,10 @@ describe('calendar derived display data', () => {
     props.schedulesByDays = [1, 2].map(day => [{
       ...makeSchedule('overnight', day, 2), startDateTime: '2026-09-01T00:00', endDateTime: '2026-09-02T00:00',
     }])
+    props.schedulesByDays.forEach(([schedule]) => Object.assign(schedule!, { isTagged: false, tags: [] }))
     const root = mountCalendar(props)
     const band = findHostNode(root, node => String(node.props.class ?? '').split(' ').includes('calendar-span'))!
+    // Without display tags the band holds only its title.
     expect(hostText(band)).toBe('Schedule overnight')
 
     props.batchEditMode = true

@@ -1220,6 +1220,9 @@ struct CalendarView: View {
             daysFromStart: \.daysFromStart,
             totalDays: \.totalDays
         )
+        let ribbonDays = days.map {
+            DPCalendarSpanRibbonDay(dutyColor: $0.duty?.dutyColor, isCurrentMonth: $0.cell.isCurrentMonth)
+        }
 
         return CalendarMonthCellGrid(items: days) { index, day in
                 let opensDetail = isInteractive
@@ -1228,6 +1231,7 @@ struct CalendarView: View {
                     day: day,
                     weekday: index % 7,
                     spanLanes: spanLanes[index],
+                    weekDays: DPCalendarSpanRibbonDay.week(containing: index, in: ribbonDays),
                     highlighted: model.highlightedDate == day.cell.date,
                     pinnedDDay: model.pinnedDDay,
                     hidesDetails: model.isQuickDutyEditing,
@@ -2010,6 +2014,7 @@ private struct CalendarDayCell: View {
     let day: CalendarDayContent
     let weekday: Int
     let spanLanes: [DPCalendarSpanLanes.Placement<ScheduleDTO>?]
+    let weekDays: [DPCalendarSpanRibbonDay]
     let highlighted: Bool
     let pinnedDDay: DDayDTO?
     let hidesDetails: Bool
@@ -2227,11 +2232,14 @@ private struct CalendarDayCell: View {
                 end: schedule.endDateTime,
                 holdsStart: placement.isTrueStart,
                 holdsEnd: placement.isTrueEnd
-            )
+            ),
+            days: placement.columns.map { weekDays[$0] },
+            tags: ScheduleTagDisplayPolicy.displayTags(for: schedule, calendarMemberID: calendarMemberID),
+            titleFloorLeading: showsPrivateBadge(schedule) ? DPCalendarLockBadge.diameter + 2 : 0
         ) {
             HStack(spacing: 2) {
                 if showsPrivateBadge(schedule) {
-                    DPCalendarLockBadge(onFill: true)
+                    DPCalendarLockBadge(onFill: isOnFill)
                 }
                 scheduleTitleLine(schedule)
             }
