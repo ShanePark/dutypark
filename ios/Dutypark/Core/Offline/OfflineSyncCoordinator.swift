@@ -244,8 +244,25 @@ final class OfflineSyncCoordinator: ObservableObject {
             return
         }
 
-        let existingState = state(for: accountID)
-        guard !existingState.isSyncing else { return }
+        guard !state(for: accountID).isSyncing else { return }
+        // Announce a drain only when something is due. `isSyncing` drives the
+        // root banner above every tab, so an empty drain (the usual launch case)
+        // would push the whole screen down and back.
+        let dueEntries = await outbox.pendingEntries(accountID: accountID, now: now())
+        guard isCurrent(accountID: accountID, generation: generation) else { return }
+        guard !dueEntries.isEmpty else {
+            await refreshState(
+                accountID: accountID,
+                expectedGeneration: generation
+            )
+            await rescheduleEarliestRetry(
+                accountID: accountID,
+                generation: generation
+            )
+            return
+        }
+        // Another drain may have started while the outbox was being read.
+        guard !state(for: accountID).isSyncing else { return }
         updateState(for: accountID) { $0.isSyncing = true }
         defer {
             // A logout/account switch clears the snapshot and increments the

@@ -369,6 +369,33 @@ final class HomeDashboardTests: XCTestCase {
 
     /// D1: every card is the same height, so no line on it may shrink its font —
     /// a scaled-down `Text` also shrinks its line box and shortens the card.
+    /// A loading spinner shorter than the loaded section makes the friends panel
+    /// jump down when the dashboard arrives. Each loading branch lays out the
+    /// loaded section, hidden, so the panel already has its loaded height.
+    func testLoadingPanelsReserveTheLoadedSectionHeight() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+        let loadingBranches = source.components(separatedBy: "case .idle, .loading:").dropFirst()
+            .map { $0.components(separatedBy: "case .failed:")[0] }
+        XCTAssertEqual(loadingBranches.count, 2)
+
+        let myLoading = try XCTUnwrap(loadingBranches.first)
+        XCTAssertTrue(myLoading.contains("myDashboardContent(HomeLoadingPlaceholder.myDashboard)"))
+        XCTAssertTrue(myLoading.contains(".hidden()"))
+        XCTAssertTrue(myLoading.contains("loadingState"))
+
+        let friendsLoading = try XCTUnwrap(loadingBranches.last)
+        XCTAssertTrue(friendsLoading.contains("friend: HomeLoadingPlaceholder.friend"))
+        XCTAssertTrue(friendsLoading.contains("width: cardWidth"))
+        XCTAssertTrue(friendsLoading.contains(".hidden()"))
+        XCTAssertTrue(friendsLoading.contains("loadingState"))
+    }
+
+    func testLoadingPlaceholdersMatchTheCommonLoadedLayout() {
+        XCTAssertTrue(HomeLoadingPlaceholder.myDashboard.schedules.isEmpty)
+        XCTAssertNotNil(HomeLoadingPlaceholder.myDashboard.duty)
+        XCTAssertNotNil(HomeLoadingPlaceholder.friend.duty)
+    }
+
     func testHomeFriendCardLinesNeverShrinkTheirFont() throws {
         let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
 

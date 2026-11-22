@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-441": {
+          "title": "여러 날 일정의 태그 표시와 앱 시작 화면 개선",
+          "summary": "여러 날 이어지는 일정 띠에 태그된 사람이 다시 보이고, 띠는 근무 색에 자연스럽게 어울리도록 차분해졌습니다. iOS 앱을 켤 때 홈 화면이 흔들리던 문제도 고쳤습니다.",
+          "changes": [
+            "여러 날 일정 띠에 태그된 사람이 매주 표시되며, 공간이 좁으면 이름 칩, 프로필 묶음, 대표 프로필과 인원 수 순서로 자연스럽게 줄어듭니다.",
+            "일정 띠가 반투명한 톤으로 바뀌고, 띠 아래 날짜 사이 경계선이 보이지 않습니다.",
+            "iOS 앱을 처음 켤 때 동기화 안내가 깜빡이거나 홈 화면 섹션이 밀리던 문제를 고쳤습니다."
+          ]
+        },
         "pr-440": {
           "title": "달력 시간 표시와 화면 정리",
           "summary": "모바일에서도 달력에 일정 시간이 보이고, 여러 날 이어지는 일정은 한 줄의 띠로 표시됩니다. 할일 보드, 이용 안내, 설정 구성도 함께 다듬었습니다.",
@@ -2443,6 +2452,15 @@
         }
       },
       "entries": {
+        "pr-441": {
+          "title": "Tags on multi-day schedules and a steadier app launch",
+          "summary": "Tagged people show on multi-day schedule ribbons again, and the ribbon now blends softly with the duty colours. The iOS home screen no longer jumps when the app starts.",
+          "changes": [
+            "Multi-day ribbons show tagged people on every week, shrinking from name chips to stacked avatars to a lead avatar with a count when space is tight.",
+            "Ribbons use a soft translucent tone, and the lines between days no longer show through them.",
+            "Fixed the sync notice flashing and home sections shifting when the iOS app first opens."
+          ]
+        },
         "pr-440": {
           "title": "Calendar times and a tidier app",
           "summary": "Schedule times now show in the calendar on phones too, and multi-day schedules appear as one continuous ribbon. The to-do board, guide, and settings layout were tidied up as well.",
@@ -4809,6 +4827,19 @@
     }
   },
   "items": [
+    {
+      "id": "pr-441",
+      "version": "2026.11.22",
+      "date": "2026-11-22",
+      "pr": 441,
+      "url": "https://github.com/ShanePark/dutypark/pull/441",
+      "category": "fix",
+      "areas": [
+        "calendar",
+        "dashboard",
+        "ui"
+      ]
+    },
     {
       "id": "pr-440",
       "version": "2026.11.21",

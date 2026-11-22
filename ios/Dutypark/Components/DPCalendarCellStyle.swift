@@ -413,13 +413,15 @@ nonisolated struct DPCalendarItemRow<Content: View>: View {
 /// The small private-schedule badge drawn before a title. On a duty fill its colours
 /// are fixed so it reads the same in light and dark.
 nonisolated struct DPCalendarLockBadge: View {
+    static let diameter: CGFloat = 14
+
     let onFill: Bool
 
     var body: some View {
         Image(systemName: "lock")
             .font(.system(size: 8, weight: .bold))
             .foregroundStyle(DPColor.dangerHover)
-            .frame(width: 14, height: 14)
+            .frame(width: Self.diameter, height: Self.diameter)
             .background(Circle().fill(onFill ? Self.fillBackground : DPColor.dangerHover.opacity(0.10)))
             .overlay(Circle().stroke(onFill ? Self.fillBorder : DPColor.dangerHover.opacity(0.24), lineWidth: 1))
             .accessibilityHidden(true)

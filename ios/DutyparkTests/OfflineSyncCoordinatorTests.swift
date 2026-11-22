@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+import Combine
 @testable import Dutypark
 
 @MainActor
@@ -376,6 +377,58 @@ final class OfflineSyncCoordinatorTests: XCTestCase {
         XCTAssertEqual(entry.attemptCount, 0)
         XCTAssertNil(entry.nextAttemptAt)
         XCTAssertEqual(entry.state, .pending)
+    }
+
+    /// The root "syncing" banner is a sibling above every tab, so announcing a
+    /// drain with nothing to send pushes the whole screen down and back on launch.
+    func testEmptyOutboxDrainNeverAnnouncesSyncing() async {
+        let coordinator = OfflineSyncCoordinator(
+            outbox: SyncOutboxFake(),
+            transport: SyncTransportFake(),
+            now: { Date(timeIntervalSince1970: 100) },
+            networkStatusProvider: { .satisfied }
+        )
+        defer { coordinator.cancelAll() }
+        var observedSyncing = false
+        let observation = coordinator.$accountStates.sink { states in
+            if states[42]?.isSyncing == true { observedSyncing = true }
+        }
+        defer { observation.cancel() }
+
+        await coordinator.synchronize(accountID: 42)
+
+        XCTAssertFalse(observedSyncing)
+        XCTAssertFalse(coordinator.isSyncing)
+        XCTAssertNil(coordinator.state(for: 42).lastSyncAt)
+    }
+
+    func testDrainWithDueEntryAnnouncesSyncingUntilItFinishes() async throws {
+        let outbox = SyncOutboxFake()
+        let coordinator = OfflineSyncCoordinator(
+            outbox: outbox,
+            transport: SyncTransportFake(),
+            now: { Date(timeIntervalSince1970: 100) },
+            networkStatusProvider: { .satisfied }
+        )
+        defer { coordinator.cancelAll() }
+        _ = try await outbox.enqueueTodoCreate(
+            accountID: 42,
+            request: makeTodoRequest(),
+            operationID: UUID(),
+            now: Date(timeIntervalSince1970: 1)
+        )
+        var observedSyncing = false
+        let observation = coordinator.$accountStates.sink { states in
+            if states[42]?.isSyncing == true { observedSyncing = true }
+        }
+        defer { observation.cancel() }
+
+        await coordinator.synchronize(accountID: 42)
+
+        XCTAssertTrue(observedSyncing)
+        XCTAssertFalse(coordinator.isSyncing)
+        let remaining = await outbox.entries(accountID: 42)
+        XCTAssertTrue(remaining.isEmpty)
     }
 
     func testBackoffIsExponentialAndCappedAtFiveMinutes() {
