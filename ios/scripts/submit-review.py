@@ -3,7 +3,7 @@
 
 Run from the repository root after exporting an .ipa (see ios/README.md):
   ASC_KEY_ID=... ASC_ISSUER_ID=... python3 ios/scripts/submit-review.py \
-    --whats-new-ko ko.txt --whats-new-en en.txt
+    --whats-new-ko ko.txt --whats-new-en en.txt --review-summary review.txt
 
 Steps: upload with altool, wait for App Store Connect processing, prepare the
 App Store version (What's New, review notes, build), then submit it through
@@ -102,14 +102,20 @@ def default_build_number(now: Optional[datetime] = None) -> str:
     return (now or datetime.now(timezone.utc)).astimezone(KST).strftime("%Y%m%d")
 
 
-def replace_review_notes_version(notes: Optional[str], version: str) -> Optional[str]:
-    """Return notes with the leading 'Version x.y.z' replaced, or None when absent."""
+def replace_review_notes_intro(notes: Optional[str], version: str, summary: str) -> Optional[str]:
+    """Replace the leading 'Version x.y.z ...' sentence with 'Version <version> <summary>'.
+
+    Returns None when the notes do not start with that sentence. The rest of the
+    notes (review account, paths, app information) is kept as is.
+    """
     if not notes:
         return None
-    match = re.match(r"(\s*)Version\s+\d+(?:\.\d+)*", notes)
+    # The sentence ends at the first period followed by whitespace or the end, so
+    # dots inside version numbers do not end it.
+    match = re.match(r"(\s*)Version\s+\d+(?:\.\d+)*\b.*?(?:\.(?=\s|$)|$)", notes, re.DOTALL)
     if not match:
         return None
-    return f"{match.group(1)}Version {version}{notes[match.end():]}"
+    return f"{match.group(1)}Version {version} {summary}{notes[match.end():]}"
 
 
 def match_locale(localizations: list, prefix: str, preferred: str) -> dict:
@@ -303,6 +309,7 @@ class ReleaseConfig:
     build_number: str
     bundle_id: str
     whats_new: dict = field(default_factory=dict)  # {"ko": text, "en": text}
+    review_summary: str = ""  # follows "Version x.y.z " in the App Review notes
     dry_run: bool = False
     poll_interval: int = 30
     build_timeout: int = 60 * 60
@@ -492,12 +499,12 @@ class Release:
             self.log("warning: the version has no App Review details; review notes were not changed.")
             return
         notes = (detail.get("attributes") or {}).get("notes")
-        updated = replace_review_notes_version(notes, self.cfg.version)
+        updated = replace_review_notes_intro(notes, self.cfg.version, self.cfg.review_summary)
         if updated is None:
             self.log("warning: App Review notes do not start with 'Version <x.y.z>'; notes were left unchanged.")
             return
         if updated == notes:
-            self.log("App Review notes already start with the target version.")
+            self.log("App Review notes already describe this release.")
             return
         first_line = updated.strip().splitlines()[0][:80]
         self.write("PATCH", f"/v1/appStoreReviewDetails/{detail['id']}", {"data": {
@@ -610,6 +617,20 @@ def read_whats_new(path: str, label: str) -> str:
     return text
 
 
+def read_review_summary(path: str) -> str:
+    try:
+        text = Path(path).expanduser().read_text(encoding="utf-8").strip()
+    except OSError as error:
+        raise ReleaseError(f"Unable to read review summary file {path}: {error}") from error
+    if not text:
+        raise ReleaseError(f"Review summary file is empty: {path}")
+    if re.match(r"Version\b", text):
+        raise ReleaseError("Review summary must not start with 'Version'; the script adds 'Version <x.y.z>'.")
+    if not text.endswith("."):
+        raise ReleaseError("Review summary must be one sentence ending with a period.")
+    return text
+
+
 def parse_args(argv):
     parser = argparse.ArgumentParser(
         description="Upload a Dutypark iOS build and submit it for App Review via the App Store Connect API.")
@@ -623,6 +644,8 @@ def parse_args(argv):
     parser.add_argument("--ipa", help="default ios/build/testflight/local-auto-export-<version>-<build>/Dutypark.ipa")
     parser.add_argument("--whats-new-ko", required=True, metavar="FILE", help="Korean What's New text (UTF-8)")
     parser.add_argument("--whats-new-en", required=True, metavar="FILE", help="English What's New text (UTF-8)")
+    parser.add_argument("--review-summary", required=True, metavar="FILE",
+                        help="What this release changes, written to follow 'Version x.y.z ' in the App Review notes")
     parser.add_argument("--skip-upload", action="store_true", help="Skip altool; the build is already uploaded")
     parser.add_argument("--dry-run", action="store_true", help="Print the plan using read-only requests; change nothing")
     return parser.parse_args(argv)
@@ -644,6 +667,7 @@ def main(argv=None) -> int:
             raise ReleaseError(f"Build number must contain one to three numeric components: {build_number}")
         ipa = args.ipa or str(BUILD_ROOT / f"local-auto-export-{version}-{build_number}" / "Dutypark.ipa")
         whats_new = {"ko": read_whats_new(args.whats_new_ko, "Korean"), "en": read_whats_new(args.whats_new_en, "English")}
+        review_summary = read_review_summary(args.review_summary)
 
         print(f"Release version: {version}")
         print(f"Build number: {build_number}")
@@ -663,7 +687,7 @@ def main(argv=None) -> int:
             upload_build(ipa, args.key_id, args.issuer_id, key_path, dry_run=args.dry_run)
 
         config = ReleaseConfig(version=version, build_number=build_number, bundle_id=args.bundle_id,
-                               whats_new=whats_new, dry_run=args.dry_run)
+                               whats_new=whats_new, review_summary=review_summary, dry_run=args.dry_run)
         api = ApiClient(token=TokenProvider(args.key_id, args.issuer_id, key_path))
         Release(api, config).run()
         return 0

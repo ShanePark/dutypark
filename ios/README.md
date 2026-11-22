@@ -234,8 +234,8 @@ Connect processing continues asynchronously after the upload command succeeds.
 an exported `.ipa` with `xcrun altool` using an App Store Connect team API key.
 It then waits for processing and prepares the App Store version. If an editable
 version exists it is reused; otherwise a new one is created. The script then
-replaces the ko/en What's New text, updates the leading `Version x.y.z` of the
-App Review notes, attaches the build, and submits it through the
+replaces the ko/en What's New text, rewrites the first `Version x.y.z …`
+sentence of the App Review notes, attaches the build, and submits it through the
 reviewSubmissions API.
 
 Export the archive to a local `.ipa` first. Use a temporary copy of the export
@@ -254,14 +254,19 @@ xcodebuild -exportArchive \
 
 Set `ASC_KEY_ID` and `ASC_ISSUER_ID`, or pass `--key-id` and `--issuer-id`. The
 key is read from `~/.appstoreconnect/private_keys/AuthKey_<key-id>.p8` unless
-`--key-path` is given. Write the What's New text to UTF-8 files and run:
+`--key-path` is given. Write the What's New text to UTF-8 files. Also write a
+one-sentence review summary of what this release changes, without the leading
+`Version x.y.z` (for example `restores tagged friends on multi-day ribbons.`).
+The script replaces the notes' first sentence with `Version <x.y.z> <summary>`
+and keeps the rest of the notes. Then run:
 
 ```sh
 ASC_KEY_ID=<key-id> ASC_ISSUER_ID=<issuer-id> \
   python3 ios/scripts/submit-review.py \
   --build-number 20261122 \
   --whats-new-ko ios/build/testflight/whats-new-1.3.1-ko.txt \
-  --whats-new-en ios/build/testflight/whats-new-1.3.1-en.txt
+  --whats-new-en ios/build/testflight/whats-new-1.3.1-en.txt \
+  --review-summary ios/build/testflight/review-summary-1.3.1.txt
 ```
 
 The marketing version comes from `Config/Version.xcconfig` and the build number

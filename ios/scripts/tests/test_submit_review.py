@@ -155,21 +155,42 @@ class ConfigTests(unittest.TestCase):
 
 
 class ReviewNotesTests(unittest.TestCase):
-    def test_replaces_leading_version_token_only(self):
-        notes = "Version 1.3.0 adds ribbons.\nVersion 1.3.0 is mentioned again."
+    def test_replaces_leading_version_sentence_with_summary(self):
+        notes = "Version 1.3.0 adds ribbons (v1.2.9 had none). Seeded data is in August.\n\nVersion 1.3.0 again."
         self.assertEqual(
-            sr.replace_review_notes_version(notes, "1.3.1"),
-            "Version 1.3.1 adds ribbons.\nVersion 1.3.0 is mentioned again.",
+            sr.replace_review_notes_intro(notes, "1.3.1", "restores ribbon tags."),
+            "Version 1.3.1 restores ribbon tags. Seeded data is in August.\n\nVersion 1.3.0 again.",
         )
 
-    def test_keeps_leading_whitespace(self):
-        self.assertEqual(sr.replace_review_notes_version("  Version 1.2 fix", "1.3.1"), "  Version 1.3.1 fix")
+    def test_replaces_sentence_ending_at_line_end(self):
+        notes = "  Version 1.2 fixes sync.\nDemo account below."
+        self.assertEqual(sr.replace_review_notes_intro(notes, "1.3.1", "adds tags."),
+                         "  Version 1.3.1 adds tags.\nDemo account below.")
+
+    def test_replaces_whole_notes_when_sentence_has_no_period(self):
+        self.assertEqual(sr.replace_review_notes_intro("Version 1.2 fix", "1.3.1", "adds tags."),
+                         "Version 1.3.1 adds tags.")
 
     def test_returns_none_without_prefix(self):
-        self.assertIsNone(sr.replace_review_notes_version("Demo account: none", "1.3.1"))
-        self.assertIsNone(sr.replace_review_notes_version("", "1.3.1"))
-        self.assertIsNone(sr.replace_review_notes_version(None, "1.3.1"))
-        self.assertIsNone(sr.replace_review_notes_version("Versioning 1.2.3", "1.3.1"))
+        self.assertIsNone(sr.replace_review_notes_intro("Demo account: none", "1.3.1", "adds tags."))
+        self.assertIsNone(sr.replace_review_notes_intro("", "1.3.1", "adds tags."))
+        self.assertIsNone(sr.replace_review_notes_intro(None, "1.3.1", "adds tags."))
+        self.assertIsNone(sr.replace_review_notes_intro("Versioning 1.2.3", "1.3.1", "adds tags."))
+
+    def test_read_review_summary_requires_text_and_final_period(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "summary.txt"
+            path.write_text("  restores ribbon tags.\n", encoding="utf-8")
+            self.assertEqual(sr.read_review_summary(str(path)), "restores ribbon tags.")
+            path.write_text("restores ribbon tags", encoding="utf-8")
+            with self.assertRaises(sr.ReleaseError):
+                sr.read_review_summary(str(path))
+            path.write_text("Version 1.3.1 restores ribbon tags.", encoding="utf-8")
+            with self.assertRaises(sr.ReleaseError):
+                sr.read_review_summary(str(path))
+            path.write_text("", encoding="utf-8")
+            with self.assertRaises(sr.ReleaseError):
+                sr.read_review_summary(str(path))
 
 
 def loc(loc_id, locale):
@@ -378,6 +399,7 @@ def make_release(fake, dry_run=False, confirm=None, **config):
         build_number=config.get("build_number", "20261122"),
         bundle_id=sr.DEFAULT_BUNDLE_ID,
         whats_new={"ko": "새 기능", "en": "New features"},
+        review_summary=config.get("review_summary", "restores ribbon tags."),
         dry_run=dry_run,
         poll_interval=30,
         build_timeout=60 * 60,
@@ -492,7 +514,7 @@ class SubmissionFlowTests(unittest.TestCase):
         ])
         locs = {l["attributes"]["locale"]: l["attributes"]["whatsNew"] for l in fake.localizations["new"]}
         self.assertEqual(locs, {"ko": "새 기능", "en-US": "New features"})
-        self.assertEqual(fake.review_details["new"]["attributes"]["notes"], "Version 1.3.1 test notes.")
+        self.assertEqual(fake.review_details["new"]["attributes"]["notes"], "Version 1.3.1 restores ribbon tags.")
         self.assertEqual(fake.attached_builds, {"new": "build1"})
         self.assertEqual(fake.items, [("sub1", "new")])
         submitted = [b for (m, p, _q, b) in fake.calls if p == "/v1/reviewSubmissions/sub1"][0]
