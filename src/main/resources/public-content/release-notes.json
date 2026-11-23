@@ -40,6 +40,18 @@
         }
       },
       "entries": {
+        "pr-443": {
+          "title": "함께 쓰는 일정 편집과 달력 사용성 개선",
+          "summary": "관리하는 계정이 나를 태그한 일정을 내 달력에서 수정하고, 알림에서 바뀐 내용을 바로 확인할 수 있습니다. 저장 전 첨부파일 미리보기와 iOS 달력 확대도 추가했습니다.",
+          "changes": [
+            "관리하는 계정이 나를 태그한 일정을 내 달력에서 수정할 수 있고, 일정의 작성자와 마지막 수정자, 변경 이력을 확인할 수 있습니다.",
+            "일정 변경 알림에 바뀐 내용이 함께 표시되어 제목, 날짜, 시간 등의 변경을 바로 확인할 수 있습니다.",
+            "일정과 할일을 저장하기 전에 추가한 첨부파일을 미리 보고 확인할 수 있습니다.",
+            "iOS의 개인 달력과 팀 달력을 두 손가락으로 확대하고 움직일 수 있으며, 다시 오므리거나 초기화 버튼을 누르면 원래 크기로 돌아갑니다.",
+            "디데이 아이콘을 알아보기 쉬운 달력 모양으로 바꾸고, 긴 디데이 제목이 끝까지 보이도록 했습니다.",
+            "일정 제목과 시간, 비공개 아이콘의 줄바꿈을 다듬고 웹 달력의 일정 앞 점을 없앴으며, 여러 날 일정 띠의 경계선도 정돈했습니다."
+          ]
+        },
         "pr-442": {
           "title": "iOS 앱 출시 준비 자동화",
           "summary": "iOS 앱 새 버전을 App Store 심사에 더 빠르고 안정적으로 제출할 수 있도록 출시 과정을 자동화했습니다. 이용 화면에는 바뀌는 점이 없습니다.",
@@ -2460,6 +2472,18 @@
         }
       },
       "entries": {
+        "pr-443": {
+          "title": "Shared schedule editing and easier calendars",
+          "summary": "Edit schedules from accounts you manage when they tag you, and see what changed directly in notifications. Preview attachments before saving and zoom into iOS calendars.",
+          "changes": [
+            "Edit schedules that tag you from accounts you manage in your own calendar, and view the author, last editor, and change history.",
+            "Schedule change notifications show the changed details, including titles, dates, and times.",
+            "Preview newly added attachments before saving a schedule or to-do.",
+            "Pinch to zoom and pan personal and team calendars on iOS. Pinch back or tap reset to return to the original size.",
+            "D-Day entries use a clearer calendar icon and show long titles in full.",
+            "Improved wrapping of schedule titles, times, and private icons, removed the leading dot from web calendar schedules, and refined multi-day ribbon dividers."
+          ]
+        },
         "pr-442": {
           "title": "Automated iOS release submission",
           "summary": "Submitting a new iOS app version for App Store review is now automated, making releases quicker and more reliable. Nothing changes in the app itself.",
@@ -4843,6 +4867,22 @@
     }
   },
   "items": [
+    {
+      "id": "pr-443",
+      "version": "2026.11.24",
+      "date": "2026-11-24",
+      "pr": 443,
+      "url": "https://github.com/ShanePark/dutypark/pull/443",
+      "category": "feature",
+      "areas": [
+        "attachments",
+        "calendar",
+        "notifications",
+        "schedule",
+        "team",
+        "ui"
+      ]
+    },
     {
       "id": "pr-442",
       "version": "2026.11.22.02",
