@@ -1650,6 +1650,7 @@ export default {
     dropMobile: '탭해서 파일을 선택하세요',
     dropOverlay: '이곳에 파일을 놓으면 첨부됩니다',
     maxSize: '최대 {size}',
+    previewImageAria: '{name} 크게 보기',
   },
   attachmentGrid: {
     label: '첨부파일 ({count})',

@@ -10,6 +10,8 @@ import { useDragClickGuard } from '@/composables/useDragClickGuard'
 interface ImageItem {
   id: string
   originalFilename: string
+  /** Already-available full image (e.g. a local file not yet downloadable from the server). */
+  url?: string
 }
 
 interface Props {
@@ -71,6 +73,7 @@ watch(
 
 async function loadFullImage(attachmentId: string | undefined) {
   if (!attachmentId || fullImageUrls.value[attachmentId]) return
+  if (props.images.find((image) => image.id === attachmentId)?.url) return
   isLoading.value = true
   try {
     const blobUrl = await fetchAuthenticatedImage(`/api/attachments/${attachmentId}/download?inline=true`)
@@ -99,14 +102,14 @@ function nextImage() {
 function getCurrentImageUrl(): string | null {
   const image = props.images[currentIndex.value]
   if (!image) return null
-  return fullImageUrls.value[image.id] || null
+  return image.url || fullImageUrls.value[image.id] || null
 }
 
 async function downloadImage() {
   const image = props.images[currentIndex.value]
   if (!image) return
 
-  const blobUrl = await fetchAuthenticatedImage(`/api/attachments/${image.id}/download`)
+  const blobUrl = image.url || await fetchAuthenticatedImage(`/api/attachments/${image.id}/download`)
   if (blobUrl) {
     const a = document.createElement('a')
     a.href = blobUrl
@@ -114,7 +117,8 @@ async function downloadImage() {
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    URL.revokeObjectURL(blobUrl)
+    // A provided url is owned by the caller and may still be on display there.
+    if (!image.url) URL.revokeObjectURL(blobUrl)
   }
 }
 

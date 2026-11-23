@@ -51,6 +51,10 @@ private actor AttachmentCancellationClient: AttachmentPickerClient {
         )
     }
 
+    func download(_ attachment: AttachmentDTO, inline: Bool) async throws -> DownloadedAttachment {
+        throw APIError.transport
+    }
+
     func discardSession(_ sessionId: UUID) async throws {}
 
     func upload(

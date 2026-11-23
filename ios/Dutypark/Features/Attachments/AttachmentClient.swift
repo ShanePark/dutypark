@@ -87,6 +87,11 @@ nonisolated protocol AttachmentPickerClient: Sendable {
 
     func discardSession(_ sessionId: UUID) async throws
 
+    func download(
+        _ attachment: AttachmentDTO,
+        inline: Bool
+    ) async throws -> DownloadedAttachment
+
     func upload(
         _ file: AttachmentUploadFile,
         sessionId: UUID

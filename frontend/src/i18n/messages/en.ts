@@ -1745,6 +1745,7 @@ export default {
     dropMobile: 'Tap to choose files',
     dropOverlay: 'Drop the file here to attach it',
     maxSize: 'Up to {size}',
+    previewImageAria: 'View {name} larger',
   },
   attachmentGrid: {
     label: 'Attachments ({count})',
