@@ -16,6 +16,9 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.notification.event.ScheduleTaggedEvent
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
+import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
+import com.tistory.shanepark.dutypark.schedule.event.ScheduleUpdatedEvent
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -46,6 +49,7 @@ class ScheduleService(
     private val pathResolver: StoragePathResolver,
     private val eventPublisher: ApplicationEventPublisher,
     private val aiScheduleParsingConsentService: AiScheduleParsingConsentService,
+    private val revisionService: ScheduleRevisionService,
 ) {
     private val log = logger()
 
@@ -68,15 +72,25 @@ class ScheduleService(
 
         val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, member)
 
-        val userSchedules =
-            scheduleRepository.findSchedulesOfMemberRangeIn(member, start, end, visibilities = availableVisibilities)
-                .map { ScheduleDto.of(calendarView, it, isTagged = false) }
-
-        val taggedSchedules =
-            scheduleRepository.findTaggedSchedulesOfRange(member, start, end, visibilities = availableVisibilities)
-                .map { ScheduleDto.of(calendarView, it, isTagged = true) }
-
-        val allScheduleDtos = userSchedules.plus(taggedSchedules).flatten()
+        val userScheduleEntities = scheduleRepository.findSchedulesOfMemberRangeIn(
+            member, start, end, visibilities = availableVisibilities,
+        )
+        val taggedScheduleEntities = scheduleRepository.findTaggedSchedulesOfRange(
+            member, start, end, visibilities = availableVisibilities,
+        )
+        val allScheduleDtos = userScheduleEntities.flatMap { ScheduleDto.of(calendarView, it, isTagged = false) } +
+            taggedScheduleEntities.flatMap { ScheduleDto.of(calendarView, it, isTagged = true) }
+        val sourceSchedules = (userScheduleEntities + taggedScheduleEntities).associateBy { it.id }
+        val editableOwners = sourceSchedules.values.map { it.member }.distinctBy { it.id }
+            .associate { it.id to schedulePermissionService.canWrite(loginMember, it) }
+        val actorIds = sourceSchedules.values.flatMap { listOfNotNull(it.createdById, it.lastEditedById) }.distinct()
+        val actors = memberRepository.findAllById(actorIds).associateBy { it.id }
+        val delegatedIds = if (loginMember == null) emptySet() else revisionService.delegatedScheduleIds(sourceSchedules.keys)
+        val metadata = sourceSchedules.mapValues { (_, schedule) ->
+            val creator = actorPreview(schedule.createdById, schedule.createdByName, actors)
+            val editor = actorPreview(schedule.lastEditedById, schedule.lastEditedByName, actors)
+            Triple(creator, editor, loginMember != null && (schedule.member.id != loginMember.id || schedule.id in delegatedIds))
+        }
 
         val scheduleIds = allScheduleDtos.map { it.id.toString() }.distinct()
         val attachmentsByScheduleId = if (scheduleIds.isNotEmpty()) {
@@ -90,7 +104,10 @@ class ScheduleService(
         allScheduleDtos
             .map { dto ->
                 val attachments = attachmentsByScheduleId[dto.id.toString()] ?: emptyList()
-                dto.copy(attachments = attachments)
+                val info = metadata[dto.id]
+                dto.copy(attachments = attachments, canEdit = editableOwners[dto.ownerMemberId] == true,
+                    canReport = info?.third == true, canBlockWithReport = dto.id !in delegatedIds,
+                    createdBy = info?.first, lastEditedBy = info?.second)
             }
             .sortedWith(compareBy({ it.isTagged }, { it.position }, { it.startDateTime.toLocalDate() }))
             .forEach { scheduleDto ->
@@ -103,8 +120,13 @@ class ScheduleService(
         return array
     }
 
+    private fun actorPreview(id: Long?, name: String?, actors: Map<Long?, Member>): MemberPreviewDto? {
+        if (id == null && name == null) return null
+        return actors[id]?.toMemberPreviewDto() ?: MemberPreviewDto(id = id, name = name ?: "")
+    }
+
     @Transactional(readOnly = true)
-    fun getScheduleBasicInfo(loginMember: LoginMember?, scheduleId: UUID): Map<String, Any> {
+    fun getScheduleBasicInfo(loginMember: LoginMember?, scheduleId: UUID): Map<String, Any?> {
         val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
         val isTagged = loginMember != null && schedule.tags.any { it.member.id == loginMember.id }
         if (!isTagged) {
@@ -117,7 +139,17 @@ class ScheduleService(
             "memberId" to owner.id!!,
             "memberName" to owner.name,
             "startDateTime" to schedule.startDateTime.toString(),
-            "content" to schedule.content
+            "content" to schedule.content,
+            "ownerMemberId" to owner.id,
+            "canEdit" to schedulePermissionService.canWrite(loginMember, owner),
+            "canReport" to (loginMember != null && revisionService.canReport(schedule, loginMember.id)),
+            "canBlockWithReport" to revisionService.canBlockWithReport(schedule),
+            "version" to schedule.version,
+            "lastEditedAt" to schedule.lastEditedAt,
+            "lastEditedBy" to actorPreview(schedule.lastEditedById, schedule.lastEditedByName,
+                memberRepository.findAllById(listOfNotNull(schedule.lastEditedById)).associateBy { it.id }),
+            "createdBy" to actorPreview(schedule.createdById, schedule.createdByName,
+                memberRepository.findAllById(listOfNotNull(schedule.createdById)).associateBy { it.id }),
         )
     }
 
@@ -157,9 +189,11 @@ class ScheduleService(
             visibility = scheduleSaveDto.visibility
         )
 
+        schedule.createdById = loginMember.id
+        schedule.createdByName = loginMember.name
         applyAiParsingPreference(schedule, scheduleSaveDto.aiTimeParsingRequested)
         scheduleRepository.save(schedule)
-        syncScheduleTags(schedule, scheduleSaveDto.tagFriendIds.orEmpty())
+        syncScheduleTags(schedule, scheduleSaveDto.tagFriendIds.orEmpty(), loginMember)
         if (schedule.parsingTimeStatus == WAIT) {
             scheduleTimeParsingQueueManager.addTask(schedule)
         }
@@ -171,6 +205,8 @@ class ScheduleService(
             attachmentSessionId = scheduleSaveDto.attachmentSessionId,
             orderedAttachmentIds = scheduleSaveDto.orderedAttachmentIds
         )
+
+        revisionService.recordCreation(schedule, loginMember)
 
         log.auditEventAfterCommit("schedule.created", loginMember.toAuditActor(), scheduleAuditTarget(schedule),
             mapOf("visibility" to schedule.visibility.name, "parsingStatus" to schedule.parsingTimeStatus.name,
@@ -192,9 +228,13 @@ class ScheduleService(
         if (scheduleSaveDto.id == null)
             throw IllegalArgumentException("Schedule id must not be null to update")
 
-        val schedule = scheduleRepository.findById(scheduleSaveDto.id).orElseThrow()
+        val schedule = scheduleRepository.findByIdForUpdate(scheduleSaveDto.id).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
+        if (scheduleSaveDto.expectedVersion != null && scheduleSaveDto.expectedVersion != schedule.version) {
+            throw ScheduleVersionConflictException()
+        }
+        val before = revisionService.capture(schedule)
         val changedFields = mutableListOf<String>()
         if (schedule.content() != scheduleSaveDto.content) changedFields.add("content")
         if (schedule.description != scheduleSaveDto.description) changedFields.add("description")
@@ -211,7 +251,7 @@ class ScheduleService(
         )
         schedule.description = scheduleSaveDto.description
         schedule.visibility = scheduleSaveDto.visibility
-        scheduleSaveDto.tagFriendIds?.let { if (syncScheduleTags(schedule, it)) changedFields.add("tags") }
+        scheduleSaveDto.tagFriendIds?.let { if (syncScheduleTags(schedule, it, loginMember)) changedFields.add("tags") }
 
         if (
             parsingInputChanged ||
@@ -234,6 +274,11 @@ class ScheduleService(
             attachmentSessionId = scheduleSaveDto.attachmentSessionId,
             orderedAttachmentIds = orderedIds
         )
+
+        val after = revisionService.recordChange(schedule, before, loginMember)
+        if (before.hasNotifiableChanges(after)) {
+            eventPublisher.publishEvent(ScheduleUpdatedEvent(schedule.id, schedule.member.id!!, loginMember.id, schedule.version, before, after))
+        }
 
         if (previousVisibility != schedule.visibility) changedFields.add("visibility")
         if (previousParsingStatus != schedule.parsingTimeStatus) changedFields.add("parsingStatus")
@@ -286,7 +331,7 @@ class ScheduleService(
     }
 
     fun deleteSchedule(loginMember: LoginMember, id: UUID) {
-        val schedule = scheduleRepository.findById(id).orElseThrow()
+        val schedule = scheduleRepository.findByIdForUpdate(id).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
         deleteScheduleInternal(schedule, actor = loginMember.toAuditActor())
@@ -307,40 +352,47 @@ class ScheduleService(
         val contextDir = pathResolver.resolveContextDirectory(SCHEDULE, contextId)
         fileSystemService.deleteDirectory(contextDir)
 
+        revisionService.deleteAll(schedule)
         scheduleRepository.delete(schedule)
         log.auditEventAfterCommit("schedule.deleted", actor, scheduleAuditTarget(schedule),
             mapOf("attachmentCount" to attachments.size))
     }
 
     fun tagFriend(loginMember: LoginMember, scheduleId: UUID, friendId: Long) {
-        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
+        val schedule = scheduleRepository.findByIdForUpdate(scheduleId).orElseThrow()
+        val before = revisionService.capture(schedule)
         val friend = memberRepository.findById(friendId).orElseThrow()
 
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
-        addTagToSchedule(schedule, friend)
+        addTagToSchedule(schedule, friend, loginMember)
+        revisionService.recordChange(schedule, before, loginMember)
         log.auditEventAfterCommit("schedule.tag_added", loginMember.toAuditActor(), scheduleAuditTarget(schedule),
             mapOf("taggedMemberId" to friendId))
     }
 
     fun untagFriend(loginMember: LoginMember, scheduleId: UUID, memberId: Long) {
-        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
+        val schedule = scheduleRepository.findByIdForUpdate(scheduleId).orElseThrow()
+        val before = revisionService.capture(schedule)
         val member = memberRepository.findById(memberId).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
         schedule.removeTag(member)
+        revisionService.recordChange(schedule, before, loginMember)
         log.auditEventAfterCommit("schedule.tag_removed", loginMember.toAuditActor(), scheduleAuditTarget(schedule),
             mapOf("taggedMemberId" to member.id))
     }
 
     fun untagSelf(loginMember: LoginMember, scheduleId: UUID) {
-        val schedule = scheduleRepository.findById(scheduleId).orElseThrow()
+        val schedule = scheduleRepository.findByIdForUpdate(scheduleId).orElseThrow()
+        val before = revisionService.capture(schedule)
         val member = memberRepository.findById(loginMember.id).orElseThrow()
         schedule.removeTag(member)
+        revisionService.recordChange(schedule, before, loginMember, "PARTICIPATION")
         log.auditEventAfterCommit("schedule.tag_removed", loginMember.toAuditActor(), scheduleAuditTarget(schedule),
             mapOf("taggedMemberId" to member.id))
     }
 
-    private fun syncScheduleTags(schedule: Schedule, tagFriendIds: List<Long>): Boolean {
+    private fun syncScheduleTags(schedule: Schedule, tagFriendIds: List<Long>, actor: LoginMember): Boolean {
         val desiredTagIds = tagFriendIds.distinct()
         val desiredTagSet = desiredTagIds.toSet()
 
@@ -356,25 +408,26 @@ class ScheduleService(
         val addedTagIds = desiredTagIds.filterNot(existingTagIds::contains)
         addedTagIds.forEach { friendId ->
             val friend = memberRepository.findById(friendId).orElseThrow()
-            addTagToSchedule(schedule, friend)
+            addTagToSchedule(schedule, friend, actor)
         }
         return removedTagIds.isNotEmpty() || addedTagIds.isNotEmpty()
     }
 
-    private fun addTagToSchedule(schedule: Schedule, friend: Member) {
+    private fun addTagToSchedule(schedule: Schedule, friend: Member, actor: LoginMember) {
         if (!friendService.isFriend(schedule.member, friend)) {
             throw ForbiddenException("schedule.tag.notFriend")
         }
 
         schedule.addTag(friend)
-        publishScheduleTaggedEvent(schedule, friend)
+        publishScheduleTaggedEvent(schedule, friend, actor)
     }
 
-    private fun publishScheduleTaggedEvent(schedule: Schedule, friend: Member) {
+    private fun publishScheduleTaggedEvent(schedule: Schedule, friend: Member, actor: LoginMember) {
         eventPublisher.publishEvent(
             ScheduleTaggedEvent(
                 scheduleId = schedule.id,
                 ownerId = schedule.member.id!!,
+                actorId = actor.id,
                 taggedMemberId = friend.id!!,
                 scheduleTitle = schedule.content
             )

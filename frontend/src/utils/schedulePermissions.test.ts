@@ -14,6 +14,11 @@ describe('schedule permissions', () => {
     expect(canEditCalendarSchedule(true, false)).toBe(true)
   })
 
+  it('uses the server permission for managed tagged schedules', () => {
+    expect(canEditCalendarSchedule(false, true, true)).toBe(true)
+    expect(canEditCalendarSchedule(true, false, false)).toBe(false)
+  })
+
   it('does not allow editing a schedule tagged by another owner', () => {
     expect(canEditCalendarSchedule(true, true)).toBe(false)
   })

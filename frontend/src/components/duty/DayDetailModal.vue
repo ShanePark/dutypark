@@ -34,6 +34,14 @@ interface Schedule {
   endDateTime: string
   visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
   isMine: boolean
+  ownerMemberId?: number
+  canEdit?: boolean
+  canReport?: boolean
+  canBlockWithReport?: boolean
+  version?: number
+  createdBy?: { id: number | null; name: string; hasProfilePhoto?: boolean; profilePhotoVersion?: number } | null
+  lastEditedBy?: { id: number | null; name: string; hasProfilePhoto?: boolean; profilePhotoVersion?: number } | null
+  lastEditedAt?: string | null
   isTagged: boolean
   taggedBy?: string
   attachments?: Array<{
@@ -81,13 +89,16 @@ const props = withDefaults(defineProps<Props>(), {
 const { t, locale } = useI18n()
 
 interface ScheduleSaveData {
+  ownerMemberId?: number
+  expectedVersion?: number
+  complete?: (saved: boolean) => void
   id?: string
   content: string
   description: string
   startDateTime: string
   endDateTime: string
   visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
-  tagFriendIds: number[]
+  tagFriendIds?: number[]
   attachmentSessionId?: string | null
   orderedAttachmentIds?: string[]
   aiTimeParsingRequested: boolean
@@ -112,6 +123,10 @@ const emit = defineEmits<{
 const isCreateMode = ref(false)
 const isEditMode = ref(false)
 const editingScheduleId = ref<string | null>(null)
+const editingSchedule = ref<Schedule | null>(null)
+const latestEditingSchedule = computed(() => props.schedules.find(schedule => schedule.id === editingScheduleId.value))
+const hasVersionConflict = computed(() => isEditMode.value && latestEditingSchedule.value?.version != null && latestEditingSchedule.value.version !== editingSchedule.value?.version)
+const canManageTags = computed(() => props.isMyCalendar && !editingSchedule.value?.isTagged)
 const scheduleFormRef = ref<InstanceType<typeof ScheduleForm> | null>(null)
 const saveButtonRef = ref<HTMLButtonElement | null>(null)
 const isUploading = ref(false)
@@ -311,6 +326,7 @@ function startCreateMode() {
   isCreateMode.value = true
   isEditMode.value = false
   editingScheduleId.value = null
+  editingSchedule.value = null
   editAttachments.value = []
   const { year, month, day } = props.date
   const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -332,10 +348,17 @@ function startCreateMode() {
   })
 }
 
+async function reloadLatestSchedule() {
+  if (!latestEditingSchedule.value || !(await confirmDiscardChanges())) return
+  await discardScheduleForm()
+  startEditMode(latestEditingSchedule.value)
+}
+
 function startEditMode(schedule: Schedule) {
   isCreateMode.value = false
   isEditMode.value = true
   editingScheduleId.value = schedule.id
+  editingSchedule.value = schedule
 
   const start = new Date(schedule.startDateTime)
   const end = new Date(schedule.endDateTime)
@@ -386,6 +409,7 @@ function exitEditor() {
   isCreateMode.value = false
   isEditMode.value = false
   editingScheduleId.value = null
+  editingSchedule.value = null
   editAttachments.value = []
   selectedTagSummaries.value = []
   initialScheduleDraft.value = null
@@ -444,12 +468,14 @@ function buildScheduleData(): ScheduleSaveData {
 
   return {
     id: isEditMode.value ? editingScheduleId.value || undefined : undefined,
+    ownerMemberId: isEditMode.value ? editingSchedule.value?.ownerMemberId : undefined,
+    expectedVersion: isEditMode.value ? editingSchedule.value?.version : undefined,
     content: newSchedule.value.content.trim(),
     description: newSchedule.value.description.trim(),
     startDateTime,
     endDateTime,
     visibility: newSchedule.value.visibility,
-    tagFriendIds: [...newSchedule.value.tagFriendIds],
+    tagFriendIds: canManageTags.value ? [...newSchedule.value.tagFriendIds] : undefined,
     attachmentSessionId: sessionId,
     orderedAttachmentIds: orderedIds.length > 0 ? orderedIds : undefined,
     aiTimeParsingRequested: true,
@@ -466,7 +492,7 @@ async function confirmSaveWithoutAi(message: string): Promise<boolean | null> {
 }
 
 async function resolveAiTimeParsingRequest(data: ScheduleSaveData): Promise<boolean | null> {
-  if (!props.isMyCalendar) return true
+  if (!props.isMyCalendar || editingSchedule.value?.isTagged) return true
   if (!isAiTimeParsingCandidate(data.startDateTime, data.endDateTime)) return true
 
   let consent
@@ -538,7 +564,11 @@ async function saveSchedule() {
     data.aiTimeParsingRequested = aiTimeParsingRequested
 
     if (isEditMode.value) {
-      emit('editSchedule', data)
+      const saved = await new Promise<boolean>((resolve) => {
+        data.complete = resolve
+        emit('editSchedule', data)
+      })
+      if (!saved) return
     } else {
       emit('createSchedule', data)
     }
@@ -640,6 +670,14 @@ function handleUploadError(message: string) {
             @report="(schedule) => emit('reportSchedule', schedule)"
           />
 
+          <section v-if="hasVersionConflict && latestEditingSchedule" class="mb-3 rounded-lg border border-dp-border-primary bg-dp-bg-tertiary p-3 text-sm">
+            <h3 class="font-semibold text-dp-text-primary">{{ t('duty.schedule.list.latestVersion') }}</h3>
+            <p class="mt-2 font-medium break-words text-dp-text-primary">{{ latestEditingSchedule.content }}</p>
+            <p class="mt-1 whitespace-pre-wrap break-words text-dp-text-secondary">{{ latestEditingSchedule.description }}</p>
+            <p class="mt-2 text-dp-text-secondary">{{ new Date(latestEditingSchedule.startDateTime).toLocaleString() }} – {{ new Date(latestEditingSchedule.endDateTime).toLocaleString() }}</p>
+            <button type="button" class="mt-3 cursor-pointer text-dp-accent underline" @click="reloadLatestSchedule">{{ t('duty.schedule.list.reloadLatest') }}</button>
+          </section>
+          <p v-if="isEditMode && editingSchedule?.isTagged" class="mb-3 text-sm text-dp-text-secondary">{{ t('duty.schedule.list.editingOwner', { name: editingSchedule.taggedBy || '' }) }}</p>
           <ScheduleForm
             v-if="isCreateMode || isEditMode"
             ref="scheduleFormRef"
@@ -648,7 +686,7 @@ function handleUploadError(message: string) {
             :visibility-options="visibilityOptions"
             :is-edit-mode="isEditMode"
             :friends="friends"
-            :can-tag-friends="isMyCalendar"
+            :can-tag-friends="canManageTags"
             :selected-tag-summaries="selectedTagSummaries"
             @upload-start="handleUploadStart"
             @upload-complete="handleUploadComplete"

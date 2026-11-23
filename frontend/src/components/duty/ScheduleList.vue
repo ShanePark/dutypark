@@ -12,6 +12,7 @@ import {
   X,
 } from '@lucide/vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import CopyTextButton from '@/components/common/CopyTextButton.vue'
@@ -30,6 +31,14 @@ interface Schedule {
   endDateTime: string
   visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
   isMine: boolean
+  ownerMemberId?: number
+  canEdit?: boolean
+  canReport?: boolean
+  canBlockWithReport?: boolean
+  version?: number
+  createdBy?: { id: number | null; name: string; hasProfilePhoto?: boolean; profilePhotoVersion?: number } | null
+  lastEditedBy?: { id: number | null; name: string; hasProfilePhoto?: boolean; profilePhotoVersion?: number } | null
+  lastEditedAt?: string | null
   isTagged: boolean
   owner?: string
   taggedBy?: string
@@ -197,14 +206,14 @@ function getDisplayTagMembers(schedule: Schedule) {
     isTagged: schedule.isTagged,
     owner: schedule.owner,
     taggedBy: schedule.taggedBy,
-    taggedByMember: schedule.taggedByMember,
+    taggedByMember: schedule.createdBy?.id != null ? { ...schedule.createdBy, id: schedule.createdBy.id } : schedule.taggedByMember,
     tags: schedule.tags,
     excludeMemberId: props.memberId,
   })
 }
 
 function canEditSchedule(schedule: Schedule) {
-  return canEditCalendarSchedule(props.canEdit, schedule.isTagged)
+  return canEditCalendarSchedule(props.canEdit, schedule.isTagged, schedule.canEdit)
 }
 
 function canUntagSchedule(schedule: Schedule) {
@@ -213,7 +222,7 @@ function canUntagSchedule(schedule: Schedule) {
 
 function canReportSchedule(schedule: Schedule) {
   const ownerMemberId = schedule.isTagged ? schedule.taggedByMember?.id ?? null : props.memberId
-  return canReportCalendarSchedule(
+  return schedule.canReport ?? canReportCalendarSchedule(
     !!props.isLoggedIn,
     props.viewerMemberId ?? null,
     ownerMemberId,
@@ -225,7 +234,7 @@ function shouldShowVisibility(schedule: Schedule) {
 }
 
 function handleTagClick(schedule: Schedule) {
-  if (!canEditSchedule(schedule)) return
+  if (!canEditSchedule(schedule) || schedule.isTagged) return
   emit('edit', schedule)
 }
 </script>
@@ -335,6 +344,7 @@ function handleTagClick(schedule: Schedule) {
                     <Pencil class="w-4 h-4" />
                   </button>
                   <button
+                    v-if="!schedule.isTagged"
                     @click="emit('delete', { id: schedule.id, content: schedule.content })"
                     class="p-1.5 rounded-lg hover-danger cursor-pointer text-dp-danger"
                     :title="t('duty.schedule.list.delete')"
@@ -352,11 +362,18 @@ function handleTagClick(schedule: Schedule) {
               <MemberTagChips
                 :members="getDisplayTagMembers(schedule)"
                 tone="neutral"
-                :interactive="canEditSchedule(schedule)"
+                :interactive="canEditSchedule(schedule) && !schedule.isTagged"
                 :button-title="t('duty.schedule.list.editTag')"
                 :density="canEditSchedule(schedule) ? 'regular' : 'compact'"
                 @chip-click="handleTagClick(schedule)"
               />
+            </div>
+
+            <div v-if="schedule.lastEditedBy && schedule.lastEditedBy.id !== (schedule.createdBy?.id ?? schedule.ownerMemberId ?? schedule.taggedByMember?.id ?? memberId)" class="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-dp-text-muted">
+              <span>{{ t('duty.schedule.list.lastEditor') }}</span>
+              <ProfileAvatar :member-id="schedule.lastEditedBy.id" :name="schedule.lastEditedBy.name" :has-profile-photo="schedule.lastEditedBy.hasProfilePhoto" :profile-photo-version="schedule.lastEditedBy.profilePhotoVersion" size="xs" />
+              <span>{{ schedule.lastEditedBy.name }}</span>
+              <time v-if="schedule.lastEditedAt" :datetime="schedule.lastEditedAt">{{ new Date(schedule.lastEditedAt).toLocaleString() }}</time>
             </div>
 
             <div v-if="schedule.description" class="mt-2 pt-2 border-t border-dp-border-primary flex items-start gap-2">

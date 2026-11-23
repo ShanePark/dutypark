@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.report.domain.entity.ContentReport
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportReason
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportStatus
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSnapshot
 import java.time.LocalDateTime
 import java.util.*
 
@@ -25,9 +26,15 @@ data class AdminReportDetailDto(
     val adminMemo: String?,
     val resolvedAt: LocalDateTime?,
     val resolvedByName: String?,
+    val scheduleVersion: Long? = null,
+    val scheduleEvidence: String? = null,
+    val targetVersionChanged: Boolean = false,
+    val currentScheduleVersion: Long? = null,
+    val currentScheduleSnapshot: ScheduleSnapshot? = null,
 ) {
     companion object {
-        fun of(report: ContentReport, targetExists: Boolean, resolvedByName: String?): AdminReportDetailDto {
+        fun of(report: ContentReport, targetExists: Boolean, resolvedByName: String?, targetVersionChanged: Boolean = false,
+               currentScheduleVersion: Long? = null, currentScheduleSnapshot: ScheduleSnapshot? = null): AdminReportDetailDto {
             return AdminReportDetailDto(
                 id = report.id,
                 targetType = report.targetType,
@@ -46,6 +53,11 @@ data class AdminReportDetailDto(
                 adminMemo = report.adminMemo,
                 resolvedAt = report.resolvedAt,
                 resolvedByName = resolvedByName,
+                scheduleVersion = report.scheduleVersion,
+                scheduleEvidence = report.scheduleEvidence,
+                targetVersionChanged = targetVersionChanged,
+                currentScheduleVersion = currentScheduleVersion,
+                currentScheduleSnapshot = currentScheduleSnapshot,
             )
         }
     }

@@ -227,6 +227,10 @@ final class CalendarViewModel: ObservableObject {
     var targetMemberID: MemberID? { selectedMemberID ?? me?.id }
     var isMyCalendar: Bool { targetMemberID == me?.id }
     var canEdit: Bool { isMyCalendar || canManage }
+    func canEditSchedule(_ schedule: ScheduleDTO) -> Bool {
+        !isOfflineMode && (schedule.canEdit ?? (canEdit && !schedule.isTagged))
+    }
+
     var canEditDuty: Bool { canEdit && team != nil }
     var canSearchSchedules: Bool { canEdit }
     var targetName: String {
@@ -1819,7 +1823,12 @@ final class CalendarViewModel: ObservableObject {
         attachmentSessionID: UUID?, orderedAttachmentIDs: [AttachmentID],
         aiTimeParsingRequested: Bool
     ) async -> Bool {
-        guard canEdit, let memberID = targetMemberID else { return false }
+        guard let memberID = existing?.ownerMemberId ?? targetMemberID else { return false }
+        if let existing {
+            guard canEditSchedule(existing) else { return false }
+        } else {
+            guard canEdit else { return false }
+        }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 50, end >= start else {
             emit(.warning)
@@ -1859,10 +1868,11 @@ final class CalendarViewModel: ObservableObject {
             visibility: visibility,
             startDateTime: CalendarDateSupport.localDateTime(start),
             endDateTime: CalendarDateSupport.localDateTime(end),
-            tagFriendIds: isMyCalendar ? tagFriendIDs : nil,
+            tagFriendIds: isMyCalendar && existing?.isTagged != true ? tagFriendIDs : nil,
             attachmentSessionId: attachmentSessionID,
             orderedAttachmentIds: orderedAttachmentIDs,
-            aiTimeParsingRequested: aiTimeParsingRequested
+            aiTimeParsingRequested: aiTimeParsingRequested,
+            expectedVersion: existing?.version
         )
 
         if isOfflineMode {
@@ -1899,7 +1909,14 @@ final class CalendarViewModel: ObservableObject {
                 emit(.warning)
             } else {
                 scheduleSaveNotice = nil
-                emit(.success)
+                let changed = existing.map {
+                    $0.content != request.content || $0.description != request.description
+                        || $0.visibility != request.visibility
+                        || $0.startDateTime != request.startDateTime || $0.endDateTime != request.endDateTime
+                        || $0.attachments.map(\.id) != request.orderedAttachmentIds
+                        || request.tagFriendIds.map { Set($0) != Set(existing?.tags.compactMap(\.id) ?? []) } == true
+                } ?? true
+                if changed { emit(.success) }
             }
             do {
                 try await refreshSchedules()
@@ -1963,7 +1980,12 @@ final class CalendarViewModel: ObservableObject {
                     return false
                 }
             }
-            errorMessage = CalendarLocalization.text("calendar.error.save")
+            if case APIError.server(status: 409, code: _) = error {
+                try? await refreshSchedules()
+                errorMessage = CalendarLocalization.text("calendar.schedule.versionConflict")
+            } else {
+                errorMessage = CalendarLocalization.text("calendar.error.save")
+            }
             emit(.error)
             return false
         }

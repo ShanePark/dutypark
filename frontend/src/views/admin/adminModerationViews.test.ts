@@ -39,7 +39,10 @@ describe('AdminReportListView', () => {
   })
 
   it('confirms content deletion with the destructive confirmation dialog', () => {
-    expect(reportListView).toContain('confirmDelete(t(\'admin.reports.messages.deleteTargetConfirm\'')
+    expect(reportListView).toContain('confirmDelete(confirmation)')
+    expect(reportListView).toContain("t('admin.reports.messages.deleteTargetConfirm'")
+    expect(reportListView).toContain("t('report.deleteCurrentVersionConfirm'")
+    expect(reportListView).toContain('adminApi.deleteReportTarget(selectedReportId.value, expectedCurrentVersion)')
   })
 
   it('sends the admin to the reported member calendar', () => {

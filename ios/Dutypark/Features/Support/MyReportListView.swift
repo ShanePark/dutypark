@@ -152,7 +152,7 @@ struct MyReportListView: View {
             } label: {
                 HStack(alignment: .top, spacing: DPSpacing.compact) {
                     VStack(alignment: .leading, spacing: DPSpacing.small) {
-                        Text(verbatim: report.reportedMemberName)
+                        Text(verbatim: MyReportPresentation.targetName(report))
                             .font(DPTypography.label)
                             .foregroundStyle(DPColor.textPrimary)
                             .multilineTextAlignment(.leading)
@@ -199,7 +199,7 @@ struct MyReportListView: View {
         VStack(alignment: .leading, spacing: DPSpacing.compact) {
             summaryRow(
                 label: "support.reports.target",
-                value: "\(report.reportedMemberName) · "
+                value: "\(MyReportPresentation.targetName(report)) · "
                     + SupportLocalization.text(MyReportPresentation.targetTypeKey(report.targetType))
             )
             summaryRow(

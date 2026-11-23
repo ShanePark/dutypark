@@ -157,7 +157,7 @@ nonisolated enum ScheduleTagDisplayPolicy {
 
         guard schedule.isTagged else { return items }
 
-        if let taggedBy = schedule.taggedByMember, !taggedBy.name.isEmpty {
+        if let taggedBy = schedule.createdBy ?? schedule.taggedByMember, !taggedBy.name.isEmpty {
             let owner = DPMemberTagItem(
                 memberID: taggedBy.id,
                 name: taggedBy.name,
@@ -2719,15 +2719,18 @@ private struct DayDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack(spacing: 0) {
-                    if model.canEdit, !canUntag(schedule) {
+                    if model.canEditSchedule(schedule) {
                         DPIconActionButton(
                             systemImage: "pencil",
                             label: CalendarLocalization.text("calendar.schedule.edit"),
                             tone: .accent
                         ) {
+                            DPHapticCenter.shared.emit(.routine)
                             editorSchedule = schedule
                         }
+                    }
 
+                    if model.canEdit, !schedule.isTagged {
                         DPIconActionButton(
                             systemImage: "trash",
                             label: CalendarLocalization.text("calendar.schedule.delete"),
@@ -2752,6 +2755,24 @@ private struct DayDetailView: View {
             }
 
             scheduleMetadata(schedule)
+            if let editor = schedule.distinctLastEditor {
+                HStack(spacing: DPSpacing.small) {
+                    Text(CalendarLocalization.text("calendar.schedule.lastEditor"))
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.textMuted)
+                    DPMemberTagChips(items: [DPMemberTagItem(
+                        memberID: editor.id, name: editor.name,
+                        hasProfilePhoto: editor.hasProfilePhoto,
+                        profilePhotoVersion: editor.profilePhotoVersion
+                    )], size: .regular)
+                    if let editedAt = schedule.lastEditedAt,
+                       let date = NotificationPresentation.date(from: editedAt) {
+                        Text(NotificationPresentation.absoluteDate(date))
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                    }
+                }
+            }
 
             if !schedule.description.isEmpty {
                 Divider().overlay(DPColor.borderPrimary)
@@ -2765,7 +2786,7 @@ private struct DayDetailView: View {
                 Divider().overlay(DPColor.borderPrimary)
                 ScheduleAttachmentGallery(
                     schedule: schedule,
-                    canEdit: model.canEdit && !schedule.isTagged
+                    canEdit: model.canEditSchedule(schedule)
                 )
             }
         }
@@ -2810,7 +2831,9 @@ private struct DayDetailView: View {
                         reportTarget = ReportTarget(
                             type: .schedule,
                             targetID: schedule.id.uuidString,
-                            name: schedule.content
+                            name: schedule.content,
+                            scheduleVersion: schedule.version,
+                            canBlockWithReport: schedule.canBlockWithReport ?? true
                         )
                     }
                 } label: {
@@ -2854,11 +2877,11 @@ private struct DayDetailView: View {
     // Only a signed-in member can report, and only content that is not their own:
     // another member's calendar, or a schedule someone else tagged them into.
     private func canReport(_ schedule: ScheduleDTO) -> Bool {
-        CalendarReportPolicy.canReport(
+        schedule.canReport ?? CalendarReportPolicy.canReport(
             isSignedIn: model.me != nil,
             isMyCalendar: model.isMyCalendar,
             isTagged: schedule.isTagged,
-            scheduleOwnerID: schedule.taggedByMember?.id ?? model.targetMemberID,
+            scheduleOwnerID: schedule.ownerMemberId ?? schedule.taggedByMember?.id ?? model.targetMemberID,
             reporterID: model.me?.id
         )
     }
@@ -3272,6 +3295,12 @@ private struct ScheduleEditorView<Header: View>: View {
 
     private var editorForm: some View {
         VStack(spacing: DPSpacing.small) {
+            if let existing, existing.isTagged {
+                Text(existing.owner)
+                    .font(DPTypography.label)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             formRow("calendar.schedule.content") {
                 ZStack(alignment: .trailing) {
                     TextField(CalendarLocalization.text("calendar.schedule.content.placeholder"), text: $content)
@@ -3317,7 +3346,7 @@ private struct ScheduleEditorView<Header: View>: View {
             }
 
             if ScheduleFriendTagSelectorPolicy.shouldShow(
-                isMyCalendar: model.isMyCalendar,
+                isMyCalendar: model.isMyCalendar && existing?.isTagged != true,
                 currentFriendCount: model.friends.count,
                 selectedIDs: tagIDs,
                 preservedValidIDCount: existing?.tags.compactMap(\.id).count ?? 0
@@ -3734,7 +3763,7 @@ private struct ScheduleEditorView<Header: View>: View {
     private func save() {
         isSaving = true
         Task {
-            guard model.isMyCalendar else {
+            guard model.isMyCalendar && existing?.isTagged != true else {
                 await performSave(aiTimeParsingRequested: true)
                 return
             }

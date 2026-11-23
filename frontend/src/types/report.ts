@@ -21,6 +21,7 @@ export interface CreateReportRequest {
   reason: ReportReason
   detail?: string
   alsoBlock: boolean
+  scheduleVersion?: number
 }
 
 export interface CreateReportResponse {
@@ -29,6 +30,8 @@ export interface CreateReportResponse {
 
 /** What the report modal is currently pointed at. */
 export interface ReportTarget {
+  canBlockWithReport?: boolean
+  scheduleVersion?: number
   targetType: ReportTargetType
   targetId: string
   targetName: string

@@ -165,19 +165,26 @@ async function handleUpdateStatus(status: ReportResolutionStatus, memo: string) 
   }
 }
 
-async function handleDeleteTarget() {
+async function handleDeleteTarget(expectedCurrentVersion?: number) {
   const report = selectedReport.value
   if (!report || !selectedReportId.value) return
 
-  if (!await confirmDelete(t('admin.reports.messages.deleteTargetConfirm', { name: report.reportedMemberName }))) return
+  const confirmation = expectedCurrentVersion == null
+    ? t('admin.reports.messages.deleteTargetConfirm', { name: report.reportedMemberName || t('report.scheduleVersionTarget') })
+    : t('report.deleteCurrentVersionConfirm', { version: expectedCurrentVersion })
+  if (!await confirmDelete(confirmation)) return
 
   isWorking.value = true
   try {
-    const res = await adminApi.deleteReportTarget(selectedReportId.value)
+    const res = await adminApi.deleteReportTarget(selectedReportId.value, expectedCurrentVersion)
     selectedReport.value = res.data
     toastSuccess(t('admin.reports.messages.deleteTargetSuccess'))
     await fetchReports()
   } catch (error) {
+    if ((error as { response?: { status?: number } }).response?.status === 409) {
+      const refreshed = await adminApi.getReport(selectedReportId.value)
+      selectedReport.value = refreshed.data
+    }
     console.error('Failed to delete report target:', error)
     showError(resolveApiErrorMessage(error, { fallbackKey: 'admin.reports.messages.deleteTargetFailed' }, t))
   } finally {
@@ -191,14 +198,14 @@ async function handleSuspend() {
   if (!report || memberId == null) return
 
   if (!await confirm(
-    t('admin.memberDetail.suspension.suspendConfirm', { name: report.reportedMemberName }),
+    t('admin.memberDetail.suspension.suspendConfirm', { name: report.reportedMemberName || t('report.scheduleVersionTarget') }),
     t('admin.memberDetail.suspension.suspendConfirmTitle'),
   )) return
 
   isWorking.value = true
   try {
     await adminApi.suspendMember(memberId)
-    toastSuccess(t('admin.memberDetail.suspension.suspendSuccess', { name: report.reportedMemberName }))
+    toastSuccess(t('admin.memberDetail.suspension.suspendSuccess', { name: report.reportedMemberName || t('report.scheduleVersionTarget') }))
     await fetchSelectedReport()
     await fetchReports()
   } catch (error) {
@@ -215,14 +222,14 @@ async function handleUnsuspend() {
   if (!report || memberId == null) return
 
   if (!await confirm(
-    t('admin.memberDetail.suspension.unsuspendConfirm', { name: report.reportedMemberName }),
+    t('admin.memberDetail.suspension.unsuspendConfirm', { name: report.reportedMemberName || t('report.scheduleVersionTarget') }),
     t('admin.memberDetail.suspension.unsuspendConfirmTitle'),
   )) return
 
   isWorking.value = true
   try {
     await adminApi.unsuspendMember(memberId)
-    toastSuccess(t('admin.memberDetail.suspension.unsuspendSuccess', { name: report.reportedMemberName }))
+    toastSuccess(t('admin.memberDetail.suspension.unsuspendSuccess', { name: report.reportedMemberName || t('report.scheduleVersionTarget') }))
     await fetchSelectedReport()
     await fetchReports()
   } catch (error) {
@@ -338,7 +345,7 @@ onMounted(() => {
                   >{{ t(MEMBER_STATUS_LABEL_KEYS[report.reportedMember.status]) }}</span>
                 </div>
                 <p class="mt-2 font-medium truncate text-dp-text-primary">
-                  {{ t('admin.reports.row.reportedMember', { name: report.reportedMemberName }) }}
+                  {{ t('admin.reports.row.reportedMember', { name: report.reportedMemberName || t('report.scheduleVersionTarget') }) }}
                 </p>
                 <p class="text-sm truncate text-dp-text-secondary">{{ report.snapshotPreview }}</p>
                 <p class="mt-1 text-xs text-dp-text-muted">

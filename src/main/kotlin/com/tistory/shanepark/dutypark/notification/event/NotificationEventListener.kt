@@ -128,13 +128,32 @@ class NotificationEventListener(
             eventId = event.scheduleId,
             memberId = event.taggedMemberId,
             type = NotificationType.SCHEDULE_TAGGED,
-            actorId = event.ownerId,
+            actorId = event.actorId,
             referenceType = NotificationReferenceType.SCHEDULE,
             referenceId = event.scheduleId.toString(),
         ) {
             ScheduleTaggedPayload(
-                actor = actorSnapshot(event.ownerId),
+                actor = actorSnapshot(event.actorId),
                 scheduleTitle = event.scheduleTitle,
+            )
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async("notificationExecutor")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun handleScheduleUpdateNotificationPersisted(event: ScheduleUpdateNotificationPersistedEvent) {
+        val notification = notificationRepository.findById(event.notificationId).orElse(null) ?: return
+        val actorId = notification.actorId
+        if (actorId != null && blockService.isBlockedEitherWay(actorId, notification.member.id!!)) return
+        try {
+            sendPushNotification(notification, NotificationDto.of(notification, event.payload))
+        } catch (e: Exception) {
+            logNotificationFailure(
+                eventName = "schedule_updated_push", eventId = notification.referenceId,
+                notificationId = notification.id, type = notification.type, memberId = notification.member.id!!,
+                actorId = notification.actorId, actorName = event.payload.actor.name,
+                referenceType = notification.referenceType, referenceId = notification.referenceId, error = e,
             )
         }
     }

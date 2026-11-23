@@ -44,6 +44,13 @@ data class ScheduleTaggedPayload(
     val scheduleTitle: String,
 ) : ActorNotificationPayload
 
+data class ScheduleUpdatedPayload(
+    override val version: Int = 1,
+    override val actor: NotificationActorSnapshot,
+    val scheduleVersion: Long,
+    val changedFields: List<String>,
+) : ActorNotificationPayload
+
 data class TodoTaggedPayload(
     override val version: Int = 1,
     override val actor: NotificationActorSnapshot,

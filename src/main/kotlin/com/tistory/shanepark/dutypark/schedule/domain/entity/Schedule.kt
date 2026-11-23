@@ -44,6 +44,24 @@ class Schedule(
 
     ) : EntityBase() {
 
+    @Column(name = "revision_version", nullable = false)
+    var version: Long = 0
+
+    @Column(name = "created_by_id")
+    var createdById: Long? = null
+
+    @Column(name = "created_by_name", length = 50)
+    var createdByName: String? = null
+
+    @Column(name = "last_edited_by_id")
+    var lastEditedById: Long? = null
+
+    @Column(name = "last_edited_by_name", length = 50)
+    var lastEditedByName: String? = null
+
+    @Column(name = "last_edited_at")
+    var lastEditedAt: LocalDateTime? = null
+
     @Column(name = "content_without_time")
     var contentWithoutTime: String = ""
 

@@ -133,7 +133,7 @@ class OperationalLoggingTest {
         val repository: NotificationRepository = mock()
         whenever(repository.deleteByMemberIdAndIsReadTrue(12L)).thenReturn(3, 0)
         capture(NotificationService::class.java) { events ->
-            val service = NotificationService(repository, mock(), mock(), mock())
+            val service = NotificationService(repository, mock(), mock(), mock(), mock())
             assertThat(service.deleteAllRead(12L)).isEqualTo(3)
             assertThat(service.deleteAllRead(12L)).isZero()
             assertThat(events.map { it.formattedMessage }).singleElement().asString()

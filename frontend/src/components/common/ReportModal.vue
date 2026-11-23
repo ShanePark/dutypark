@@ -85,7 +85,7 @@ function handleSubmit() {
   emit('submit', {
     reason: reason.value,
     detail: detail.value.trim(),
-    alsoBlock: alsoBlock.value,
+    alsoBlock: props.target?.canBlockWithReport !== false && alsoBlock.value,
   })
 }
 </script>
@@ -118,6 +118,8 @@ function handleSubmit() {
       <p class="rounded-lg bg-dp-bg-tertiary px-3 py-2 text-sm break-all text-dp-text-primary">
         {{ targetLabel }}
       </p>
+
+      <p v-if="target?.scheduleVersion != null" class="text-sm text-dp-text-secondary">{{ t('report.versionLabel', { version: target.scheduleVersion }) }}</p>
 
       <fieldset>
         <legend class="form-label">
@@ -166,7 +168,7 @@ function handleSubmit() {
         </p>
       </div>
 
-      <div>
+      <div v-if="target?.canBlockWithReport !== false">
         <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 text-sm text-dp-text-primary hover:bg-dp-bg-hover">
           <input
             v-model="alsoBlock"

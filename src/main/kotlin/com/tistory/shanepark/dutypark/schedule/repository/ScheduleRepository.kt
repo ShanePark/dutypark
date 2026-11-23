@@ -8,12 +8,22 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Lock
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.Query
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.*
 
 interface ScheduleRepository : JpaRepository<Schedule, UUID> {
+
+    @Query("SELECT s.member.id FROM Schedule s WHERE s.id = :id")
+    fun findOwnerIdById(id: UUID): Long?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Schedule s WHERE s.id = :id")
+    fun findByIdForUpdate(id: UUID): Optional<Schedule>
+
 
     fun findFirstByMemberIdAndContentAndDescriptionAndStartDateTimeAndEndDateTimeOrderByCreatedDateAscIdAsc(
         memberId: Long,

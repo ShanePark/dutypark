@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestR
 import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleTaggedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleUpdatedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusDonePayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusInProgressPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusTodoPayload
@@ -73,6 +74,7 @@ class NotificationPayloadCodec(
                 NotificationType.FAMILY_REQUEST_RECEIVED -> FamilyRequestReceivedPayload::class.java
                 NotificationType.FAMILY_REQUEST_ACCEPTED -> FamilyRequestAcceptedPayload::class.java
                 NotificationType.SCHEDULE_TAGGED -> ScheduleTaggedPayload::class.java
+                NotificationType.SCHEDULE_UPDATED -> ScheduleUpdatedPayload::class.java
                 NotificationType.TODO_TAGGED -> TodoTaggedPayload::class.java
                 NotificationType.TODO_STATUS_TODO -> TodoStatusTodoPayload::class.java
                 NotificationType.TODO_STATUS_IN_PROGRESS -> TodoStatusInProgressPayload::class.java

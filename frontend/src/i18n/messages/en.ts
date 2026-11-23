@@ -288,6 +288,9 @@ const apiErrors = {
     self: 'You cannot block yourself.',
   },
   report: {
+    currentVersion: 'Current schedule version {version}', deleteCurrentVersion: 'Delete reviewed current schedule', deleteCurrentVersionConfirm: 'You reviewed current schedule version {version}. Delete this version?',
+    evidenceFields: { content: 'Title', displayContent: 'Display title', description: 'Description', startDateTime: 'Start', endDateTime: 'End', visibility: 'Visibility', tags: 'Tags', attachments: 'Attachments' },
+    scheduleVersionTarget: 'Schedule version report', versionLabel: 'Reported version {version}', versionEvidence: 'Version and change evidence', targetVersionChanged: 'The schedule has changed since this report. Review the current version separately.',
     self: 'You cannot report your own content.',
     detail: {
       required: 'Please describe the problem when you choose Other.',
@@ -1410,12 +1413,16 @@ export default {
         edit: 'Edit',
         delete: 'Delete',
         editTag: 'Edit tags',
+        latestVersion: 'Latest saved schedule', reloadLatest: 'Discard this draft and edit the latest version',
+        lastEditor: 'Last edited by',
+        editingOwner: 'Editing {name}’s schedule',
       },
       messages: {
         created: 'The schedule has been saved.',
         duplicate: 'An identical schedule already exists, so no new schedule was added.',
         createFailed: 'Failed to save the schedule.',
         updateFailed: 'Failed to update the schedule.',
+        versionConflict: 'Someone else changed this schedule. Your input is kept. Check the latest schedule before editing again.',
         deleteConfirm: 'Delete the schedule “{title}”?',
         deleted: 'The schedule has been deleted.',
         deleteFailed: 'Failed to delete the schedule.',

@@ -489,6 +489,13 @@ nonisolated enum MyInquiryPresentation {
 }
 
 nonisolated enum MyReportPresentation {
+    static func targetName(_ report: MyReportDTO) -> String {
+        if report.targetType == .schedule && report.reportedMemberName.isEmpty {
+            return SupportLocalization.text("support.reports.scheduleVersion")
+        }
+        return report.reportedMemberName
+    }
+
     static func statusKey(_ status: ReportStatus) -> String {
         switch status {
         case .open: "support.reports.status.open"

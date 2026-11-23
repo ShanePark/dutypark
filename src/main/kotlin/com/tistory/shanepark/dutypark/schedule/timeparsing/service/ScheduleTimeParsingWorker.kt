@@ -10,6 +10,7 @@ import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.*
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.schedule.service.ScheduleParsingResultService
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeIndicator
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
@@ -25,6 +26,7 @@ class ScheduleTimeParsingWorker(
     private val scheduleRepository: ScheduleRepository,
     private val slackEventNotifier: SlackEventNotifier,
     private val aiScheduleParsingConsentService: AiScheduleParsingConsentService,
+    private val parsingResultService: ScheduleParsingResultService,
 ) {
     private val log = logger()
     fun run(task: ScheduleTimeParsingTask): Boolean {
@@ -213,7 +215,7 @@ class ScheduleTimeParsingWorker(
         parsedEnd: LocalDateTime,
         contentWithoutTime: String,
     ): Boolean {
-        val updated = scheduleRepository.applyParsingResultIfCurrent(
+        val updated = parsingResultService.applyParsingResultIfCurrent(
             id = task.scheduleId,
             parsingGeneration = task.parsingGeneration,
             expectedStatus = WAIT,

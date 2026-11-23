@@ -171,20 +171,22 @@ struct ReportSheet: View {
             }
             .id(Field.detail)
 
-            Toggle(isOn: Binding(
-                get: { model.alsoBlock },
-                set: { model.setAlsoBlock($0) }
-            )) {
-                Label(
-                    ReportLocalization.text("report.field.alsoBlock"),
-                    systemImage: "hand.raised"
-                )
-                .font(DPTypography.supporting)
-                .foregroundStyle(DPColor.textSecondary)
+            if model.allowsCombinedBlock {
+                Toggle(isOn: Binding(
+                    get: { model.alsoBlock },
+                    set: { model.setAlsoBlock($0) }
+                )) {
+                    Label(
+                        ReportLocalization.text("report.field.alsoBlock"),
+                        systemImage: "hand.raised"
+                    )
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textSecondary)
+                }
+                .tint(DPColor.accent)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .accessibilityIdentifier("report.alsoBlock")
             }
-            .tint(DPColor.accent)
-            .frame(minHeight: DPSize.minimumTouchTarget)
-            .accessibilityIdentifier("report.alsoBlock")
         }
         .disabled(model.isSubmitting)
         .padding(DPSpacing.medium)

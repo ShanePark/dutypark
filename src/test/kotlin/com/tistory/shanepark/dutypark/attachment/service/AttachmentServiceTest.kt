@@ -79,7 +79,9 @@ class AttachmentServiceTest {
             thumbnailService,
             permissionEvaluator,
             sessionService,
-            eventPublisher
+            eventPublisher,
+            org.mockito.kotlin.mock(),
+            org.mockito.kotlin.mock(),
         )
     }
 

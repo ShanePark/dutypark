@@ -17,6 +17,14 @@ interface ContentReportRepository : JpaRepository<ContentReport, UUID> {
         status: ReportStatus,
     ): ContentReport?
 
+    fun findFirstByReporterIdAndTargetTypeAndTargetIdAndScheduleVersionAndStatus(
+        reporterId: Long,
+        targetType: ReportTargetType,
+        targetId: String,
+        scheduleVersion: Long,
+        status: ReportStatus,
+    ): ContentReport?
+
     fun findAllByStatus(status: ReportStatus, pageable: Pageable): Page<ContentReport>
 
     fun findAllByReporterIdOrderByCreatedDateDesc(reporterId: Long, pageable: Pageable): Page<ContentReport>

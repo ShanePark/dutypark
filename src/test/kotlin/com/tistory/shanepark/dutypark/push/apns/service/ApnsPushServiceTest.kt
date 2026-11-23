@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationActorSnapshot
+import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleUpdatedPayload
 import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import com.tistory.shanepark.dutypark.push.apns.domain.entity.ApnsInstallation
 import com.tistory.shanepark.dutypark.push.apns.domain.repository.ApnsInstallationRepository
@@ -41,6 +42,27 @@ import java.util.concurrent.CompletableFuture
 class ApnsPushServiceTest {
     private val repository: ApnsInstallationRepository = mock()
     private val objectMapper = TestUtils.jsr310JsonMapper()
+
+    @Test
+    fun `schedule update push names only changed fields in canonical order`() {
+        val notification = NotificationDto(
+            id = UUID.randomUUID(), type = NotificationType.SCHEDULE_UPDATED,
+            referenceType = null, referenceId = null, actorId = 2L,
+            payload = ScheduleUpdatedPayload(
+                actor = NotificationActorSnapshot("Editor", false, 0), scheduleVersion = 3,
+                changedFields = listOf("TIME", "TITLE"),
+            ),
+            isRead = false, createdAt = LocalDateTime.now(),
+        )
+        val result = disabledService().buildPayload(
+            PushNotificationPayload(type = NotificationType.SCHEDULE_UPDATED, notification = notification),
+        )
+        @Suppress("UNCHECKED_CAST")
+        val alert = (result["aps"] as Map<String, Any>)["alert"] as Map<String, Any>
+        assertThat(alert["loc-key"]).isEqualTo("notifications.items.scheduleUpdatedTitleTime")
+        assertThat(alert["loc-args"]).isEqualTo(listOf("Editor"))
+        assertThat(objectMapper.writeValueAsString(result)).doesNotContain("scheduleVersion", "before", "after")
+    }
 
     @Test
     fun `sender is a no-op until Apple credentials are configured`() {

@@ -38,6 +38,14 @@ export interface Schedule {
   endDateTime: string
   visibility: CalendarVisibility
   isMine: boolean
+  ownerMemberId?: number
+  canEdit?: boolean
+  canReport?: boolean
+  canBlockWithReport?: boolean
+  version?: number
+  createdBy?: { id: number | null; name: string; hasProfilePhoto?: boolean; profilePhotoVersion?: number } | null
+  lastEditedBy?: { id: number | null; name: string; hasProfilePhoto?: boolean; profilePhotoVersion?: number } | null
+  lastEditedAt?: string | null
   isTagged: boolean
   owner?: string
   taggedBy?: string

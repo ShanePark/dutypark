@@ -22,6 +22,20 @@ nonisolated struct ScheduleDTO: Codable, Equatable, Sendable {
     let endDate: DateOnly
     let curDate: DateOnly
     let totalDays: Int
+    var ownerMemberId: MemberID? = nil
+    var canEdit: Bool? = nil
+    var canReport: Bool? = nil
+    var canBlockWithReport: Bool? = nil
+    var version: Int64? = nil
+    var createdBy: MemberPreviewDTO? = nil
+    var lastEditedBy: MemberPreviewDTO? = nil
+    var lastEditedAt: LocalDateTimeValue? = nil
+
+    var distinctLastEditor: MemberPreviewDTO? {
+        guard let editor = lastEditedBy else { return nil }
+        let authorID = createdBy?.id ?? ownerMemberId ?? taggedByMember?.id
+        return editor.id == authorID ? nil : editor
+    }
 }
 
 nonisolated struct ScheduleSaveDTO: Codable, Equatable, Sendable {
@@ -36,6 +50,7 @@ nonisolated struct ScheduleSaveDTO: Codable, Equatable, Sendable {
     let attachmentSessionId: UUID?
     let orderedAttachmentIds: [AttachmentID]
     let aiTimeParsingRequested: Bool
+    let expectedVersion: Int64?
 
     init(
         id: ScheduleID?,
@@ -48,7 +63,8 @@ nonisolated struct ScheduleSaveDTO: Codable, Equatable, Sendable {
         tagFriendIds: [MemberID]?,
         attachmentSessionId: UUID?,
         orderedAttachmentIds: [AttachmentID],
-        aiTimeParsingRequested: Bool
+        aiTimeParsingRequested: Bool,
+        expectedVersion: Int64? = nil
     ) {
         self.id = id
         self.memberId = memberId
@@ -61,6 +77,7 @@ nonisolated struct ScheduleSaveDTO: Codable, Equatable, Sendable {
         self.attachmentSessionId = attachmentSessionId
         self.orderedAttachmentIds = orderedAttachmentIds
         self.aiTimeParsingRequested = aiTimeParsingRequested
+        self.expectedVersion = expectedVersion
     }
 }
 

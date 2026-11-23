@@ -290,6 +290,9 @@ const apiErrors = {
     self: '자기 자신은 차단할 수 없습니다.',
   },
   report: {
+    currentVersion: '현재 일정 버전 {version}', deleteCurrentVersion: '확인한 현재 일정 삭제', deleteCurrentVersionConfirm: '현재 일정 버전 {version}의 내용을 확인했습니다. 이 버전을 삭제하시겠습니까?',
+    evidenceFields: { content: '제목', displayContent: '표시 제목', description: '본문', startDateTime: '시작', endDateTime: '종료', visibility: '공개 범위', tags: '태그', attachments: '첨부파일' },
+    scheduleVersionTarget: '일정 버전 신고', versionLabel: '신고 대상 버전 {version}', versionEvidence: '버전과 변경 근거', targetVersionChanged: '신고된 뒤 일정이 수정되었습니다. 최신 버전을 별도로 확인해 주세요.',
     self: '내가 올린 콘텐츠는 신고할 수 없습니다.',
     detail: {
       required: '기타 사유를 선택한 경우 상세 내용을 입력해 주세요.',
@@ -1315,12 +1318,16 @@ export default {
         edit: '수정',
         delete: '삭제',
         editTag: '태그 수정',
+        latestVersion: '다른 사람이 저장한 최신 일정', reloadLatest: '입력 내용을 버리고 최신 버전으로 수정',
+        lastEditor: '최종 수정자',
+        editingOwner: '{name}님의 일정 수정',
       },
       messages: {
         created: '일정이 저장되었습니다.',
         duplicate: '이미 동일한 일정이 있어 새로 등록하지 않았습니다.',
         createFailed: '일정 저장에 실패했습니다.',
         updateFailed: '일정 수정에 실패했습니다.',
+        versionConflict: '다른 사람이 일정을 수정했습니다. 입력 내용은 유지됩니다. 최신 일정을 확인한 뒤 다시 수정해 주세요.',
         deleteConfirm: '“{title}” 일정을 삭제하시겠습니까?',
         deleted: '일정이 삭제되었습니다.',
         deleteFailed: '일정 삭제에 실패했습니다.',

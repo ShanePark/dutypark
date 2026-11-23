@@ -63,6 +63,8 @@ final class ReportViewModel: ObservableObject {
         ReportLocalization.format(target.type.labelKey, target.name)
     }
 
+    var allowsCombinedBlock: Bool { target.canBlockWithReport }
+
     var requiresDetail: Bool {
         reason == .other
     }
@@ -90,7 +92,7 @@ final class ReportViewModel: ObservableObject {
     }
 
     func setAlsoBlock(_ isEnabled: Bool) {
-        guard alsoBlock != isEnabled else { return }
+        guard allowsCombinedBlock, alsoBlock != isEnabled else { return }
         alsoBlock = isEnabled
         hapticCenter.emit(.selection)
     }
@@ -110,7 +112,8 @@ final class ReportViewModel: ObservableObject {
             targetId: target.targetID,
             reason: reason,
             detail: ReportSubmissionPolicy.normalizedDetail(detail),
-            alsoBlock: alsoBlock
+            alsoBlock: allowsCombinedBlock && alsoBlock,
+            scheduleVersion: target.scheduleVersion
         )
         do {
             try await repository.createReport(request)

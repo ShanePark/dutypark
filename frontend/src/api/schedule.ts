@@ -15,6 +15,14 @@ export interface ScheduleDto {
   startDateTime: string
   endDateTime: string
   isTagged: boolean
+  ownerMemberId?: number
+  canEdit?: boolean
+  canReport?: boolean
+  canBlockWithReport?: boolean
+  version?: number
+  createdBy?: ScheduleTagMemberDto | null
+  lastEditedBy?: ScheduleTagMemberDto | null
+  lastEditedAt?: string | null
   owner: string
   taggedByMember?: ScheduleTagMemberDto | null
   tags: ScheduleTagMemberDto[]
@@ -50,6 +58,7 @@ export interface ScheduleAttachmentDto {
 }
 
 export interface ScheduleSaveDto {
+  expectedVersion?: number
   id?: string
   memberId: number
   content: string

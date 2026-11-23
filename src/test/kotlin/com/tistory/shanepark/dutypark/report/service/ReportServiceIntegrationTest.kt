@@ -14,6 +14,9 @@ import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
 import com.tistory.shanepark.dutypark.report.repository.ContentReportRepository
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRevisionRepository
+import com.tistory.shanepark.dutypark.schedule.service.ScheduleRevisionService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import org.assertj.core.api.Assertions.assertThat
@@ -29,10 +32,19 @@ class ReportServiceIntegrationTest : DutyparkIntegrationTest() {
     lateinit var reportService: ReportService
 
     @Autowired
+    lateinit var adminReportService: AdminReportService
+
+    @Autowired
     lateinit var contentReportRepository: ContentReportRepository
 
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
+
+    @Autowired
+    lateinit var revisionService: ScheduleRevisionService
+
+    @Autowired
+    lateinit var revisionRepository: ScheduleRevisionRepository
 
     @Autowired
     lateinit var todoRepository: TodoRepository
@@ -110,6 +122,8 @@ class ReportServiceIntegrationTest : DutyparkIntegrationTest() {
         val report = contentReportRepository.findById(result.id).orElseThrow()
         assertThat(report.reportedMember?.id).isEqualTo(TestData.member2.id)
         assertThat(report.reportedMemberName).isEqualTo(TestData.member2.name)
+        assertThat(report.scheduleVersion).isEqualTo(0L)
+        assertThat(report.scheduleEvidence).contains("회식", "장소는 여기")
         assertThat(report.contentSnapshot)
             .isEqualTo("제목: 회식\n내용: 장소는 여기\n첨부: photo1.png, photo2.png")
     }
@@ -135,7 +149,7 @@ class ReportServiceIntegrationTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `schedule description is truncated to 300 characters`() {
+    fun `schedule report preserves full description as evidence`() {
         val schedule = saveSchedule(TestData.member2, content = "긴 일정", description = "가".repeat(400))
         flushAndClear()
 
@@ -151,7 +165,108 @@ class ReportServiceIntegrationTest : DutyparkIntegrationTest() {
         flushAndClear()
 
         val report = contentReportRepository.findById(result.id).orElseThrow()
-        assertThat(report.contentSnapshot).isEqualTo("제목: 긴 일정\n내용: ${"가".repeat(300)}\n첨부: 없음")
+        assertThat(report.contentSnapshot).isEqualTo("제목: 긴 일정\n내용: ${"가".repeat(400)}\n첨부: 없음")
+    }
+
+    @Test
+    fun `report pins the requested version independently from later changes and deletion`() {
+        val schedule = saveSchedule(TestData.member2, content = "Before", description = "Original body")
+        revisionService.ensureBaseline(schedule)
+        val before = revisionService.capture(schedule)
+        schedule.content = "Reported title"
+        schedule.description = "Reported body"
+        revisionService.recordChange(schedule, before, LoginMember(id = TestData.member.id!!, name = TestData.member.name))
+        val reportedVersion = schedule.version
+        val after = revisionService.capture(schedule)
+        schedule.description = "Later body"
+        revisionService.recordChange(schedule, after, LoginMember(id = TestData.member2.id!!, name = TestData.member2.name))
+        flushAndClear()
+
+        val result = reportService.createReport(
+            TestData.member.id!!,
+            CreateReportRequest(ReportTargetType.SCHEDULE, schedule.id.toString(), ReportReason.SPAM,
+                scheduleVersion = reportedVersion),
+        )
+        flushAndClear()
+        val report = contentReportRepository.findById(result.id).orElseThrow()
+        assertThat(report.scheduleVersion).isEqualTo(reportedVersion)
+        assertThat(report.reportedMember).isNull()
+        assertThat(report.contentSnapshot).contains("Reported title", "Reported body").doesNotContain("Later body")
+        val detail = adminReportService.findReport(result.id)
+        assertThat(detail.targetVersionChanged).isTrue()
+        assertThat(detail.currentScheduleVersion).isEqualTo(schedule.version)
+        assertThat(detail.currentScheduleSnapshot?.description).isEqualTo("Later body")
+        val evidence = report.scheduleEvidence
+        assertThat(evidence).contains("Reported body", TestData.member.name).doesNotContain("Later body", "Original body")
+
+        scheduleRepository.deleteById(schedule.id)
+        flushAndClear()
+
+        assertThat(revisionRepository.findAllByScheduleIdAndVersionLessThanEqualOrderByVersionAsc(schedule.id, Long.MAX_VALUE)).isEmpty()
+        assertThat(contentReportRepository.findById(result.id).orElseThrow().scheduleEvidence).isEqualTo(evidence)
+    }
+
+    @Test
+    fun `owner can report delegated changes after editing time and cannot accidentally block themselves`() {
+        val schedule = saveSchedule(TestData.member, content = "My schedule", description = "Original")
+        revisionService.ensureBaseline(schedule)
+        val before = revisionService.capture(schedule)
+        schedule.description = "Delegated edit"
+        revisionService.recordChange(schedule, before, LoginMember(id = TestData.member2.id!!, name = TestData.member2.name))
+        val delegated = revisionService.capture(schedule)
+        schedule.startDateTime = schedule.startDateTime.plusHours(1)
+        schedule.endDateTime = schedule.endDateTime.plusHours(1)
+        revisionService.recordChange(schedule, delegated, LoginMember(id = TestData.member.id!!, name = TestData.member.name))
+        flushAndClear()
+        val request = CreateReportRequest(ReportTargetType.SCHEDULE, schedule.id.toString(), ReportReason.HARASSMENT,
+            alsoBlock = true, scheduleVersion = schedule.version)
+
+        val first = reportService.createReport(TestData.member.id!!, request)
+        val duplicate = reportService.createReport(TestData.member.id!!, request)
+        flushAndClear()
+
+        assertThat(first.isNew).isTrue()
+        assertThat(duplicate.id).isEqualTo(first.id)
+        assertThat(duplicate.isNew).isFalse()
+        assertThat(memberBlockRepository.findAll()).isEmpty()
+        val evidence = objectMapper.readTree(contentReportRepository.findById(first.id).orElseThrow().scheduleEvidence)
+        assertThat(evidence["snapshot"]["description"].asText()).isEqualTo("Delegated edit")
+        assertThat(evidence["fieldAuthors"]["description"]["actorId"].asLong()).isEqualTo(TestData.member2.id)
+        assertThat(evidence["fieldAuthors"]["startDateTime"]["actorId"].asLong()).isEqualTo(TestData.member.id)
+    }
+
+    @Test
+    fun `owner-authored schedule report preserves combined blocking`() {
+        val schedule = saveSchedule(TestData.member2, content = "Owner authored", description = "")
+        flushAndClear()
+
+        val result = reportService.createReport(TestData.member.id!!,
+            CreateReportRequest(ReportTargetType.SCHEDULE, schedule.id.toString(), ReportReason.SPAM,
+                alsoBlock = true, scheduleVersion = 0))
+        flushAndClear()
+
+        assertThat(result.isNew).isTrue()
+        assertThat(memberBlockRepository.existsBetween(TestData.member.id!!, TestData.member2.id!!)).isTrue()
+        assertThat(contentReportRepository.findById(result.id).orElseThrow().reportedMember?.id)
+            .isEqualTo(TestData.member2.id)
+    }
+
+    @Test
+    fun `reports for different versions of a schedule are distinct`() {
+        val schedule = saveSchedule(TestData.member2, content = "Version zero", description = "")
+        revisionService.ensureBaseline(schedule)
+        val first = reportService.createReport(TestData.member.id!!,
+            CreateReportRequest(ReportTargetType.SCHEDULE, schedule.id.toString(), ReportReason.SPAM, scheduleVersion = 0))
+        val before = revisionService.capture(schedule)
+        schedule.content = "Version one"
+        revisionService.recordChange(schedule, before, LoginMember(id = TestData.member2.id!!, name = TestData.member2.name))
+        flushAndClear()
+
+        val second = reportService.createReport(TestData.member.id!!,
+            CreateReportRequest(ReportTargetType.SCHEDULE, schedule.id.toString(), ReportReason.SPAM, scheduleVersion = 1))
+
+        assertThat(second.isNew).isTrue()
+        assertThat(second.id).isNotEqualTo(first.id)
     }
 
     @Test

@@ -47,7 +47,7 @@ class ScheduleController(
     fun getSchedule(
         @Login(required = false) loginMember: LoginMember?,
         @PathVariable id: UUID
-    ): Map<String, Any> {
+    ): Map<String, Any?> {
         return scheduleService.getScheduleBasicInfo(loginMember, id)
     }
 

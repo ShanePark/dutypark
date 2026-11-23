@@ -30,7 +30,8 @@ describe('ReportModal', () => {
 
   it('lets the reporter block the same user in one submission', () => {
     expect(reportModal).toContain('const alsoBlock = ref(false)')
-    expect(reportModal).toContain('alsoBlock: alsoBlock.value')
+    expect(reportModal).toContain("alsoBlock: props.target?.canBlockWithReport !== false && alsoBlock.value")
+    expect(reportModal).toContain("v-if=\"target?.canBlockWithReport !== false\"")
     expect(reportModal).toContain("t('report.modal.alsoBlock')")
   })
 

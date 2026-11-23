@@ -47,6 +47,9 @@ class NotificationServiceTest {
     @Mock
     private lateinit var friendRequestRepository: FriendRequestRepository
 
+    @Mock
+    private lateinit var scheduleChangesService: ScheduleNotificationChangesService
+
     private lateinit var notificationPayloadCodec: NotificationPayloadCodec
     private lateinit var notificationService: NotificationService
 
@@ -55,12 +58,14 @@ class NotificationServiceTest {
 
     @BeforeEach
     fun setUp() {
+        org.mockito.Mockito.lenient().`when`(scheduleChangesService.enrich(any(), any())).thenAnswer { it.getArgument(1) }
         notificationPayloadCodec = NotificationPayloadCodec(jacksonMapperBuilder().build())
         notificationService = NotificationService(
             notificationRepository = notificationRepository,
             memberRepository = memberRepository,
             friendRequestRepository = friendRequestRepository,
             notificationPayloadCodec = notificationPayloadCodec,
+            scheduleChangesService = scheduleChangesService,
         )
 
         testMember = Member(name = "testUser", email = "test@test.com", password = "password")
@@ -419,6 +424,7 @@ class NotificationServiceTest {
             memberRepository = memberRepository,
             friendRequestRepository = friendRequestRepository,
             notificationPayloadCodec = codec,
+            scheduleChangesService = scheduleChangesService,
         )
         val notification = Notification(
             member = testMember,

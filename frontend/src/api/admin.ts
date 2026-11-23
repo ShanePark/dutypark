@@ -135,8 +135,9 @@ export const adminApi = {
   /**
    * Delete the reported content. Member targets are not deletable.
    */
-  deleteReportTarget(reportId: string) {
-    return adminClient.delete<AdminReportDetailDto>(`/reports/${reportId}/target`)
+  deleteReportTarget(reportId: string, expectedCurrentVersion?: number) {
+    if (expectedCurrentVersion == null) return adminClient.delete<AdminReportDetailDto>(`/reports/${reportId}/target`)
+    return adminClient.delete<AdminReportDetailDto>(`/reports/${reportId}/target`, { params: { expectedCurrentVersion } })
   },
 
   // ========== Inquiry Management ==========
