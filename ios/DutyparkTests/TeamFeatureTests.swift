@@ -801,6 +801,87 @@ struct TeamFeatureTests {
     }
 
     @Test @MainActor
+    func teamCalendarPinchCoexistsWithInteractiveTilesAndOuterScrolling() async throws {
+        TeamURLProtocolStub.handler = { request in Self.fullMonthTeamLoadResponse(request) }
+        defer { TeamURLProtocolStub.handler = nil }
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1))
+        )
+        await viewModel.load(memberID: 1)
+        let session = SessionStore(initialState: .guest)
+        let host = UIHostingController(rootView:
+            NavigationStack {
+                TeamView(viewModel: viewModel)
+                    .environmentObject(session)
+            }
+        )
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 375, height: 480))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+
+        func render() {
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+            host.view.layoutIfNeeded()
+        }
+
+        func recognizers(in view: UIView) -> [UIGestureRecognizer] {
+            (view.gestureRecognizers ?? []) + view.subviews.flatMap { recognizers(in: $0) }
+        }
+
+        render()
+        let gestures = recognizers(in: host.view)
+        let pinch = try #require(gestures.first { $0 is UIPinchGestureRecognizer && $0.delegate is DPCalendarZoomCoordinator })
+        let zoom = try #require(pinch.delegate as? DPCalendarZoomCoordinator)
+        let anchor = try #require(zoom.anchor)
+        let outerScroll = try #require(pinch.view as? UIScrollView)
+        let monthPan = try #require(gestures.first { $0.delegate is DPHorizontalPanCoordinator })
+        #expect(anchor.bounds.width > 0)
+        #expect(anchor.bounds.height > 0)
+        #expect(monthPan.view === outerScroll)
+
+        let scrollDistance = min(40, max(0, outerScroll.contentSize.height - outerScroll.bounds.height))
+        #expect(scrollDistance > 0)
+        outerScroll.setContentOffset(CGPoint(x: 0, y: scrollDistance), animated: false)
+        render()
+        let visibleAnchor = anchor.convert(anchor.bounds, to: host.view).intersection(host.view.bounds)
+        #expect(!visibleAnchor.isEmpty)
+        #expect(outerScroll.contentOffset.y > 0)
+        #expect(
+            zoom.gestureRecognizer(pinch, shouldRecognizeSimultaneouslyWith: outerScroll.panGestureRecognizer),
+            "The calendar pinch must coexist with its enclosing scroll recognizer until the pinch begins"
+        )
+        let competitors = (outerScroll.gestureRecognizers ?? []).filter {
+            $0 !== pinch && $0 !== zoom.pan && !($0 is UIHoverGestureRecognizer)
+        }
+        #expect(!competitors.isEmpty)
+        for competitor in competitors {
+            #expect(
+                zoom.gestureRecognizer(pinch, shouldRecognizeSimultaneouslyWith: competitor),
+                "A native pinch must be able to begin alongside the existing \(String(describing: type(of: competitor)))"
+            )
+            #expect(!zoom.gestureRecognizer(zoom.pan, shouldRecognizeSimultaneouslyWith: competitor))
+        }
+
+        let focus = CGPoint(x: anchor.bounds.midX, y: anchor.bounds.midY)
+        zoom.handlePinch(state: .began, scale: 1, location: focus)
+        zoom.handlePinch(state: .changed, scale: 2, location: focus)
+        zoom.handlePinch(state: .ended, scale: 2, location: focus)
+        render()
+        #expect(zoom.isZoomed())
+        #expect(!monthPan.isEnabled)
+        #expect(outerScroll.panGestureRecognizer.isEnabled)
+        #expect(viewModel.calendarMonth == OfflineMonthKey(year: 2026, month: 8))
+        window.isHidden = true
+        window.rootViewController = nil
+        render()
+        try await Task.sleep(for: .milliseconds(100))
+    }
+
+    @Test @MainActor
     func teamCalendarPanPreservesScrollingAndSupportsCancelSuccessFailureAndRetry() async throws {
         TeamURLProtocolStub.handler = { request in Self.fullMonthTeamLoadResponse(request) }
         TeamURLProtocolStub.calendarRequestCount = 0

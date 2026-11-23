@@ -1,6 +1,7 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "calendar.zoom.reset" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Actual size" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "원래 크기" } } } },
     "calendar.ok" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } } } },
     "calendar.cancel" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } } } },
     "calendar.close" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "닫기" } } } },

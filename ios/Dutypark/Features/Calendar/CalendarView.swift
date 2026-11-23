@@ -221,6 +221,7 @@ struct CalendarView: View {
     @State private var monthSlideTask: Task<Void, Never>?
     @State private var isSlidingMonth = false
     @State private var isSwipingMonth = false
+    @State private var isCalendarZoomActive = false
     @State private var leavesAfterBlock = false
     @State private var refreshesAfterReportedBlock = false
     @StateObject private var blockModel = MemberBlockViewModel()
@@ -1199,6 +1200,7 @@ struct CalendarView: View {
         // so a scroll that set off with the slightest sideways lean never reached
         // the page underneath. This one takes sideways drags and nothing else.
         .dpHorizontalPan(
+            isEnabled: !isCalendarZoomActive,
             onChanged: followMonthSwipe,
             onEnded: finishMonthSwipe,
             onCancelled: cancelMonthSwipe
@@ -1315,7 +1317,12 @@ struct CalendarView: View {
     // Swiping the grid sideways is the quick way through the months; the chevrons in
     // the navigation bar stay for taps and for VoiceOver, which never sees this drag.
     private var swipeableCalendarGrid: some View {
-        calendarGrid
+        DPCalendarZoom(
+            resetID: AnyHashable("\(model.targetMemberID?.description ?? "self")-\(displayedMonthKey.year)-\(displayedMonthKey.month)-\(model.isQuickDutyEditing)"),
+            isActive: $isCalendarZoomActive
+        ) {
+            calendarGrid
+        }
     }
 
     private func beginMonthTransitionIfNeeded() {
@@ -1365,7 +1372,7 @@ struct CalendarView: View {
     }
 
     private func followMonthSwipe(translation: CGSize) {
-        guard !isSlidingMonth, !model.isLoading else { return }
+        guard !isCalendarZoomActive, !isSlidingMonth, !model.isLoading else { return }
         beginMonthTransitionIfNeeded()
         guard monthTransition != nil else { return }
         let drag = CalendarMonthSwipe.followOffset(
@@ -1377,7 +1384,7 @@ struct CalendarView: View {
     }
 
     private func finishMonthSwipe(translation: CGSize, velocity: CGSize) {
-        guard !isSlidingMonth else { return }
+        guard !isCalendarZoomActive, !isSlidingMonth else { return }
         let offset = CalendarMonthSwipe.monthOffset(
             translation: translation,
             velocity: velocity,
