@@ -16,6 +16,9 @@ class SchedulePermissionService(
     private val friendService: FriendService,
     private val memberService: MemberService
 ) {
+    fun canWrite(loginMember: LoginMember?, scheduleMember: Member): Boolean =
+        loginMember != null && (scheduleMember.isEquals(loginMember) || memberService.isManager(loginMember, scheduleMember))
+
     fun checkScheduleWriteAuthority(loginMember: LoginMember, scheduleMember: Member) {
         if (scheduleMember.isEquals(loginMember = loginMember)) return
         if (memberService.isManager(isManager = loginMember, target = scheduleMember)) return

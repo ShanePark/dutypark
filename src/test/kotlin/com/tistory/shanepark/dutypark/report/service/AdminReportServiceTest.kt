@@ -23,8 +23,11 @@ import java.time.LocalDateTime
 import java.util.Optional
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.slf4j.LoggerFactory
 
@@ -42,6 +45,7 @@ class AdminReportServiceTest {
         todoRepository,
         scheduleService,
         todoService,
+        mock(),
     )
 
     @Test
@@ -103,7 +107,7 @@ class AdminReportServiceTest {
         )
         val scheduleReport = report(ReportTargetType.SCHEDULE, schedule.id.toString())
         whenever(contentReportRepository.findById(scheduleReport.id)).thenReturn(Optional.of(scheduleReport))
-        whenever(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(schedule.id)).thenReturn(Optional.of(schedule))
 
         service.deleteTarget(scheduleReport.id, loginMember = actor)
 
@@ -122,6 +126,53 @@ class AdminReportServiceTest {
         service.deleteTarget(todoReport.id, loginMember = actor)
 
         verify(todoService).deleteTodoInternal(todo, actor = actor.toAuditActor())
+    }
+
+    @Test
+    fun `moderation cannot delete a newer schedule using evidence from an older version`() {
+        val schedule = Schedule(
+            member = Member(name = "Owner"), content = "Changed schedule",
+            startDateTime = LocalDateTime.of(2026, 11, 23, 9, 0),
+            endDateTime = LocalDateTime.of(2026, 11, 23, 10, 0),
+        )
+        val report = ContentReport(
+            reporter = null, reportedMember = null,
+            targetType = ReportTargetType.SCHEDULE, targetId = schedule.id.toString(),
+            reason = ReportReason.SPAM, contentSnapshot = "Reported version",
+            reporterName = "Reporter", reportedMemberName = "", scheduleVersion = 1L,
+        )
+        whenever(contentReportRepository.findById(report.id)).thenReturn(Optional.of(report))
+        whenever(scheduleRepository.findByIdForUpdate(schedule.id)).thenReturn(Optional.of(schedule))
+
+        val exception = assertThrows<ReportTargetVersionChangedException> { service.deleteTarget(report.id) }
+
+        assertThat(exception.message).isEqualTo("report.target.versionChanged")
+        verifyNoInteractions(scheduleService)
+    }
+
+    @Test
+    fun `moderation can delete an explicitly reviewed current version and refuses a second change`() {
+        val schedule = Schedule(
+            member = Member(name = "Owner"), content = "Current content",
+            startDateTime = LocalDateTime.of(2026, 11, 23, 9, 0),
+            endDateTime = LocalDateTime.of(2026, 11, 23, 10, 0),
+        ).apply { version = 3L }
+        val report = ContentReport(
+            reporter = null, reportedMember = null,
+            targetType = ReportTargetType.SCHEDULE, targetId = schedule.id.toString(),
+            reason = ReportReason.SPAM, contentSnapshot = "Reported version",
+            reporterName = "Reporter", reportedMemberName = "", scheduleVersion = 1L,
+        )
+        whenever(contentReportRepository.findById(report.id)).thenReturn(Optional.of(report))
+        whenever(scheduleRepository.findByIdForUpdate(schedule.id)).thenReturn(Optional.of(schedule))
+
+        service.deleteTarget(report.id, expectedCurrentVersion = 3L)
+
+        verify(scheduleService).deleteScheduleInternal(schedule, actor = null)
+        schedule.version = 4L
+        assertThrows<ReportTargetVersionChangedException> {
+            service.deleteTarget(report.id, expectedCurrentVersion = 3L)
+        }
     }
 
     private fun report(targetType: ReportTargetType, targetId: String) = ContentReport(

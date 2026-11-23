@@ -625,6 +625,10 @@ private actor TodoAttachmentDiscardClient: AttachmentPickerClient {
         )
     }
 
+    func download(_ attachment: AttachmentDTO, inline: Bool) async throws -> DownloadedAttachment {
+        throw APIError.transport
+    }
+
     func discardSession(_ sessionId: UUID) async throws {
         discardCount += 1
         if discardCount == 1, let firstDiscardGate {

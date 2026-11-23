@@ -25,8 +25,8 @@ class ScheduleMutationAuditTest {
         ReflectionTestUtils.setField(owner, "id", 11L)
         val time = LocalDateTime.of(2026, 10, 1, 0, 0)
         val schedule = Schedule(owner, "private original", startDateTime = time, endDateTime = time)
-        whenever(repository.findById(schedule.id)).thenReturn(Optional.of(schedule))
-        val service = ScheduleService(repository, mock(), mock(), mock(), mock(), mock(), mock(), mock(), mock(), mock(), mock())
+        whenever(repository.findByIdForUpdate(schedule.id)).thenReturn(Optional.of(schedule))
+        val service = ScheduleService(repository, mock(), mock(), mock(), mock(), mock(), mock(), mock(), mock(), mock(), mock(), ScheduleRevisionService(mock(), mock(), com.tistory.shanepark.dutypark.TestUtils.jsr310JsonMapper()))
         val request = ScheduleSaveDto(id = schedule.id, memberId = 11L, content = "private replacement", description = "private description", startDateTime = time, endDateTime = time)
         val logger = LoggerFactory.getLogger(ScheduleService::class.java) as Logger
         val appender = ListAppender<ILoggingEvent>().apply { start() }

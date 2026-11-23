@@ -15,7 +15,8 @@ data class NotificationDto(
     val actorId: Long?,
     val payload: NotificationPayload,
     val isRead: Boolean,
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    val scheduleChanges: ScheduleNotificationChangesDto? = null,
 ) {
     companion object {
         fun of(notification: Notification, payload: NotificationPayload): NotificationDto {

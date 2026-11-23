@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.report.domain.enums.ReportReason
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
 
 data class CreateReportRequest(
@@ -20,4 +21,7 @@ data class CreateReportRequest(
     val detail: String? = null,
 
     val alsoBlock: Boolean = false,
+
+    @field:PositiveOrZero
+    val scheduleVersion: Long? = null,
 )

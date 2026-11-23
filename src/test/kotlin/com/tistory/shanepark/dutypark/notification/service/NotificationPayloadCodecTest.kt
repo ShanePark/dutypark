@@ -13,6 +13,20 @@ class NotificationPayloadCodecTest {
     private val codec = NotificationPayloadCodec(jacksonMapperBuilder().build())
 
     @Test
+    fun `decodes schedule update summary without exposing old or new content`() {
+        val type = NotificationType.entries.singleOrNull { it.name == "SCHEDULE_UPDATED" }
+        assertThat(type).describedAs("schedule update notification type").isNotNull()
+        val json = """{"version":1,"actor":{"name":"Editor","hasProfilePhoto":false,"profilePhotoVersion":0},"scheduleVersion":3,"changedFields":["TITLE","TIME"]}"""
+
+        val decoded = codec.safeDeserialize(type!!, 1, json)
+
+        assertThat(decoded).isInstanceOf(NotificationPayloadDecodeResult.Success::class.java)
+        val roundTrip = codec.serialize((decoded as NotificationPayloadDecodeResult.Success).payload)
+        assertThat(roundTrip).contains("\"scheduleVersion\":3", "\"TITLE\"", "\"TIME\"")
+        assertThat(roundTrip).doesNotContain("scheduleTitle", "before", "after", "description")
+    }
+
+    @Test
     fun `round-trips friend request payload`() {
         val payload = FriendRequestReceivedPayload(
             actor = NotificationActorSnapshot(

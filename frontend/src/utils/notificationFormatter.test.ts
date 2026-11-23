@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { NotificationDto } from '@/types'
+import { createStaticNotificationTranslate } from '@/notifications/staticTranslate'
 import { notificationRendererRegistry } from '@/notifications/renderers'
 import {
   formatNotificationMessage,
@@ -323,5 +324,73 @@ describe('notificationFormatter', () => {
     })
 
     expect(getNotificationActor(notification)).toBeNull()
+  })
+})
+
+
+describe('schedule update messages', () => {
+  it('includes only changed field names and the actual actor', () => {
+    const notification = createNotification({
+      type: 'SCHEDULE_UPDATED', referenceType: 'SCHEDULE',
+      payload: { version: 1, actor: { name: 'Manager', hasProfilePhoto: false, profilePhotoVersion: 0 }, scheduleVersion: 3, changedFields: ['TITLE', 'TIME'] },
+    })
+    const translate: NotificationTranslate = (key, params = {}) => key === 'notifications.items.scheduleUpdated.v1'
+      ? `${params.actorName}: ${params.fields}`
+      : key
+    const message = formatNotificationMessage(notification, translate)
+    expect(message).toContain('Manager')
+    expect(message).toContain('TITLE')
+    expect(message).toContain('TIME')
+    expect(message).not.toContain('DESCRIPTION')
+  })
+})
+
+
+describe('inline schedule changes', () => {
+  it('includes the before and after values in Korean without another view', () => {
+    const notification = createNotification({
+      type: 'SCHEDULE_UPDATED', referenceType: 'SCHEDULE',
+      payload: { version: 1, actor: { name: '박세현', hasProfilePhoto: false, profilePhotoVersion: 0 }, scheduleVersion: 3, changedFields: ['DESCRIPTION'] },
+      scheduleChanges: { scheduleId: 's', scheduleVersion: 3, description: { before: '공통 ㄴㄴㄴ 공통', after: '공통 ㅇㅇㅇ 공통' } },
+    } as Partial<NotificationDto>)
+    expect(formatNotificationMessage(notification, createStaticNotificationTranslate('ko'))).toBe('박세현님이 일정을 수정했습니다.\n‘ㄴㄴㄴ’ → ‘ㅇㅇㅇ’')
+  })
+})
+
+
+describe('inline schedule change combinations', () => {
+  it('formats all changed fields in English and collapses whitespace', () => {
+    const notification = createNotification({
+      type: 'SCHEDULE_UPDATED', referenceType: 'SCHEDULE',
+      payload: { version: 1, actor: { name: 'Park', hasProfilePhoto: false, profilePhotoVersion: 0 }, scheduleVersion: 3, changedFields: ['TITLE', 'DESCRIPTION', 'TIME'] },
+      scheduleChanges: { scheduleId: 's', scheduleVersion: 3, title: { before: 'Old', after: 'New' }, description: { before: 'before\ntext', after: 'after\ttext' }, time: { before: { startDateTime: '2026-11-23T14:00:00', endDateTime: '2026-11-23T15:00:00' }, after: { startDateTime: '2026-11-23T15:00:00', endDateTime: '2026-11-23T16:00:00' } } },
+    })
+    const message = formatNotificationMessage(notification, createStaticNotificationTranslate('en'))
+    expect(message).toContain('Park renamed “Old” to “New”.')
+    expect(message).toContain('\n“')
+    expect(message).toContain('14:00–15:00 → 15:00–16:00')
+    expect(message.split('\n')).toHaveLength(3)
+  })
+})
+
+
+it('identifies an unchanged schedule title once in the heading', () => {
+  const notification = createNotification({
+    type: 'SCHEDULE_UPDATED', referenceType: 'SCHEDULE',
+    payload: { version: 1, actor: { name: '부계테스트', hasProfilePhoto: false, profilePhotoVersion: 0 }, scheduleVersion: 3, changedFields: ['DESCRIPTION'] },
+    scheduleChanges: { scheduleId: 's', scheduleVersion: 3, scheduleTitle: '알림 확인 · 일정 확정', description: { before: '온라인', after: '대면' } },
+  })
+  expect(formatNotificationMessage(notification, createStaticNotificationTranslate('ko'))).toBe('부계테스트님이 ‘알림 확인 · 일정 확정’ 일정을 수정했습니다.\n‘온라인’ → ‘대면’')
+})
+
+
+describe('renamed schedule sentence', () => {
+  it.each([['최종 회의', '로'], ['모임', '으로'], ['일정', '으로'], ['일', '로'], ['회의 0', '으로'], ['회의 3!', '으로'], ['회의 6   ', '으로'], ['회의 1', '로'], ['회의 2?', '로']])('selects the Korean particle after %s', (after, particle) => {
+    const notification = createNotification({
+      type: 'SCHEDULE_UPDATED', referenceType: 'SCHEDULE',
+      payload: { version: 1, actor: { name: '부계테스트', hasProfilePhoto: false, profilePhotoVersion: 0 }, scheduleVersion: 3, changedFields: ['TITLE'] },
+      scheduleChanges: { scheduleId: 's', scheduleVersion: 3, title: { before: '자료 검토', after } },
+    })
+    expect(formatNotificationMessage(notification, createStaticNotificationTranslate('ko'))).toBe(`부계테스트님이 ‘자료 검토’ 일정을 ‘${after.trim()}’${particle} 변경했습니다.`)
   })
 })

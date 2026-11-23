@@ -351,7 +351,8 @@ final class NotificationStore: ObservableObject {
             actorId: notification.actorId,
             payload: notification.payload,
             isRead: true,
-            createdAt: notification.createdAt
+            createdAt: notification.createdAt,
+            scheduleChanges: notification.scheduleChanges
         )
     }
 

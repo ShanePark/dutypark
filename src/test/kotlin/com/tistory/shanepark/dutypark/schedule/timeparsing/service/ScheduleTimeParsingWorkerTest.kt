@@ -47,6 +47,9 @@ class ScheduleTimeParsingWorkerTest {
     @Mock
     lateinit var aiScheduleParsingConsentService: AiScheduleParsingConsentService
 
+    @Mock
+    lateinit var parsingResultService: com.tistory.shanepark.dutypark.schedule.service.ScheduleParsingResultService
+
     @InjectMocks
     lateinit var worker: ScheduleTimeParsingWorker
 
@@ -57,7 +60,7 @@ class ScheduleTimeParsingWorkerTest {
             scheduleRepository.updateParsingStatusIfCurrent(any(), any(), any(), any())
         ).thenReturn(1)
         lenient().whenever(
-            scheduleRepository.applyParsingResultIfCurrent(
+            parsingResultService.applyParsingResultIfCurrent(
                 any(), any(), any(), any(), any(), any(), any()
             )
         ).thenReturn(1)
@@ -118,7 +121,7 @@ class ScheduleTimeParsingWorkerTest {
 
         assertThat(aiAttempted).isFalse()
         verify(scheduleRepository, never()).updateParsingStatusIfCurrent(any(), any(), any(), any())
-        verify(scheduleRepository, never()).applyParsingResultIfCurrent(
+        verify(parsingResultService, never()).applyParsingResultIfCurrent(
             any(), any(), any(), any(), any(), any(), any()
         )
     }
@@ -138,7 +141,7 @@ class ScheduleTimeParsingWorkerTest {
 
         assertThat(aiAttempted).isFalse()
         verify(scheduleRepository, never()).updateParsingStatusIfCurrent(any(), any(), any(), any())
-        verify(scheduleRepository, never()).applyParsingResultIfCurrent(
+        verify(parsingResultService, never()).applyParsingResultIfCurrent(
             any(), any(), any(), any(), any(), any(), any()
         )
     }
@@ -160,7 +163,7 @@ class ScheduleTimeParsingWorkerTest {
         assertThat(schedule.parsingTimeStatus).isEqualTo(status)
         verify(scheduleTimeParsingService, never()).parseScheduleTime(anyOrNull())
         verify(scheduleRepository, never()).updateParsingStatusIfCurrent(any(), any(), any(), any())
-        verify(scheduleRepository, never()).applyParsingResultIfCurrent(
+        verify(parsingResultService, never()).applyParsingResultIfCurrent(
             any(), any(), any(), any(), any(), any(), any()
         )
     }
@@ -284,7 +287,7 @@ class ScheduleTimeParsingWorkerTest {
         assertThat(schedule.contentWithoutTime).isEqualTo("시간정보 제거된 내용")
         assertThat(aiAttempted).isTrue()
 
-        verify(scheduleRepository).applyParsingResultIfCurrent(
+        verify(parsingResultService).applyParsingResultIfCurrent(
             any(), any(), any(), any(), any(), any(), any()
         )
     }
@@ -351,7 +354,7 @@ class ScheduleTimeParsingWorkerTest {
         }
         `when`(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(parsingSchedule))
         whenever(
-            scheduleRepository.applyParsingResultIfCurrent(
+            parsingResultService.applyParsingResultIfCurrent(
                 any(), any(), any(), any(), any(), any(), any()
             )
         ).thenReturn(0)
@@ -370,7 +373,7 @@ class ScheduleTimeParsingWorkerTest {
         assertThat(editedSchedule.content()).isEqualTo("새 제목")
         assertThat(editedSchedule.startDateTime).isEqualTo(LocalDateTime.of(2025, 3, 4, 0, 0))
         assertThat(editedSchedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
-        verify(scheduleRepository).applyParsingResultIfCurrent(
+        verify(parsingResultService).applyParsingResultIfCurrent(
             any(), any(), any(), any(), any(), any(), any()
         )
     }
@@ -432,7 +435,7 @@ class ScheduleTimeParsingWorkerTest {
 
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.PARSED)
         verify(scheduleTimeParsingService, times(1)).parseScheduleTime(anyOrNull())
-        verify(scheduleRepository, times(1)).applyParsingResultIfCurrent(
+        verify(parsingResultService, times(1)).applyParsingResultIfCurrent(
             any(), any(), any(), any(), any(), any(), any()
         )
     }
@@ -474,7 +477,7 @@ class ScheduleTimeParsingWorkerTest {
 
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.PARSED)
         verify(scheduleTimeParsingService, times(1)).parseScheduleTime(anyOrNull())
-        verify(scheduleRepository, times(1)).applyParsingResultIfCurrent(
+        verify(parsingResultService, times(1)).applyParsingResultIfCurrent(
             any(), any(), any(), any(), any(), any(), any()
         )
     }

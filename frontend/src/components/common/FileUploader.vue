@@ -3,7 +3,7 @@ import { ref, shallowRef, onMounted, onUnmounted, watch, computed, nextTick } fr
 import { useI18n } from 'vue-i18n'
 import Uppy from '@uppy/core'
 import XHRUpload from '@uppy/xhr-upload'
-import { Upload, X, FileIcon, Image, Loader2 } from '@lucide/vue'
+import { Upload, X, FileIcon, Image, Loader2, ZoomIn } from '@lucide/vue'
 import type {
   AttachmentContextType,
   NormalizedAttachment,
@@ -26,6 +26,7 @@ import {
   hasDroppedFiles,
   shouldPreventClipboardDefault,
 } from './fileUploaderInput'
+import ImageViewer from './ImageViewer.vue'
 
 interface Props {
   contextType: AttachmentContextType
@@ -58,6 +59,11 @@ const uploaderRootRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 const ticker = ref(0)
 const imageBlobUrls = ref<Record<string, string>>({})
+// Attachments whose imageBlobUrls entry is the uploaded local original rather than a server thumbnail.
+const localFullImageIds = new Set<string>()
+const imageViewerOpen = ref(false)
+const imageViewerIndex = ref(0)
+const imageViewerImages = ref<Array<{ id: string; originalFilename: string; url?: string }>>([])
 const highlightedAttachmentIds = ref<Set<string>>(new Set())
 const attachmentItemRefs = new Map<string, Element>()
 const highlightTimers = new Map<string, number>()
@@ -406,6 +412,7 @@ function setupUppy() {
       // Keep the local blob URL for display
       if (normalized.isImage && oldPreviewUrl?.startsWith('blob:')) {
         imageBlobUrls.value[normalized.id] = oldPreviewUrl
+        localFullImageIds.add(normalized.id)
       }
 
       // Create new array reference to trigger watcher and emit updated attachment IDs
@@ -552,6 +559,8 @@ function cleanup() {
     URL.revokeObjectURL(url)
   })
   imageBlobUrls.value = {}
+  localFullImageIds.clear()
+  imageViewerOpen.value = false
 
   uploadedAttachments.value = []
   uploadProgress.value = {}
@@ -615,6 +624,24 @@ function getDisplayImageUrl(attachment: NormalizedAttachment): string | null {
   return null
 }
 
+function getFullImageUrl(attachment: NormalizedAttachment): string | undefined {
+  if (attachment.previewUrl?.startsWith('blob:')) return attachment.previewUrl
+  // Unsaved session attachments cannot be downloaded from the server yet, so reuse the local original.
+  if (localFullImageIds.has(attachment.id)) return imageBlobUrls.value[attachment.id]
+  return undefined
+}
+
+function openImageViewer(attachment: NormalizedAttachment) {
+  const images = uploadedAttachments.value.filter((a) => a.isImage)
+  imageViewerImages.value = images.map((a) => ({
+    id: a.id,
+    originalFilename: a.originalFilename,
+    url: getFullImageUrl(a),
+  }))
+  imageViewerIndex.value = Math.max(0, images.findIndex((a) => a.id === attachment.id))
+  imageViewerOpen.value = true
+}
+
 async function loadAuthenticatedImage(attachment: NormalizedAttachment) {
   if (!attachment.isImage) return
   if (imageBlobUrls.value[attachment.id]) return
@@ -671,13 +698,22 @@ async function loadExistingImages() {
         ]"
       >
         <div class="attachment-preview">
-          <template v-if="attachment.isImage && getDisplayImageUrl(attachment)">
+          <button
+            v-if="attachment.isImage && getDisplayImageUrl(attachment)"
+            type="button"
+            class="attachment-preview-button"
+            :aria-label="t('fileUploader.previewImageAria', { name: attachment.name })"
+            @click.stop="openImageViewer(attachment)"
+          >
             <img
               :src="getDisplayImageUrl(attachment) || ''"
               :alt="attachment.name"
               class="thumbnail"
             />
-          </template>
+            <span class="attachment-preview-zoom" aria-hidden="true">
+              <ZoomIn :size="16" />
+            </span>
+          </button>
           <template v-else>
             <component :is="getIconComponent(attachment)" :size="24" class="file-icon" />
           </template>
@@ -709,6 +745,13 @@ async function loadExistingImages() {
         </div>
       </div>
     </div>
+
+    <ImageViewer
+      :is-open="imageViewerOpen"
+      :images="imageViewerImages"
+      :initial-index="imageViewerIndex"
+      @close="imageViewerOpen = false"
+    />
 
     <Teleport v-if="isDragging && dialogTarget" :to="dialogTarget">
       <div class="file-uploader-drop-overlay" aria-hidden="true">
@@ -878,6 +921,10 @@ async function loadExistingImages() {
   .attachment-item--highlighted {
     animation: none;
   }
+
+  .attachment-preview-zoom {
+    transition: none;
+  }
 }
 
 .attachment-preview {
@@ -892,7 +939,47 @@ async function loadExistingImages() {
   overflow: hidden;
 }
 
+.attachment-preview-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: inherit;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.attachment-preview-button:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: -2px;
+}
+
+.attachment-preview-zoom {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--dp-overlay-scrim-medium);
+  color: var(--dp-text-on-dark);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.attachment-preview-button:focus-visible .attachment-preview-zoom {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .attachment-preview-button:hover .attachment-preview-zoom {
+    opacity: 1;
+  }
+}
+
 .thumbnail {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;

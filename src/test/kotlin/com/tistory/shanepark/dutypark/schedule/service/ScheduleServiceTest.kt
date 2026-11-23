@@ -78,6 +78,7 @@ class ScheduleServiceTest {
             pathResolver = pathResolver,
             eventPublisher = eventPublisher,
             aiScheduleParsingConsentService = aiScheduleParsingConsentService,
+            revisionService = ScheduleRevisionService(mock(), attachmentRepository, com.tistory.shanepark.dutypark.TestUtils.jsr310JsonMapper()),
         )
 
         member = Member(name = "testMember", email = "test@test.com", password = "1234")
@@ -282,6 +283,7 @@ class ScheduleServiceTest {
         )
 
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { it.getArgument<Schedule>(0) }
 
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
@@ -308,6 +310,7 @@ class ScheduleServiceTest {
             endDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
         ).also { ReflectionTestUtils.setField(it, "id", scheduleId) }
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         whenever(aiScheduleParsingConsentService.hasCurrentConsent(member.id!!)).thenReturn(false)
         val dto = updateDto(
@@ -333,6 +336,7 @@ class ScheduleServiceTest {
             endDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
         ).also { ReflectionTestUtils.setField(it, "id", scheduleId) }
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val dto = ScheduleSaveDto(
             id = scheduleId,
@@ -362,6 +366,7 @@ class ScheduleServiceTest {
             parsingTimeStatus = ParsingTimeStatus.WAIT,
         ).also { ReflectionTestUtils.setField(it, "id", scheduleId) }
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val dto = ScheduleSaveDto(
             id = scheduleId,
@@ -392,6 +397,7 @@ class ScheduleServiceTest {
             parsingTimeStatus = ParsingTimeStatus.WAIT,
         ).also { ReflectionTestUtils.setField(it, "id", scheduleId) }
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         whenever(aiScheduleParsingConsentService.hasCurrentConsent(member.id!!)).thenReturn(false)
         val dto = ScheduleSaveDto(
@@ -423,6 +429,7 @@ class ScheduleServiceTest {
             endDateTime = endDateTime,
         )
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
         val dto = ScheduleSaveDto(
@@ -461,6 +468,7 @@ class ScheduleServiceTest {
             endDateTime = LocalDateTime.of(2026, 7, 25, 0, 0),
         )
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
 
@@ -495,6 +503,7 @@ class ScheduleServiceTest {
             endDateTime = endDateTime,
         )
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
 
@@ -530,6 +539,7 @@ class ScheduleServiceTest {
             endDateTime = endDateTime,
         )
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
 
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
@@ -559,6 +569,7 @@ class ScheduleServiceTest {
             endDateTime = LocalDateTime.of(2026, 7, 26, 14, 0),
         )
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
 
@@ -607,6 +618,7 @@ class ScheduleServiceTest {
             endDateTime = newEnd,
         )
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
 
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
@@ -646,6 +658,7 @@ class ScheduleServiceTest {
             endDateTime = endDateTime,
         )
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
 
@@ -683,6 +696,7 @@ class ScheduleServiceTest {
             endDateTime = originalDateTime.plusDays(1),
         )
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
 
@@ -715,6 +729,7 @@ class ScheduleServiceTest {
         )
 
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember))
             .thenThrow(AuthException("login member doesn't have permission"))
 
@@ -772,6 +787,7 @@ class ScheduleServiceTest {
         ReflectionTestUtils.setField(schedule, "id", scheduleId)
 
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         val attachment = mock<Attachment>()
         whenever(attachmentRepository.findAllByContextTypeAndContextId(any(), any())).thenReturn(listOf(attachment))
         whenever(pathResolver.resolveContextDirectory(any(), any())).thenReturn(java.nio.file.Paths.get("/tmp/test"))
@@ -835,6 +851,7 @@ class ScheduleServiceTest {
         ReflectionTestUtils.setField(schedule, "id", scheduleId)
 
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember))
             .thenThrow(AuthException("login member doesn't have permission"))
 
@@ -914,6 +931,7 @@ class ScheduleServiceTest {
         )
 
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findByIdForUpdate(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { it.getArgument<Schedule>(0) }
 
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)

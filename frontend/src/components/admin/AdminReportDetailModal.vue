@@ -25,7 +25,7 @@ const emit = defineEmits<{
   close: []
   retry: []
   updateStatus: [status: ReportResolutionStatus, memo: string]
-  deleteTarget: []
+  deleteTarget: [expectedCurrentVersion?: number]
   suspend: []
   unsuspend: []
   goToCalendar: []
@@ -47,8 +47,20 @@ watch(
 
 const reportedMember = computed(() => props.report?.reportedMember ?? null)
 const isMemberTarget = computed(() => props.report?.targetType === 'MEMBER')
-const canDeleteTarget = computed(() => !!props.report && !isMemberTarget.value && props.report.targetExists)
+const canDeleteTarget = computed(() => !!props.report && !isMemberTarget.value && props.report.targetExists && !props.report.targetVersionChanged)
 const isSuspended = computed(() => reportedMember.value?.status === 'SUSPENDED')
+
+interface EvidenceRevision {
+  version: number
+  actorName: string | null
+  source: string
+  editedAt: string
+  changedFields: string[]
+}
+const evidenceHistory = computed<EvidenceRevision[]>(() => {
+  try { return JSON.parse(props.report?.scheduleEvidence ?? '{}').history ?? [] }
+  catch { return [] }
+})
 
 function formatDateTime(value: string | null) {
   if (!value) return t('admin.reports.detail.values.none')
@@ -143,13 +155,13 @@ function formatDateTime(value: string | null) {
             <div class="rounded-xl border border-dp-border-primary px-3 py-2.5">
               <dt class="text-xs font-semibold text-dp-text-muted">{{ t('admin.reports.detail.fields.reportedMember') }}</dt>
               <dd class="mt-1 flex flex-wrap items-center gap-2 text-sm font-bold text-dp-text-primary">
-                <span>{{ report.reportedMemberName }}</span>
+                <span>{{ report.reportedMemberName || t('report.scheduleVersionTarget') }}</span>
                 <span
                   v-if="reportedMember"
                   class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold"
                   :class="memberStatusToneClass(reportedMember.status)"
                 >{{ t(MEMBER_STATUS_LABEL_KEYS[reportedMember.status]) }}</span>
-                <span v-else class="text-xs font-semibold text-dp-text-muted">
+                <span v-else-if="report.reportedMemberName" class="text-xs font-semibold text-dp-text-muted">
                   {{ t('admin.reports.detail.values.withdrawnMember') }}
                 </span>
               </dd>
@@ -166,12 +178,33 @@ function formatDateTime(value: string | null) {
         <section class="rounded-2xl border border-dp-border-primary bg-dp-bg-card p-4">
           <h3 class="text-base font-semibold text-dp-text-primary">{{ t('admin.reports.detail.fields.snapshot') }}</h3>
           <p class="mt-2 rounded-xl bg-dp-bg-tertiary p-3 text-sm whitespace-pre-wrap break-words text-dp-text-primary">{{ report.contentSnapshot }}</p>
+          <p v-if="report.scheduleVersion != null" class="mt-2 text-sm text-dp-text-secondary">{{ t('report.versionLabel', { version: report.scheduleVersion }) }}</p>
+          <details v-if="report.scheduleEvidence" class="mt-3">
+            <summary class="cursor-pointer text-sm font-semibold text-dp-text-primary">{{ t('report.versionEvidence') }}</summary>
+            <div class="mt-2 max-h-96 overflow-auto space-y-2">
+              <article v-for="revision in evidenceHistory" :key="revision.version" class="rounded-lg bg-dp-bg-tertiary p-3 text-sm text-dp-text-secondary">
+                <p class="font-semibold text-dp-text-primary">{{ t('report.versionLabel', { version: revision.version }) }} · {{ revision.actorName || revision.source }} · {{ formatDateTime(revision.editedAt) }}</p>
+                <p class="mt-2">{{ revision.changedFields.map(field => t(`report.evidenceFields.${field}`)).join(', ') }}</p>
+              </article>
+            </div>
+          </details>
+          <p v-if="report.targetVersionChanged" class="mt-2 text-sm text-dp-danger">{{ t('report.targetVersionChanged') }}</p>
           <p v-if="isMemberTarget" class="mt-2 text-sm text-dp-text-muted">
             {{ t('admin.reports.detail.memberTargetNotDeletable') }}
           </p>
           <p v-else-if="!report.targetExists" class="mt-2 text-sm text-dp-text-muted">
             {{ t('admin.reports.detail.targetDeleted') }}
           </p>
+        </section>
+
+        <section v-if="report.targetVersionChanged && report.currentScheduleSnapshot" class="rounded-2xl border border-dp-border-primary bg-dp-bg-card p-4">
+          <h3 class="font-semibold text-dp-text-primary">{{ t('report.currentVersion', { version: report.currentScheduleVersion }) }}</h3>
+          <p class="mt-2 font-medium text-dp-text-primary">{{ report.currentScheduleSnapshot.content }}</p>
+          <p class="mt-1 whitespace-pre-wrap break-words text-sm text-dp-text-secondary">{{ report.currentScheduleSnapshot.description }}</p>
+          <p class="mt-2 text-sm text-dp-text-secondary">{{ formatDateTime(report.currentScheduleSnapshot.startDateTime) }} – {{ formatDateTime(report.currentScheduleSnapshot.endDateTime) }}</p>
+          <p class="text-sm text-dp-text-secondary">{{ report.currentScheduleSnapshot.visibility }} · {{ report.currentScheduleSnapshot.tags.map(member => member.name).join(', ') }}</p>
+          <ul v-if="report.currentScheduleSnapshot.attachments.length" class="mt-2 list-disc pl-5 text-sm text-dp-text-secondary"><li v-for="attachment in report.currentScheduleSnapshot.attachments" :key="attachment.id">{{ attachment.originalFilename }}</li></ul>
+          <button v-if="report.currentScheduleVersion != null" type="button" :disabled="working" class="mt-3 min-h-11 rounded-lg bg-dp-danger px-4 py-2 text-sm text-dp-text-on-dark cursor-pointer disabled:opacity-50" @click="emit('deleteTarget', report.currentScheduleVersion)">{{ t('report.deleteCurrentVersion') }}</button>
         </section>
 
         <section class="rounded-2xl border border-dp-border-primary bg-dp-bg-card p-4">

@@ -553,32 +553,27 @@ private struct GuestCalendarDayCell: View {
             }
             ForEach(Array(day.dDays.enumerated()), id: \.element.id) { index, item in
                 DPCalendarItemRow(showsRule: index > 0, rule: ruleColor) {
-                    (Text(Image(systemName: "flag.fill")).font(.system(size: 7)) + Text(verbatim: " \(item.title)"))
+                    (Text(Image(systemName: "calendar.badge.checkmark")).font(.system(size: 7)) + Text(verbatim: " \(item.title)"))
                         .font(DPFont.bold(size: CalendarTypography.cellContent, relativeTo: .caption2))
                         .foregroundStyle(primaryForeground)
-                        .lineLimit(2)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             ForEach(Array(singleDaySchedules.enumerated()), id: \.element.id) { index, schedule in
                 DPCalendarItemRow(showsRule: index + day.dDays.count > 0, rule: ruleColor) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        scheduleTitleLine(schedule)
-                            .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
-                            .tracking(-0.3)
-                            .lineSpacing(1)
-                            .foregroundStyle(primaryForeground)
-                            .lineLimit(2)
-                            .truncationMode(.tail)
-
-                        if let time = CalendarVisualLogic.calendarScheduleTimeText(
+                    DPCalendarScheduleLine(
+                        title: schedule.content,
+                        time: CalendarVisualLogic.calendarScheduleTimeText(
                             start: schedule.startDateTime,
                             end: schedule.endDateTime,
                             daysFromStart: schedule.daysFromStart,
                             totalDays: schedule.totalDays
-                        ) {
-                            DPCalendarScheduleTime(time: time, dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
-                        }
-                    }
+                        ),
+                        hasDetails: !schedule.description.isEmpty || !schedule.attachments.isEmpty,
+                        dutyColor: dutyColor,
+                        isCurrentMonth: isCurrentMonth
+                    )
                 }
             }
         }
@@ -629,8 +624,7 @@ private struct GuestCalendarDayCell: View {
         }
     }
 
-    /// The title and the details mark run as one flow of text, as in the member calendar;
-    /// the time has a chip of its own below.
+    /// Ribbon titles share one flow with their details mark.
     private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
         var line = Text(verbatim: schedule.content)
         if !schedule.description.isEmpty || !schedule.attachments.isEmpty {

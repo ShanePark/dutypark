@@ -46,6 +46,11 @@ export interface AdminReportSummaryDto {
 export interface AdminReportDetailDto extends AdminReportSummaryDto {
   detail: string | null
   contentSnapshot: string
+  scheduleVersion?: number | null
+  scheduleEvidence?: string | null
+  currentScheduleVersion?: number | null
+  currentScheduleSnapshot?: { content: string; description: string; startDateTime: string; endDateTime: string; visibility: string; tags: Array<{id: number; name: string}>; attachments: Array<{id: string; originalFilename: string}> } | null
+  targetVersionChanged?: boolean
   targetExists: boolean
   adminMemo: string | null
   resolvedAt: string | null

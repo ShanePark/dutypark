@@ -11,6 +11,8 @@ import java.util.*
 
 interface NotificationRepository : JpaRepository<Notification, UUID> {
 
+    fun existsByEventKey(eventKey: String): Boolean
+
     fun findByMemberIdAndIsReadFalseOrderByCreatedDateDesc(memberId: Long): List<Notification>
 
     fun findByMemberIdOrderByCreatedDateDesc(memberId: Long, pageable: Pageable): Page<Notification>

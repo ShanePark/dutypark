@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.notification.event
 
+import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleUpdatedPayload
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import java.util.*
 
@@ -29,7 +30,13 @@ data class ScheduleTaggedEvent(
     val scheduleId: UUID,
     val ownerId: Long,
     val taggedMemberId: Long,
-    val scheduleTitle: String
+    val scheduleTitle: String,
+    val actorId: Long = ownerId,
+)
+
+data class ScheduleUpdateNotificationPersistedEvent(
+    val notificationId: UUID,
+    val payload: ScheduleUpdatedPayload,
 )
 
 data class TodoTaggedEvent(

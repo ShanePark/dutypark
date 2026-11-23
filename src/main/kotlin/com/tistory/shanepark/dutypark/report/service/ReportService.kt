@@ -14,12 +14,16 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.report.domain.dto.CreateReportRequest
 import com.tistory.shanepark.dutypark.report.domain.dto.MyReportDto
 import com.tistory.shanepark.dutypark.report.domain.dto.ReportCreateResult
+import com.tistory.shanepark.dutypark.report.domain.dto.ScheduleReportEvidenceDto
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleMemberSnapshot
 import com.tistory.shanepark.dutypark.report.domain.entity.ContentReport
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportReason
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportStatus
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
 import com.tistory.shanepark.dutypark.report.repository.ContentReportRepository
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.schedule.service.ScheduleRevisionService
+import tools.jackson.databind.json.JsonMapper
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import java.time.LocalDateTime
@@ -28,6 +32,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.annotation.Isolation
 
 @Service
 @Transactional
@@ -39,6 +44,8 @@ class ReportService(
     private val attachmentRepository: AttachmentRepository,
     private val blockService: BlockService,
     private val slackNotifier: ReportSlackNotifier,
+    private val scheduleRevisionService: ScheduleRevisionService,
+    private val jsonMapper: JsonMapper,
 ) {
 
     private val log = logger()
@@ -47,6 +54,7 @@ class ReportService(
      * Reporting does not check whether the reporter can still see the target:
      * a member must stay able to report content of somebody they already blocked.
      */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     fun createReport(
         loginMemberId: Long,
         request: CreateReportRequest,
@@ -56,29 +64,35 @@ class ReportService(
             throw BadRequestException("report.detail.required")
         }
 
-        val target = resolveTarget(request.targetType, request.targetId)
-        val ownerId = target.owner.id!!
-        if (ownerId == loginMemberId) {
-            throw BadRequestException("report.self")
-        }
+        val initialTarget = if (request.targetType == ReportTargetType.SCHEDULE) null else resolveTarget(request)
+        val ownerId = initialTarget?.owner?.id
+            ?: scheduleRepository.findOwnerIdById(toUuid(request.targetId)) ?: notFound()
         val lockedMembers = listOf(loginMemberId, ownerId)
+            .distinct()
             .sorted()
             .associateWith { memberRepository.findMemberWithTeamForUpdate(it).orElseThrow() }
         val reporter = lockedMembers.getValue(loginMemberId)
         val owner = lockedMembers.getValue(ownerId)
+        // Account deletion and blocking lock members before their schedules too.
+        val target = initialTarget ?: resolveTarget(request)
+        if (ownerId == loginMemberId && !target.hasDelegatedChanges) {
+            throw BadRequestException("report.self")
+        }
+        val alsoBlock = request.alsoBlock && !target.hasDelegatedChanges && ownerId != loginMemberId
 
-        val result = existingOpenReport(loginMemberId, request)
+        val result = existingOpenReport(loginMemberId, request, target.scheduleVersion)
             ?.let { ReportCreateResult(id = it.id, isNew = false) }
             ?: ReportCreateResult(id = saveReport(reporter, owner, target, request).id, isNew = true)
 
-        if (request.alsoBlock) {
+        if (alsoBlock) {
             blockService.block(
                 reporter.id!!,
                 owner.id!!,
                 actor = loginMember?.toAuditActor() ?: reporter.toAuditActor(),
             )
         }
-        slackNotifier.reportCreated(result = result, reporter = reporter, reported = owner, request = request)
+        slackNotifier.reportCreated(result = result, reporter = reporter, reported = owner,
+            request = request.copy(alsoBlock = alsoBlock))
 
         if (result.isNew) {
             log.auditEventAfterCommit(
@@ -87,9 +101,9 @@ class ReportService(
                     "reportId" to result.id,
                     "targetType" to request.targetType,
                     "targetId" to request.targetId,
-                    "reportedMemberId" to ownerId,
+                    "reportedMemberId" to ownerId.takeIf { !target.hasDelegatedChanges },
                 ),
-                details = mapOf("reason" to request.reason, "status" to ReportStatus.OPEN, "alsoBlock" to request.alsoBlock),
+                details = mapOf("reason" to request.reason, "status" to ReportStatus.OPEN, "alsoBlock" to alsoBlock),
             )
         }
         return result
@@ -133,7 +147,12 @@ class ReportService(
         return MyReportDto.of(report)
     }
 
-    private fun existingOpenReport(reporterId: Long, request: CreateReportRequest): ContentReport? {
+    private fun existingOpenReport(reporterId: Long, request: CreateReportRequest, scheduleVersion: Long?): ContentReport? {
+        if (scheduleVersion != null) {
+            return contentReportRepository.findFirstByReporterIdAndTargetTypeAndTargetIdAndScheduleVersionAndStatus(
+                reporterId, request.targetType, request.targetId, scheduleVersion, ReportStatus.OPEN,
+            )
+        }
         return contentReportRepository.findFirstByReporterIdAndTargetTypeAndTargetIdAndStatus(
             reporterId = reporterId,
             targetType = request.targetType,
@@ -151,34 +170,46 @@ class ReportService(
         return contentReportRepository.save(
             ContentReport(
                 reporter = reporter,
-                reportedMember = owner,
+                reportedMember = owner.takeIf { !target.hasDelegatedChanges },
                 targetType = request.targetType,
                 targetId = request.targetId,
                 reason = request.reason,
                 detail = request.detail,
                 contentSnapshot = target.snapshot(),
                 reporterName = reporter.name,
-                reportedMemberName = owner.name,
+                reportedMemberName = if (target.hasDelegatedChanges) "" else owner.name,
+                scheduleVersion = target.scheduleVersion,
+                scheduleEvidence = target.evidence,
             )
         )
     }
 
-    private fun resolveTarget(targetType: ReportTargetType, targetId: String): ResolvedTarget {
-        return when (targetType) {
+    private fun resolveTarget(request: CreateReportRequest): ResolvedTarget {
+        val targetId = request.targetId
+        return when (request.targetType) {
             ReportTargetType.MEMBER -> {
                 val member = memberRepository.findById(targetId.toLongOrNull() ?: notFound()).orElseThrow()
                 ResolvedTarget(member) { memberSnapshot(member) }
             }
 
             ReportTargetType.SCHEDULE -> {
-                val schedule = scheduleRepository.findById(toUuid(targetId)).orElseThrow()
-                ResolvedTarget(schedule.member) {
-                    contentSnapshot(
-                        title = schedule.content,
-                        body = schedule.description,
-                        contextType = AttachmentContextType.SCHEDULE,
-                        contextId = targetId,
-                    )
+                val schedule = scheduleRepository.findByIdForUpdate(toUuid(targetId)).orElseThrow()
+                val evidence = scheduleRevisionService.evidenceFor(schedule, request.scheduleVersion ?: schedule.version)
+                val snapshot = evidence.snapshot
+                ResolvedTarget(
+                    owner = schedule.member,
+                    scheduleVersion = evidence.version,
+                    evidence = jsonMapper.writeValueAsString(ScheduleReportEvidenceDto.of(
+                        evidence,
+                        ScheduleMemberSnapshot(schedule.member.id!!, schedule.member.name),
+                        schedule.createdById?.let { ScheduleMemberSnapshot(it, schedule.createdByName.orEmpty()) },
+                    )),
+                    hasDelegatedChanges = evidence.history.any {
+                        it.actorId != null && it.actorId != schedule.member.id && it.source == "HUMAN"
+                    },
+                ) {
+                    val attachments = snapshot.attachments.joinToString { it.originalFilename }.ifEmpty { "없음" }
+                    "제목: ${snapshot.displayContent}\n내용: ${snapshot.description}\n첨부: $attachments"
                 }
             }
 
@@ -222,6 +253,9 @@ class ReportService(
 
     private class ResolvedTarget(
         val owner: Member,
+        val scheduleVersion: Long? = null,
+        val evidence: String? = null,
+        val hasDelegatedChanges: Boolean = false,
         /** Deferred so the snapshot is assembled only once the report is known to be valid. */
         val snapshot: () -> String,
     )

@@ -29,6 +29,14 @@ data class ScheduleDto(
     val visibility: Visibility? = null,
     val dateToCompare: LocalDate,
     val attachments: List<AttachmentDto> = listOf(),
+    val ownerMemberId: Long? = null,
+    val canEdit: Boolean = false,
+    val canReport: Boolean = false,
+    val canBlockWithReport: Boolean = true,
+    val version: Long = 0,
+    val createdBy: MemberPreviewDto? = null,
+    val lastEditedBy: MemberPreviewDto? = null,
+    val lastEditedAt: LocalDateTime? = null,
 ) {
     val startDate: LocalDate = startDateTime.toLocalDate()
     val daysFromStart = ChronoUnit.DAYS.between(startDate, dateToCompare).toInt() + 1
@@ -50,6 +58,9 @@ data class ScheduleDto(
                 endDateTime = schedule.endDateTime,
                 isTagged = schedule.member.id != member.id,
                 owner = schedule.member.name,
+                ownerMemberId = schedule.member.id,
+                version = schedule.version,
+                lastEditedAt = schedule.lastEditedAt,
                 taggedByMember = schedule.member.takeIf { it.id != member.id }?.toMemberPreviewDto(),
                 dateToCompare = dateToCompare,
             )
@@ -74,6 +85,9 @@ data class ScheduleDto(
                         endDateTime = schedule.endDateTime,
                         isTagged = isTagged,
                         owner = schedule.member.name,
+                        ownerMemberId = schedule.member.id,
+                        version = schedule.version,
+                        lastEditedAt = schedule.lastEditedAt,
                         taggedByMember = schedule.member.takeIf { isTagged }?.toMemberPreviewDto(),
                         tags = tags,
                         visibility = schedule.visibility,

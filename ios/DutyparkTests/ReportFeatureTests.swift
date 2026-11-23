@@ -13,6 +13,23 @@ final class ReportFeatureTests: XCTestCase {
 
     // MARK: - Submission rules
 
+    func testVersionedScheduleReportPinsVersionAndCannotCombineBlocking() async throws {
+        let repository = ReportRepositorySpy()
+        let model = ReportViewModel(
+            target: ReportTarget(type: .schedule, targetID: UUID().uuidString, name: "Meeting", scheduleVersion: 3, canBlockWithReport: false),
+            repository: repository
+        )
+        model.setAlsoBlock(true)
+        XCTAssertFalse(model.alsoBlock)
+        XCTAssertFalse(model.allowsCombinedBlock)
+        let submitted = await model.submit()
+        XCTAssertTrue(submitted)
+        let request = try XCTUnwrap(repository.reports.first)
+        XCTAssertEqual(request.scheduleVersion, 3)
+        XCTAssertFalse(request.alsoBlock)
+        XCTAssertFalse(model.didBlock)
+    }
+
     func testOnlyTheOtherReasonRequiresWrittenDetail() {
         XCTAssertTrue(ReportSubmissionPolicy.canSubmit(reason: .spam, detail: ""))
         XCTAssertFalse(ReportSubmissionPolicy.canSubmit(reason: .other, detail: ""))
@@ -278,7 +295,7 @@ final class ReportFeatureTests: XCTestCase {
             // Reporting one schedule reuses the same sheet.
             "calendar.schedule.report",
             "CalendarReportPolicy.canReport(",
-            "scheduleOwnerID: schedule.taggedByMember?.id ?? model.targetMemberID",
+            "scheduleOwnerID: schedule.ownerMemberId ?? schedule.taggedByMember?.id ?? model.targetMemberID",
             "ReportSheet(",
         ] {
             XCTAssertTrue(source.contains(wiring), "CalendarView is missing: \(wiring)")

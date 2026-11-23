@@ -17,6 +17,10 @@ import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSnapshot
+import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.schedule.service.ScheduleRevisionService
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -36,7 +40,9 @@ class AttachmentService(
     private val thumbnailService: ThumbnailService,
     private val permissionEvaluator: AttachmentPermissionEvaluator,
     private val sessionService: AttachmentUploadSessionService,
-    private val eventPublisher: ApplicationEventPublisher
+    private val eventPublisher: ApplicationEventPublisher,
+    private val scheduleRepository: ScheduleRepository,
+    private val scheduleRevisionService: ScheduleRevisionService,
 ) {
     private val log = logger()
 
@@ -150,7 +156,11 @@ class AttachmentService(
             permissionEvaluator.checkWritePermission(loginMember, attachment)
         }
 
+        val mutation = if (attachment.uploadSessionId == null) {
+            beginScheduleMutation(attachment.contextType, attachment.contextId)
+        } else null
         deleteAttachment(attachment, actor = loginMember.toAuditActor(), reason = "direct_request")
+        finishScheduleMutation(mutation, loginMember)
     }
 
     fun deleteAttachment(
@@ -194,7 +204,8 @@ class AttachmentService(
     fun finalizeSession(
         loginMember: LoginMember,
         sessionId: UUID,
-        request: FinalizeSessionRequest
+        request: FinalizeSessionRequest,
+        recordScheduleRevision: Boolean = true,
     ) {
         val session = sessionService.findById(sessionId)
             ?: throw IllegalArgumentException("Upload session not found: $sessionId")
@@ -205,6 +216,7 @@ class AttachmentService(
             throw BadRequestException("attachment.session.contextMismatch")
         }
 
+        val mutation = if (recordScheduleRevision) beginScheduleMutation(session.contextType, request.contextId) else null
         val allAttachments = attachmentRepository.findAllByUploadSessionId(sessionId)
         if (allAttachments.isEmpty()) {
             sessionService.deleteSession(sessionId)
@@ -286,6 +298,7 @@ class AttachmentService(
                     "deletedAttachmentCount" to attachmentsToDelete.size
                 )
             )
+            finishScheduleMutation(mutation, loginMember)
         } catch (e: Exception) {
             log.error(
                 "Failed to finalize attachment upload session: {}",
@@ -309,8 +322,10 @@ class AttachmentService(
 
     fun reorderAttachments(
         loginMember: LoginMember,
-        request: ReorderAttachmentsRequest
+        request: ReorderAttachmentsRequest,
+        recordScheduleRevision: Boolean = true,
     ) {
+        val mutation = if (recordScheduleRevision) beginScheduleMutation(request.contextType, request.contextId) else null
         val attachments = attachmentRepository.findAllByContextTypeAndContextId(
             request.contextType,
             request.contextId
@@ -348,6 +363,18 @@ class AttachmentService(
                 after = mapOf("orderIndex" to attachment.orderIndex)
             )
         }
+        finishScheduleMutation(mutation, loginMember)
+    }
+
+    private fun beginScheduleMutation(type: AttachmentContextType, contextId: String?): Pair<Schedule, ScheduleSnapshot>? {
+        if (type != AttachmentContextType.SCHEDULE || contextId == null) return null
+        val id = runCatching { UUID.fromString(contextId) }.getOrNull() ?: return null
+        val schedule = scheduleRepository.findByIdForUpdate(id).orElse(null) ?: return null
+        return schedule to scheduleRevisionService.capture(schedule)
+    }
+
+    private fun finishScheduleMutation(mutation: Pair<Schedule, ScheduleSnapshot>?, actor: LoginMember) {
+        if (mutation != null) scheduleRevisionService.recordChange(mutation.first, mutation.second, actor)
     }
 
     fun listAttachments(
@@ -428,7 +455,7 @@ class AttachmentService(
                     contextId = contextId,
                     orderedAttachmentIds = orderedAttachmentIds
                 )
-                finalizeSession(loginMember, attachmentSessionId, request)
+                finalizeSession(loginMember, attachmentSessionId, request, recordScheduleRevision = false)
             } else {
                 sessionService.deleteSession(attachmentSessionId)
                 log.auditEventAfterCommit(
@@ -457,7 +484,7 @@ class AttachmentService(
                 contextId = contextId,
                 orderedAttachmentIds = orderedAttachmentIds
             )
-            reorderAttachments(loginMember, reorderRequest)
+            reorderAttachments(loginMember, reorderRequest, recordScheduleRevision = false)
         }
 
         val remainingAttachments =

@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.notification.domain.payload.ActorNotificationPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleTaggedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleUpdatedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusDonePayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusInProgressPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusTodoPayload
@@ -221,6 +222,7 @@ class ApnsPushService @Autowired constructor(
                 (notificationPayload as? ScheduleTaggedPayload)?.scheduleTitle.orEmpty(),
                 "scheduleTagged",
             )
+            NotificationType.SCHEDULE_UPDATED -> scheduleUpdatedAlert(actor, notificationPayload as? ScheduleUpdatedPayload)
             NotificationType.TODO_TAGGED -> titledAlert(
                 actor,
                 (notificationPayload as? TodoTaggedPayload)?.todoTitle.orEmpty(),
@@ -246,6 +248,14 @@ class ApnsPushService @Autowired constructor(
                 "inquiryAnswered",
             )
         }
+    }
+
+    private fun scheduleUpdatedAlert(actor: String?, payload: ScheduleUpdatedPayload?): LocalizedAlert {
+        val fields = payload?.changedFields.orEmpty()
+        val suffix = listOf("TITLE" to "Title", "DESCRIPTION" to "Description", "TIME" to "Time")
+            .filter { it.first in fields }
+            .joinToString("") { it.second }
+        return actorAlert(actor, "scheduleUpdated$suffix")
     }
 
     private fun actorAlert(actor: String?, name: String): LocalizedAlert = if (actor == null) {

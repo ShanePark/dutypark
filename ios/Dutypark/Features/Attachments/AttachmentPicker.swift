@@ -1,6 +1,7 @@
 import AVFoundation
 import Combine
 import PhotosUI
+import QuickLook
 import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
@@ -19,19 +20,26 @@ final class AttachmentPickerModel: ObservableObject {
 
     private let client: any AttachmentPickerClient
     private let haptics: DPHapticCenter
+    private let temporaryFileStore: AttachmentTemporaryFileStore
+    /// Copies of the files added here, in the purgeable temporary store. An upload is not
+    /// bound to its schedule or todo until the form is saved, and the server refuses to
+    /// download it back until then, so these files preview from their copy instead.
+    private var localFiles: [AttachmentID: URL] = [:]
 
     init(
         contextType: AttachmentContextType,
         targetContextId: String? = nil,
         existingAttachments: [AttachmentDTO] = [],
         client: any AttachmentPickerClient = AttachmentClient(),
-        haptics: DPHapticCenter = .shared
+        haptics: DPHapticCenter = .shared,
+        temporaryFileStore: AttachmentTemporaryFileStore = .shared
     ) {
         self.contextType = contextType
         self.targetContextId = targetContextId
         self.attachments = existingAttachments
         self.client = client
         self.haptics = haptics
+        self.temporaryFileStore = temporaryFileStore
     }
 
     var result: AttachmentPickerResult {
@@ -82,7 +90,9 @@ final class AttachmentPickerModel: ObservableObject {
                     currentFilename: file.filename
                 )
                 let sessionId = try await ensureSession()
-                attachments.append(try await client.upload(file, sessionId: sessionId))
+                let attachment = try await client.upload(file, sessionId: sessionId)
+                attachments.append(attachment)
+                await keepLocalCopy(of: file, for: attachment.id)
             }
             try Task.checkCancellation()
             haptics.emit(.success)
@@ -103,6 +113,9 @@ final class AttachmentPickerModel: ObservableObject {
         let countBefore = attachments.count
         attachments.removeAll { $0.id == attachmentId }
         guard attachments.count != countBefore else { return }
+        if let url = localFiles.removeValue(forKey: attachmentId) {
+            temporaryFileStore.remove(url)
+        }
     }
 
     func move(from index: Int, by offset: Int) {
@@ -120,12 +133,64 @@ final class AttachmentPickerModel: ObservableObject {
         haptics.emit(.error)
     }
 
+    /// A file for Quick Look, with the gallery's routine impact once it can open: the local
+    /// copy of a file added here, otherwise a download into the purgeable temporary store, the
+    /// way the gallery previews one. `nil` when the download fails (recorded) or is cancelled
+    /// (silent, leaving no file behind).
+    func previewFile(for attachment: AttachmentDTO) async -> URL? {
+        if let local = localFiles[attachment.id], FileManager.default.fileExists(atPath: local.path) {
+            haptics.emit(.routine)
+            return local
+        }
+        var preparedURL: URL?
+        do {
+            let downloaded = try await client.download(attachment, inline: false)
+            let url = try temporaryFileStore.write(downloaded.data, for: attachment.id, filename: downloaded.filename)
+            preparedURL = url
+            try Task.checkCancellation()
+            haptics.emit(.routine)
+            return url
+        } catch {
+            if let preparedURL {
+                temporaryFileStore.remove(preparedURL)
+            }
+            guard !Task.isCancelled, !(error is CancellationError) else { return nil }
+            recordFailure(.downloadFailed)
+            return nil
+        }
+    }
+
+    /// Removes a downloaded preview once Quick Look closes; a local copy stays for the next.
+    func releasePreviewFile(at url: URL) {
+        guard !localFiles.values.contains(url) else { return }
+        temporaryFileStore.remove(url)
+    }
+
+    func releaseLocalFiles() {
+        localFiles.values.forEach(temporaryFileStore.remove)
+        localFiles.removeAll()
+    }
+
+    /// Written off the main actor; a copy that cannot be written only costs the preview.
+    private func keepLocalCopy(of file: AttachmentUploadFile, for attachmentId: AttachmentID) async {
+        let store = temporaryFileStore
+        let data = file.data
+        let filename = file.filename
+        let url = try? await Task.detached(priority: .utility) {
+            try store.write(data, for: attachmentId, filename: filename)
+        }.value
+        if let url {
+            localFiles[attachmentId] = url
+        }
+    }
+
     @discardableResult
     func discard() async -> Bool {
         guard let attachmentSessionId else { return true }
         do {
             try await client.discardSession(attachmentSessionId)
             self.attachmentSessionId = nil
+            releaseLocalFiles()
             return true
         } catch {
             guard !Task.isCancelled, !(error is CancellationError) else { return false }
@@ -179,6 +244,7 @@ nonisolated enum AttachmentPickerFailure: String, Identifiable, Sendable {
     case blockedExtension
     case uploadFailed
     case discardFailed
+    case downloadFailed
     case cameraUnavailable
     case cameraPermissionDenied
 
@@ -193,6 +259,7 @@ nonisolated enum AttachmentPickerFailure: String, Identifiable, Sendable {
         case .blockedExtension: "attachment.error.blockedExtension"
         case .uploadFailed: "attachment.error.upload"
         case .discardFailed: "attachment.error.discard"
+        case .downloadFailed: "attachment.error.download"
         case .cameraUnavailable: "attachment.error.cameraUnavailable"
         case .cameraPermissionDenied: "attachment.error.cameraPermissionDenied"
         }
@@ -257,6 +324,9 @@ struct AttachmentPicker: View {
     @State private var isShowingCamera = false
     @State private var cameraImage: UIImage?
     @State private var uploadCoordinator = AttachmentUploadCoordinator()
+    @State private var previewURL: URL?
+    @State private var preparingPreviewID: AttachmentID?
+    @State private var previewTask: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: DPSpacing.compact) {
@@ -372,9 +442,14 @@ struct AttachmentPicker: View {
                 Text(AttachmentLocalization.text(failure.messageKey))
             }
         }
+        .quickLookPreview(previewBinding)
         .interactiveDismissDisabled(model.isBusy || model.attachmentSessionId != nil)
         .onDisappear {
             uploadCoordinator.cancel(model: model)
+            previewTask?.cancel()
+            previewTask = nil
+            dismissPreview()
+            model.releaseLocalFiles()
         }
     }
 
@@ -445,20 +520,39 @@ struct AttachmentPicker: View {
 
     private func pickerRow(_ attachment: AttachmentDTO, at index: Int) -> some View {
         HStack(spacing: DPSpacing.compact) {
-            AttachmentThumbnail(attachment: attachment)
-                .frame(width: 40, height: 40)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.small))
+            // The thumbnail and its name open the preview together, like a gallery card,
+            // so the target is larger than the 40pt thumbnail alone.
+            Button {
+                preview(attachment)
+            } label: {
+                HStack(spacing: DPSpacing.compact) {
+                    AttachmentThumbnail(attachment: attachment)
+                        .frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.small))
+                        .overlay {
+                            if preparingPreviewID == attachment.id {
+                                ProgressView()
+                                    .frame(width: 40, height: 40)
+                                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: DPRadius.small))
+                            }
+                        }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(attachment.originalFilename)
-                    .font(DPTypography.label)
-                    .foregroundStyle(DPColor.textPrimary)
-                    .lineLimit(1)
-                Text(AttachmentFormatting.bytes(attachment.size))
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textMuted)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(attachment.originalFilename)
+                            .font(DPTypography.label)
+                            .foregroundStyle(DPColor.textPrimary)
+                            .lineLimit(1)
+                        Text(AttachmentFormatting.bytes(attachment.size))
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .contentShape(Rectangle())
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .buttonStyle(.plain)
+            .accessibilityHint(AttachmentLocalization.text("attachment.action.preview"))
+            .accessibilityIdentifier("attachment.\(attachment.id.uuidString).preview")
 
             DPIconActionButton(
                 systemImage: "xmark",
@@ -499,6 +593,35 @@ struct AttachmentPicker: View {
             .disabled(index == model.attachments.count - 1 || model.isBusy)
         }
         .accessibilityElement(children: .contain)
+    }
+
+    private func preview(_ attachment: AttachmentDTO) {
+        guard preparingPreviewID == nil else { return }
+        preparingPreviewID = attachment.id
+        previewTask = Task {
+            defer { preparingPreviewID = nil }
+            previewURL = await model.previewFile(for: attachment)
+        }
+    }
+
+    private var previewBinding: Binding<URL?> {
+        Binding(
+            get: { previewURL },
+            set: { value in
+                if value == nil {
+                    dismissPreview()
+                } else {
+                    previewURL = value
+                }
+            }
+        )
+    }
+
+    private func dismissPreview() {
+        if let previewURL {
+            model.releasePreviewFile(at: previewURL)
+        }
+        previewURL = nil
     }
 
     private func add(urls: [URL]) async {

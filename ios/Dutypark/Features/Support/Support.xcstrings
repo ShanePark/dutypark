@@ -1264,7 +1264,8 @@
           }
         }
       }
-    }
+    },
+    "support.reports.scheduleVersion" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Schedule version report"}}, "ko": {"stringUnit": {"state": "translated", "value": "일정 버전 신고"}}}}
   },
   "version" : "1.0"
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { compileStyle, parse } from 'vue/compiler-sfc'
 import calendarGrid from './CalendarGrid.vue?raw'
 import calendarSpanTags from '../duty/CalendarSpanTags.vue?raw'
+import dutyCalendarContent from '../duty/DutyCalendarContent.vue?raw'
 
 const template = calendarGrid.slice(0, calendarGrid.indexOf('<style scoped>'))
 const style = calendarGrid.slice(calendarGrid.indexOf('<style scoped>'))
@@ -27,6 +29,19 @@ function expectTwoLineClamp(body: string) {
 // A multi-day schedule is one glass ribbon per week row, drawn in a lane under
 // the date so its days line up across the week.
 describe('multi-day schedule bands', () => {
+  it('wraps full D-Day titles while preserving the schedule title clamp', () => {
+    expect(dutyCalendarContent).toContain('class="calendar-item__line calendar-item__line--dday"')
+    const ddayLine = ruleBody(baseBlock, ':slotted(.calendar-item__line--dday)')
+    expect(ddayLine).toContain('display: block')
+    expect(ddayLine).toContain('overflow: visible')
+    expect(ddayLine).toContain('-webkit-line-clamp: none')
+    expect(ddayLine).toContain('line-clamp: none')
+    expect(ddayLine).toContain('overflow-wrap: anywhere')
+    const scheduleTitle = ruleBody(baseBlock, ':slotted(.calendar-item__line--chip > .calendar-item__text)')
+    expect(scheduleTitle).toContain('-webkit-line-clamp: 2')
+    expect(scheduleTitle).toContain('overflow: hidden')
+  })
+
   it('aligns lanes across a week through a shared header row', () => {
     const day = ruleBody(baseBlock, '.calendar-day')
     expect(day).toContain('grid-row: span 2')
@@ -61,14 +76,14 @@ describe('multi-day schedule bands', () => {
   })
 
   // Soft glass: an opaque band painted per day as glass over that day's fill
-  // (see CalendarGrid.test.ts), with a hairline edge and no drop shadow. The
-  // title follows the tile the band starts in; the end time, chevron and tags
-  // follow the tile it ends in.
+  // (see CalendarGrid.test.ts), rimmed in each covered day's ink and lifted
+  // by a faint drop shadow. The title follows the tile the band starts in; the
+  // end time, chevron and tags follow the tile it ends in.
   it('paints the band as soft glass in the tile ink', () => {
     const band = ruleBody(baseBlock, '.calendar-span')
-    expect(band).toContain('--calendar-span-edge: rgb(255 255 255 / 60%)')
     expect(band).toContain('background: var(--calendar-span-fill)')
-    expect(band).toContain('box-shadow: inset 0 0 0 1px var(--calendar-span-edge)')
+    expect(band).toContain('box-shadow: var(--calendar-span-shadow)')
+    expect(band).not.toContain('box-shadow: inset')
     expect(band).toContain('color: var(--calendar-ink)')
     expect(band).not.toContain('rgba(31, 41, 55')
     expect(band).not.toContain('#1f2937')
@@ -79,20 +94,69 @@ describe('multi-day schedule bands', () => {
     expect(ruleBody(spanTags, '.calendar-span__tags')).toContain('--calendar-ink: var(--calendar-span-end-ink)')
   })
 
-  it('fades the edge on dark fills and tints empty tiles by theme', () => {
-    expect(ruleBody(baseBlock, '.calendar-day--on-dark .calendar-span')).toContain('--calendar-span-edge: rgb(255 255 255 / 16%)')
-    expect(ruleBody(baseBlock, '.calendar-day:not(.calendar-day--on-light):not(.calendar-day--on-dark) .calendar-span'))
-      .toContain('--calendar-span-edge: var(--calendar-span-empty-edge)')
+  // A white hairline vanished on light tiles, so the rim is an ink tint that
+  // follows the rounded ends: a transparent 1px border shows the outline layer
+  // while the padding box repaints the fill. It sits under the text.
+  it('rims the band in an ink tint that follows its rounded ends', () => {
+    const band = ruleBody(baseBlock, '.calendar-span')
+    expect(band).toContain('--calendar-span-outline-strength: 34%')
+    expect(band).toContain('--calendar-span-shadow: 0 1px 2px rgb(15 23 42 / 16%)')
+    const rim = ruleBody(baseBlock, '.calendar-span::before')
+    expect(rim).toContain('position: absolute')
+    expect(rim).toContain('inset: 0')
+    expect(rim).toContain('z-index: -1')
+    expect(rim).toContain('border: 1px solid transparent')
+    expect(rim).toContain('border-radius: inherit')
+    expect(rim).toContain('background: var(--calendar-span-fill) padding-box, var(--calendar-span-outline) border-box')
+    expect(rim).toContain('background-origin: border-box')
+    expect(ruleBody(baseBlock, ':global(.dark) .calendar-span'))
+      .toContain('--calendar-span-shadow: 0 1px 2px rgb(0 0 0 / 40%)')
+    expect(style).not.toContain('--calendar-span-edge')
+    expect(style).not.toContain('--calendar-span-empty-edge')
+  })
+
+  // The gutters stay faintly visible through the band: an opaque divider over
+  // each gutter, split at the seam, inside the rim so the outline stays
+  // unbroken. In light theme it is the gutter seen through each side's glass,
+  // so the line keeps the light gutter's colour and polarity above, inside
+  // and below the band.
+  it('draws each gutter through the band as the gutter under its glass in light theme', () => {
+    const divider = ruleBody(baseBlock, '.calendar-span__divider')
+    expect(divider).toContain('position: absolute')
+    expect(divider).toContain('z-index: -1')
+    expect(divider).toContain('top: 1px')
+    expect(divider).toContain('bottom: 1px')
+    expect(divider).toContain('width: var(--calendar-gap)')
+    expect(divider).toContain('background: linear-gradient(to right, var(--calendar-span-before-gutter) 50%, var(--calendar-span-after-gutter) 50%)')
+    expect(divider).not.toContain('ink')
+    // The rim is drawn first, so the dividers paint over the fill it repaints.
+    expect(template.indexOf('class="calendar-span__divider"')).toBeLessThan(template.indexOf('<slot name="span"'))
+  })
+
+  // Dark theme keeps exactly the faint ink line per side over that side's glass,
+  // which reads as the dark gutter continuing.
+  it('keeps the dark-theme divider as a faint ink line over each side\'s glass', () => {
+    const dark = ruleBody(baseBlock, ':global(.dark .calendar-span__divider)')
+    expect(dark).toContain('--calendar-span-divider-strength: 18%')
+    expect(dark).toMatch(/background:\s*linear-gradient\(\s*to right,\s*color-mix\(in srgb, var\(--calendar-span-before-ink\) var\(--calendar-span-divider-strength\), transparent\) 50%,\s*color-mix\(in srgb, var\(--calendar-span-after-ink\) var\(--calendar-span-divider-strength\), transparent\) 50%\s*\),\s*linear-gradient\(to right, var\(--calendar-span-before-glass\) 50%, var\(--calendar-span-after-glass\) 50%\);/)
+  })
+
+  it('compiles the dark divider override to target the divider inside the dark theme', () => {
+    const { descriptor } = parse(calendarGrid)
+    const compiled = compileStyle({ source: descriptor.styles[0]!.content, filename: 'CalendarGrid.vue', id: 'data-v-test', scoped: true })
+    expect(compiled.errors).toEqual([])
+    expect(ruleBody(compiled.code, '.dark .calendar-span__divider')).toContain('--calendar-span-divider-strength: 18%')
+  })
+
+  it('keeps the light-theme empty tile glass as a faint ink tint', () => {
     // White glass would vanish on a light empty tile, so light-theme empty
-    // tiles take a faint ink tint and an ink hairline instead.
+    // tiles take a faint ink tint instead.
     const grid = ruleBody(baseBlock, '.calendar-grid')
     expect(grid).toContain('--calendar-span-empty-tint: var(--dp-text-primary)')
     expect(grid).toContain('--calendar-span-empty-glass: 6%')
-    expect(grid).toContain('--calendar-span-empty-edge: color-mix(in srgb, var(--dp-text-primary) 10%, transparent)')
     const dark = ruleBody(baseBlock, ':global(.dark .calendar-grid)')
     expect(dark).toContain('--calendar-span-empty-tint: #fff')
     expect(dark).toContain('--calendar-span-empty-glass: 10%')
-    expect(dark).toContain('--calendar-span-empty-edge: rgb(255 255 255 / 16%)')
   })
 
   // The tightest tag level is the "+N" pill with the first member's avatar
@@ -133,6 +197,11 @@ describe('multi-day schedule bands', () => {
 })
 
 describe('responsive calendar day headers', () => {
+  it('aligns desktop calendar items without a leading dot or reserved dot space', () => {
+    expect(ruleBody(desktopBlock, ':slotted(.calendar-item)')).toContain('padding: 0;')
+    expect(style).not.toContain(':slotted(.calendar-item)::before')
+  })
+
   it('wraps the full D-Day header while keeping the date and today badge intact', () => {
     expect(ruleBody(baseBlock, '.calendar-day-top')).toContain('flex-wrap: wrap')
     expect(ruleBody(baseBlock, '.calendar-day-top')).toContain('container: calendar-day-header / inline-size')

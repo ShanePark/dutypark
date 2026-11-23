@@ -235,6 +235,8 @@ class AdminReportControllerTest : RestDocsTest() {
                 document(
                     "admin/reports-delete-target",
                     pathParameters(parameterWithName("reportId").description("Report ID")),
+                    queryParameters(parameterWithName("expectedCurrentVersion").optional()
+                        .description("Current schedule version explicitly reviewed by the admin before deleting a changed target")),
                     detailResponseFields(),
                 )
             )
@@ -323,6 +325,15 @@ class AdminReportControllerTest : RestDocsTest() {
         fieldWithPath("resolvedAt").type(JsonFieldType.STRING).optional().description("Time the report was handled"),
         fieldWithPath("resolvedByName").type(JsonFieldType.STRING).optional()
             .description("Name of the admin who handled the report"),
+        fieldWithPath("scheduleVersion").type(JsonFieldType.NUMBER).optional()
+            .description("Immutable schedule version selected by the reporter"),
+        fieldWithPath("scheduleEvidence").type(JsonFieldType.STRING).optional()
+            .description("Pinned schedule snapshot and field authorship metadata as JSON"),
+        fieldWithPath("targetVersionChanged").description("Whether the live schedule differs from the reported version"),
+        fieldWithPath("currentScheduleVersion").type(JsonFieldType.NUMBER).optional()
+            .description("Current version requiring explicit admin review when the target has changed"),
+        subsectionWithPath("currentScheduleSnapshot").optional()
+            .description("Current immutable schedule snapshot for admin review when the target has changed"),
     )
 
     private fun saveReport(

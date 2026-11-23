@@ -60,7 +60,9 @@ class ReportControllerTest : RestDocsTest() {
                         fieldWithPath("detail").type(JsonFieldType.STRING).optional()
                             .description("Optional free-form detail (max 500 chars). Required when reason is `OTHER`"),
                         fieldWithPath("alsoBlock").type(JsonFieldType.BOOLEAN)
-                            .description("Whether to also block the reported member"),
+                            .description("Whether to also block the reported member; ignored for delegated schedule versions"),
+                        fieldWithPath("scheduleVersion").type(JsonFieldType.NUMBER).optional()
+                            .description("Viewed schedule version; omitted requests report the current version"),
                     ),
                     responseFields(
                         fieldWithPath("id").type(JsonFieldType.STRING).description("Created report ID"),

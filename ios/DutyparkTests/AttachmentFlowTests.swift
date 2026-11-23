@@ -424,6 +424,176 @@ struct AttachmentFlowTests {
         #expect(!FileManager.default.fileExists(atPath: url.path))
     }
 
+    /// A file being attached previews the way the gallery does: downloaded into the purgeable
+    /// temporary store, with a routine impact once Quick Look can open it.
+    @Test
+    func pickerPreviewWritesTheDownloadThroughThePurgeableStore() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "dutypark-attachment-picker-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let pending = attachment(id: UUID(), filename: "photo.jpg")
+        let haptics = DPHapticCenter()
+        let model = AttachmentPickerModel(
+            contextType: .todo,
+            existingAttachments: [pending],
+            client: AttachmentFlowClientStub(downloadOutcome: .success(Data([0x01, 0x02]))),
+            haptics: haptics,
+            temporaryFileStore: AttachmentTemporaryFileStore(directoryURL: directory)
+        )
+
+        let url = try #require(await model.previewFile(for: pending))
+        #expect(url.deletingLastPathComponent().standardizedFileURL == directory.standardizedFileURL)
+        #expect(try Data(contentsOf: url) == Data([0x01, 0x02]))
+        #expect(haptics.event?.kind == .routine)
+        #expect(haptics.event?.id == 1)
+        #expect(model.failure == nil)
+
+        model.releasePreviewFile(at: url)
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    /// An upload not yet bound to its schedule or todo cannot be downloaded back (the server
+    /// answers `attachment.context.missing`), so a file added here previews from a local copy
+    /// of the bytes that were uploaded, which outlives each preview.
+    @Test
+    func aNewlyAddedFilePreviewsFromItsLocalCopyWithoutDownloading() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "dutypark-attachment-picker-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let uploaded = attachment(id: UUID(), filename: "photo.jpg")
+        let client = AttachmentFlowClientStub(uploadOutcomes: [.success(uploaded)])
+        let haptics = DPHapticCenter()
+        let model = AttachmentPickerModel(
+            contextType: .schedule,
+            client: client,
+            haptics: haptics,
+            temporaryFileStore: AttachmentTemporaryFileStore(directoryURL: directory)
+        )
+        let bytes = Data([0xFF, 0xD8, 0xFF])
+        await model.add(files: [try AttachmentUploadFile(filename: "photo.jpg", contentType: "image/jpeg", data: bytes)])
+
+        let url = try #require(await model.previewFile(for: uploaded))
+        #expect(try Data(contentsOf: url) == bytes)
+        #expect((await client.snapshot()).downloadCount == 0)
+        #expect(model.failure == nil)
+        #expect(haptics.event?.kind == .routine)
+
+        model.releasePreviewFile(at: url)
+        #expect(FileManager.default.fileExists(atPath: url.path), "Kept for the next preview")
+        let again = try #require(await model.previewFile(for: uploaded))
+        #expect(again == url)
+        #expect((await client.snapshot()).downloadCount == 0)
+    }
+
+    @Test
+    func aSavedAttachmentStillPreviewsByDownloading() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "dutypark-attachment-picker-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let saved = embeddedAttachment(contextId: UUID().uuidString, filename: "saved.jpg")
+        let client = AttachmentFlowClientStub(downloadOutcome: .success(Data([0x07])))
+        let model = AttachmentPickerModel(
+            contextType: .schedule,
+            targetContextId: saved.contextId,
+            existingAttachments: [saved],
+            client: client,
+            temporaryFileStore: AttachmentTemporaryFileStore(directoryURL: directory)
+        )
+
+        let url = try #require(await model.previewFile(for: saved))
+        #expect(try Data(contentsOf: url) == Data([0x07]))
+        #expect((await client.snapshot()).downloadCount == 1)
+
+        model.releasePreviewFile(at: url)
+        #expect(!FileManager.default.fileExists(atPath: url.path), "A downloaded copy lasts one preview")
+    }
+
+    @Test
+    func localCopiesAreRemovedWithTheirFileAndWhenThePickerIsDone() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "dutypark-attachment-picker-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let first = attachment(id: UUID(), filename: "first.jpg")
+        let second = attachment(id: UUID(), filename: "second.jpg")
+        let client = AttachmentFlowClientStub(uploadOutcomes: [.success(first), .success(second)])
+        let model = AttachmentPickerModel(
+            contextType: .todo,
+            client: client,
+            temporaryFileStore: AttachmentTemporaryFileStore(directoryURL: directory)
+        )
+        await model.add(files: [try uploadFile(named: "first.jpg"), try uploadFile(named: "second.jpg")])
+        let firstURL = try #require(await model.previewFile(for: first))
+        let secondURL = try #require(await model.previewFile(for: second))
+
+        model.remove(first.id)
+        #expect(!FileManager.default.fileExists(atPath: firstURL.path))
+        #expect(FileManager.default.fileExists(atPath: secondURL.path))
+
+        model.releaseLocalFiles()
+        #expect(!FileManager.default.fileExists(atPath: secondURL.path))
+    }
+
+    @Test
+    func discardingTheSessionRemovesItsLocalCopies() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "dutypark-attachment-picker-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let added = attachment(id: UUID(), filename: "added.jpg")
+        let model = AttachmentPickerModel(
+            contextType: .todo,
+            client: AttachmentFlowClientStub(uploadOutcomes: [.success(added)]),
+            temporaryFileStore: AttachmentTemporaryFileStore(directoryURL: directory)
+        )
+        await model.add(files: [try uploadFile(named: "added.jpg")])
+        let url = try #require(await model.previewFile(for: added))
+
+        #expect(await model.discard())
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    @Test
+    func pickerPreviewFailureIsReportedAsADownloadError() async {
+        let pending = attachment(id: UUID(), filename: "photo.jpg")
+        let haptics = DPHapticCenter()
+        let model = AttachmentPickerModel(
+            contextType: .todo,
+            existingAttachments: [pending],
+            client: AttachmentFlowClientStub(downloadOutcome: .failure(.transport)),
+            haptics: haptics
+        )
+
+        #expect(await model.previewFile(for: pending) == nil)
+        #expect(model.failure == .downloadFailed)
+        #expect(model.failure?.messageKey == "attachment.error.download")
+        #expect(haptics.event?.kind == .error)
+    }
+
+    @Test
+    func aCancelledPickerPreviewIsSilentAndLeavesNoFile() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "dutypark-attachment-picker-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let pending = attachment(id: UUID(), filename: "photo.jpg")
+        let haptics = DPHapticCenter()
+        let model = AttachmentPickerModel(
+            contextType: .todo,
+            existingAttachments: [pending],
+            client: AttachmentFlowClientStub(downloadOutcome: .suspended),
+            haptics: haptics,
+            temporaryFileStore: AttachmentTemporaryFileStore(directoryURL: directory)
+        )
+
+        let task = Task { await model.previewFile(for: pending) }
+        try await Task.sleep(for: .milliseconds(20))
+        task.cancel()
+
+        #expect(await task.value == nil)
+        #expect(model.failure == nil)
+        #expect(haptics.event == nil)
+        let leftovers = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        #expect(leftovers.isEmpty)
+    }
+
     private func temporaryFile(
         contents: Data,
         extension pathExtension: String = "bin"
@@ -493,6 +663,12 @@ private actor AttachmentFlowClientStub: AttachmentPickerClient {
         case suspended
     }
 
+    enum DownloadOutcome: Sendable {
+        case success(Data)
+        case failure(APIError)
+        case suspended
+    }
+
     struct Snapshot: Sendable {
         let createSessionCount: Int
         let createdContextTypes: [AttachmentContextType]
@@ -501,6 +677,7 @@ private actor AttachmentFlowClientStub: AttachmentPickerClient {
         let uploadSessionIds: [UUID]
         let cancelledUploadCount: Int
         let discardedSessionIds: [UUID]
+        let downloadCount: Int
     }
 
     private let sessionId: UUID
@@ -512,13 +689,30 @@ private actor AttachmentFlowClientStub: AttachmentPickerClient {
     private var uploadSessionIds: [UUID] = []
     private var cancelledUploadCount = 0
     private var discardedSessionIds: [UUID] = []
+    private let downloadOutcome: DownloadOutcome
+    private var downloadCount = 0
 
     init(
         sessionId: UUID = UUID(),
-        uploadOutcomes: [UploadOutcome] = []
+        uploadOutcomes: [UploadOutcome] = [],
+        downloadOutcome: DownloadOutcome = .failure(.transport)
     ) {
         self.sessionId = sessionId
         self.uploadOutcomes = uploadOutcomes
+        self.downloadOutcome = downloadOutcome
+    }
+
+    func download(_ attachment: AttachmentDTO, inline: Bool) async throws -> DownloadedAttachment {
+        downloadCount += 1
+        switch downloadOutcome {
+        case .success(let data):
+            return DownloadedAttachment(data: data, filename: attachment.originalFilename, contentType: attachment.contentType)
+        case .failure(let error):
+            throw error
+        case .suspended:
+            try await Task.sleep(for: .seconds(30))
+            throw APIError.transport
+        }
     }
 
     func createSession(
@@ -571,7 +765,8 @@ private actor AttachmentFlowClientStub: AttachmentPickerClient {
             uploadedFilenames: uploadedFilenames,
             uploadSessionIds: uploadSessionIds,
             cancelledUploadCount: cancelledUploadCount,
-            discardedSessionIds: discardedSessionIds
+            discardedSessionIds: discardedSessionIds,
+            downloadCount: downloadCount
         )
     }
 }

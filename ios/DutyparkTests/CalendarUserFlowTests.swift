@@ -215,6 +215,94 @@ final class CalendarUserFlowTests: XCTestCase {
         XCTAssertNil(request.tagFriendIds, "Only a member's own calendar may modify friend sharing tags")
     }
 
+    func testManagedTaggedScheduleEditUsesOwnerAndPreservesTagsAndVersion() async throws {
+        let original = CalendarUserFlowRepository.schedule(
+            id: UUID(), memberID: 9, content: "Shared", isTagged: true
+        )
+        var payload = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        payload["ownerMemberId"] = 9
+        payload["canEdit"] = true
+        payload["version"] = 4
+        let existing = try JSONDecoder().decode(ScheduleDTO.self, from: JSONSerialization.data(withJSONObject: payload))
+        let repository = CalendarUserFlowRepository(schedule: existing)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+        let saved = await model.saveSchedule(
+            existing: existing, content: "Updated", description: "Details", visibility: .friends,
+            start: date(2026, 8, 12), end: date(2026, 8, 12, hour: 1),
+            tagFriendIDs: [2, 3], attachmentSessionID: nil, orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+        XCTAssertTrue(saved)
+        let requests = await repository.savedRequests
+        let request = try XCTUnwrap(requests.last)
+        XCTAssertEqual(request.memberId, 9)
+        XCTAssertNil(request.tagFriendIds)
+        let encoded = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any])
+        XCTAssertEqual(encoded["expectedVersion"] as? Int, 4)
+        let deleted = await model.deleteSchedule(existing)
+        XCTAssertFalse(deleted)
+    }
+
+    func testScheduleSpecificPermissionDeniesCalendarOwnerAndLastEditorUsesCreator() async throws {
+        var existing = CalendarUserFlowRepository.schedule(id: UUID(), memberID: 9, content: "Shared", isTagged: true)
+        existing.ownerMemberId = 9
+        existing.canEdit = false
+        existing.lastEditedBy = MemberPreviewDTO(id: 2, name: "Editor", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0)
+        XCTAssertEqual(existing.distinctLastEditor?.id, 2)
+        existing.createdBy = existing.lastEditedBy
+        XCTAssertNil(existing.distinctLastEditor)
+        let repository = CalendarUserFlowRepository(schedule: existing)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+        XCTAssertTrue(model.canEdit)
+        XCTAssertFalse(model.canEditSchedule(existing))
+        let saved = await model.saveSchedule(
+            existing: existing, content: "Updated", description: "", visibility: .friends,
+            start: date(2026, 8, 12), end: date(2026, 8, 12, hour: 1), tagFriendIDs: [],
+            attachmentSessionID: nil, orderedAttachmentIDs: [], aiTimeParsingRequested: false
+        )
+        XCTAssertFalse(saved)
+        let requests = await repository.savedRequests
+        XCTAssertTrue(requests.isEmpty)
+    }
+
+    func testScheduleVersionConflictKeepsSaveUnsuccessfulAndRefreshesUnderlyingSchedule() async throws {
+        var existing = CalendarUserFlowRepository.schedule(id: UUID(), memberID: 1, content: "Original", isTagged: false)
+        existing.version = 3
+        let repository = CalendarUserFlowRepository(schedule: existing, saveError: .server(status: 409, code: "schedule.version.conflict"))
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+        let baseline = await repository.fetchCounts
+        let saved = await model.saveSchedule(
+            existing: existing, content: "My draft", description: "", visibility: .friends,
+            start: date(2026, 8, 12), end: date(2026, 8, 12, hour: 1), tagFriendIDs: [],
+            attachmentSessionID: nil, orderedAttachmentIDs: [], aiTimeParsingRequested: false
+        )
+        XCTAssertFalse(saved)
+        XCTAssertEqual(model.errorMessage, CalendarLocalization.text("calendar.schedule.versionConflict"))
+        let after = await repository.fetchCounts
+        var expected = baseline
+        expected.schedules += 1
+        XCTAssertEqual(after, expected)
+    }
+
+    func testSavingUnchangedScheduleKeepsOutcomeFeedbackSilent() async throws {
+        let existing = CalendarUserFlowRepository.schedule(id: UUID(), memberID: 1, content: "Original", isTagged: false)
+        let repository = CalendarUserFlowRepository(schedule: existing)
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), hapticCenter: haptics)
+        await model.load()
+        let previousEvent = haptics.event
+        let saved = await model.saveSchedule(
+            existing: existing, content: "Original", description: "", visibility: .friends,
+            start: date(2026, 8, 12), end: date(2026, 8, 12, hour: 1), tagFriendIDs: [],
+            attachmentSessionID: nil, orderedAttachmentIDs: [], aiTimeParsingRequested: false
+        )
+        XCTAssertTrue(saved)
+        XCTAssertEqual(haptics.event, previousEvent)
+    }
+
     func testTaggedScheduleDeepLinkCanRemoveMyTagAndRefreshHighlightedDay() async throws {
         let scheduleID = UUID(uuidString: "00000000-0000-0000-0000-000000000042")!
         let tagged = CalendarUserFlowRepository.schedule(
@@ -393,6 +481,7 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
     private var storedSchedule: ScheduleDTO?
     private var storedDDays: [DDayDTO] = []
     private let canManageValue: Bool
+    private let saveError: APIError?
     private let teamID: TeamID?
     private let scheduleOwnerID: MemberID
     private var storedDuty: DutyDTO?
@@ -411,9 +500,11 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
         teamID: TeamID? = nil,
         scheduleOwnerID: MemberID = 1,
         todo: TodoDTO? = nil,
-        inProgressTodo: TodoDTO? = nil
+        inProgressTodo: TodoDTO? = nil,
+        saveError: APIError? = nil
     ) {
         storedSchedule = schedule
+        self.saveError = saveError
         canManageValue = canManage
         self.teamID = teamID
         self.scheduleOwnerID = scheduleOwnerID
@@ -526,6 +617,7 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
     }
 
     func saveSchedule(_ request: ScheduleSaveDTO) async throws -> ScheduleSaveResponse {
+        if let saveError { throw saveError }
         savedRequests.append(request)
         let id = request.id ?? UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let date = Self.dateParts(request.startDateTime)

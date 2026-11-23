@@ -210,7 +210,8 @@ struct CalendarSpanRibbonGlassTests {
         let glass = DPCalendarSpanRibbonGlass(tone: .onLight, isDarkTheme: false)
         #expect(glass == .light)
         #expect(glass.fillOpacity == 0.45)
-        #expect(glass.strokeOpacity == 0.6)
+        #expect(glass.strokeOpacity == 0.32)
+        #expect(glass.dividerOpacity == 0.16)
         #expect(DPCalendarSpanRibbonGlass(tone: .onLight, isDarkTheme: true) == .light,
                 "A duty fill looks the same in both themes")
     }
@@ -222,7 +223,8 @@ struct CalendarSpanRibbonGlassTests {
         let glass = DPCalendarSpanRibbonGlass(tone: .theme, isDarkTheme: false)
         #expect(glass == .tinted)
         #expect(glass.fillOpacity == 0.06)
-        #expect(glass.strokeOpacity == 0.10)
+        #expect(glass.strokeOpacity == 0.24)
+        #expect(glass.dividerOpacity == 0.12)
     }
 
     @Test
@@ -230,7 +232,8 @@ struct CalendarSpanRibbonGlassTests {
         let glass = DPCalendarSpanRibbonGlass(tone: .onDark, isDarkTheme: false)
         #expect(glass == .dark)
         #expect(glass.fillOpacity == 0.10)
-        #expect(glass.strokeOpacity == 0.16)
+        #expect(glass.strokeOpacity == 0.36)
+        #expect(glass.dividerOpacity == 0.20)
         #expect(DPCalendarSpanRibbonGlass(tone: .onDark, isDarkTheme: true) == .dark)
         #expect(DPCalendarSpanRibbonGlass(tone: .theme, isDarkTheme: true) == .dark)
     }
@@ -307,8 +310,8 @@ struct CalendarSpanTagFitTests {
     }
 }
 
-/// The band is opaque, one colour per day it covers — that day's fill under the glass — so
-/// the gutters between the tiles do not show through it as lines.
+/// The band is opaque, one colour per day it covers — that day's fill under the glass — with
+/// a faint divider of its own drawn exactly over each gutter it bridges.
 struct CalendarSpanRibbonGutterTests {
     @Test
     func eachDayOfTheBandIsItsOwnFillUnderTheGlass() {
@@ -324,15 +327,42 @@ struct CalendarSpanRibbonGutterTests {
         #expect(rgba(empty, .dark) == [53, 62, 75, 255], "White 10% over the dark card")
     }
 
+    /// The outline is the day's own ink, so it contrasts with the tile: dark on a light
+    /// fill, light on a dark fill, and the theme's text colour on an empty tile.
     @Test
-    func eachDayOfTheBandHasItsOwnHairline() {
+    func eachDayOfTheBandIsOutlinedInItsInk() {
         let teal = DPCalendarSpanRibbonGlass.strokeColor(dutyColor: "#A2D9DD", isCurrentMonth: true)
-        #expect(rgba(teal, .light) == [255, 255, 255, 153], "White 60% on a light fill")
+        #expect(rgba(teal, .light) == [31, 41, 55, 82], "Dark ink 32% on a light fill")
+        #expect(rgba(teal, .dark) == [31, 41, 55, 82], "A duty fill looks the same in both themes")
+        let fadedTeal = DPCalendarSpanRibbonGlass.strokeColor(dutyColor: "#A2D9DD", isCurrentMonth: false)
+        #expect(rgba(fadedTeal, .light) == [31, 41, 55, 82], "The ink's own fade is not compounded")
         let navy = DPCalendarSpanRibbonGlass.strokeColor(dutyColor: "#1F3A8A", isCurrentMonth: true)
-        #expect(rgba(navy, .light) == [255, 255, 255, 41], "White 16% on a dark fill")
+        #expect(rgba(navy, .light) == [255, 255, 255, 92], "White 36% on a dark fill")
         let empty = DPCalendarSpanRibbonGlass.strokeColor(dutyColor: nil, isCurrentMonth: true)
-        #expect(rgba(empty, .light) == [17, 24, 39, 26], "Ink 10% on the white card")
-        #expect(rgba(empty, .dark) == [255, 255, 255, 41], "White 16% on the dark card")
+        #expect(rgba(empty, .light) == [17, 24, 39, 61], "Ink 24% on the white card")
+        #expect(rgba(empty, .dark) == [249, 250, 251, 92], "Light ink 36% on the dark card")
+    }
+
+    /// Light-theme dividers carry the grid gutter through the same glass as each day.
+    @Test
+    func theLightThemeGutterContinuesThroughEachDaysGlass() {
+        let teal = DPCalendarSpanRibbonGlass.dividerColor(dutyColor: "#A2D9DD", isCurrentMonth: true)
+        #expect(rgba(teal, .light) == [241, 242, 244, 255])
+        let navy = DPCalendarSpanRibbonGlass.dividerColor(dutyColor: "#1F3A8A", isCurrentMonth: true)
+        #expect(rgba(navy, .light) == [232, 233, 237, 255])
+        let empty = DPCalendarSpanRibbonGlass.dividerColor(dutyColor: nil, isCurrentMonth: true)
+        #expect(rgba(empty, .light) == [216, 219, 223, 255])
+    }
+
+    /// Dark-theme dividers keep a faint stroke of each day's ink over its glass.
+    @Test
+    func theGutterDividerIsAFaintTintOfTheDaysInk() {
+        let teal = DPCalendarSpanRibbonGlass.dividerColor(dutyColor: "#A2D9DD", isCurrentMonth: true)
+        #expect(rgba(teal, .dark) == [31, 41, 55, 41], "Dark ink 16% on a light fill")
+        let navy = DPCalendarSpanRibbonGlass.dividerColor(dutyColor: "#1F3A8A", isCurrentMonth: true)
+        #expect(rgba(navy, .dark) == [255, 255, 255, 51], "White 20% on a dark fill")
+        let empty = DPCalendarSpanRibbonGlass.dividerColor(dutyColor: nil, isCurrentMonth: true)
+        #expect(rgba(empty, .dark) == [249, 250, 251, 51], "Light ink 20% on the dark card")
     }
 
     /// The title sits on the day the band starts in; the tags, end time and chevron sit at
@@ -365,6 +395,36 @@ struct CalendarSpanRibbonGutterTests {
 
         let broken = DPCalendarSpanRibbon.daySpans(bandWidth: 2 * tile + gutter, columnCount: 2, isTrueStart: false, isTrueEnd: false)
         #expect(broken == [0..<(tile + gutter / 2), (tile + gutter / 2)..<(2 * tile + gutter)])
+    }
+
+    /// A divider covers each gutter between the covered tiles exactly, continuing the gutter
+    /// line above and below the band, and the band changes colour at its centre.
+    @Test
+    func aDividerSitsOnEachGutterWithTheSeamAtItsCentre() {
+        let tile = 41 + DPCalendarCellStyle.cellHorizontalPadding * 2
+        let gutter = DPCalendarCellStyle.gutterWidth
+        let inset = DPCalendarSpanRibbon.edgeInset
+        let width = 3 * tile + 2 * gutter - 2 * inset
+        let dividers = DPCalendarSpanRibbon.gutters(bandWidth: width, columnCount: 3, isTrueStart: true, isTrueEnd: true)
+        #expect(dividers == [(tile - inset)..<(tile + gutter - inset), (2 * tile + gutter - inset)..<(2 * tile + 2 * gutter - inset)])
+        let spans = DPCalendarSpanRibbon.daySpans(bandWidth: width, columnCount: 3, isTrueStart: true, isTrueEnd: true)
+        #expect(dividers.map { ($0.lowerBound + $0.upperBound) / 2 } == spans.dropLast().map(\.upperBound))
+
+        // Placed at the band's extent, each divider lands on a gutter of the grid.
+        let extent = DPCalendarSpanRibbon.extent(slotWidth: 41, columnCount: 3, isTrueStart: true, isTrueEnd: true)
+        let padding = DPCalendarCellStyle.cellHorizontalPadding
+        let gridGutters = (1..<3).map { CGFloat($0) * (tile + gutter) - gutter - padding }
+        #expect(dividers.map { $0.lowerBound + extent.x } == gridGutters)
+
+        let broken = DPCalendarSpanRibbon.gutters(bandWidth: 2 * tile + gutter, columnCount: 2, isTrueStart: false, isTrueEnd: false)
+        #expect(broken == [tile..<(tile + gutter)])
+        #expect(DPCalendarSpanRibbon.gutters(bandWidth: tile - 2 * inset, columnCount: 1, isTrueStart: true, isTrueEnd: true).isEmpty)
+    }
+
+    @Test
+    func anUnmeasuredBandHasNoVisibleDividers() {
+        let dividers = DPCalendarSpanRibbon.gutters(bandWidth: 0, columnCount: 3, isTrueStart: true, isTrueEnd: false)
+        #expect(dividers.allSatisfy { $0.isEmpty })
     }
 
     /// Before the band has been measured its width is zero; the spans collapse rather than

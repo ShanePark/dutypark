@@ -85,7 +85,9 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)")
                             .type("UUID").optional(),
                         fieldWithPath("orderedAttachmentIds").description("Ordered Attachment Ids (optional)")
-                            .type("Array").optional()
+                            .type("Array").optional(),
+                        fieldWithPath("expectedVersion").type(JsonFieldType.NUMBER)
+                            .description("Expected schedule version for optimistic concurrency checks (optional)").optional()
                     )
                 )
             )
@@ -244,7 +246,9 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)")
                             .type("UUID").optional(),
                         fieldWithPath("orderedAttachmentIds").description("Ordered Attachment Ids (optional)")
-                            .type("Array").optional()
+                            .type("Array").optional(),
+                        fieldWithPath("expectedVersion").type(JsonFieldType.NUMBER)
+                            .description("Expected schedule version for optimistic concurrency checks (optional)").optional()
                     )
                 )
             )

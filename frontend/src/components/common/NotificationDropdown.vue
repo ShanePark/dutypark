@@ -172,10 +172,21 @@ function handleOverlayClick() {
             </div>
             <div class="flex-1 min-w-0">
               <p
-                class="text-sm truncate"
-                :class="notification.isRead ? 'notification-item-title-read' : 'notification-item-title'"
+                class="text-sm"
+                :class="[
+                  notification.type === 'SCHEDULE_UPDATED' ? 'whitespace-normal break-words break-keep' : 'truncate',
+                  notification.isRead ? 'notification-item-title-read' : 'notification-item-title'
+                ]"
               >
-                {{ getNotificationMessage(notification) }}
+                <template v-if="notification.type === 'SCHEDULE_UPDATED'">
+                  <span
+                    v-for="(line, index) in getNotificationMessage(notification).split('\n')"
+                    :key="index"
+                    class="block"
+                    :class="index > 0 ? 'mt-1 font-normal text-dp-text-secondary' : ''"
+                  >{{ line }}</span>
+                </template>
+                <template v-else>{{ getNotificationMessage(notification) }}</template>
               </p>
               <p class="notification-item-time text-xs mt-0.5">
                 {{ formatTimeAgo(notification.createdAt) }}

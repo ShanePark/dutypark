@@ -29,7 +29,7 @@ class ReportServiceLoggingTest {
     private val repository: ContentReportRepository = mock()
     private val members: MemberRepository = mock()
     private val blockService: BlockService = mock()
-    private val service = ReportService(repository, members, mock(), mock(), mock(), blockService, mock())
+    private val service = ReportService(repository, members, mock(), mock(), mock(), blockService, mock(), mock(), mock())
 
     @Test
     fun `duplicate report also block preserves impersonator and uses reporter fallback for internal caller`() {

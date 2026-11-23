@@ -288,6 +288,9 @@ const apiErrors = {
     self: 'You cannot block yourself.',
   },
   report: {
+    currentVersion: 'Current schedule version {version}', deleteCurrentVersion: 'Delete reviewed current schedule', deleteCurrentVersionConfirm: 'You reviewed current schedule version {version}. Delete this version?',
+    evidenceFields: { content: 'Title', displayContent: 'Display title', description: 'Description', startDateTime: 'Start', endDateTime: 'End', visibility: 'Visibility', tags: 'Tags', attachments: 'Attachments' },
+    scheduleVersionTarget: 'Schedule version report', versionLabel: 'Reported version {version}', versionEvidence: 'Version and change evidence', targetVersionChanged: 'The schedule has changed since this report. Review the current version separately.',
     self: 'You cannot report your own content.',
     detail: {
       required: 'Please describe the problem when you choose Other.',
@@ -480,6 +483,15 @@ export default {
     logoutUnconfirmed: 'This device was signed out safely, but a server session may remain. Sign in again and open My info > Sessions, or use another signed-in device, to end it.',
   },
   notifications: {
+    changes: {
+      inlineText: '“{before}” → “{after}”',
+      inlineTime: '{before} → {after}',
+      heading: '{actorName} updated a schedule.',
+      headingRenamed: '{actorName} renamed “{before}” to “{after}”.',
+      headingWithTitle: '{actorName} updated “{scheduleTitle}”.',
+      empty: '(empty)',
+      fields: { TITLE: 'Title', DESCRIPTION: 'Description', TIME: 'Date and time' },
+    },
     common: {
       ariaLabel: 'Notifications',
       loading: 'Loading...',
@@ -516,6 +528,7 @@ export default {
       familyRequestAcceptedFallback: {
         v1: 'Your family request was accepted.',
       },
+      scheduleUpdated: { v1: '{actorName} changed the schedule {fields}.' },
       scheduleTagged: {
         v1: '{actorName} tagged you in [{scheduleTitle}].',
       },
@@ -1410,12 +1423,16 @@ export default {
         edit: 'Edit',
         delete: 'Delete',
         editTag: 'Edit tags',
+        latestVersion: 'Latest saved schedule', reloadLatest: 'Discard this draft and edit the latest version',
+        lastEditor: 'Last edited by',
+        editingOwner: 'Editing {name}’s schedule',
       },
       messages: {
         created: 'The schedule has been saved.',
         duplicate: 'An identical schedule already exists, so no new schedule was added.',
         createFailed: 'Failed to save the schedule.',
         updateFailed: 'Failed to update the schedule.',
+        versionConflict: 'Someone else changed this schedule. Your input is kept. Check the latest schedule before editing again.',
         deleteConfirm: 'Delete the schedule “{title}”?',
         deleted: 'The schedule has been deleted.',
         deleteFailed: 'Failed to delete the schedule.',
@@ -1745,6 +1762,7 @@ export default {
     dropMobile: 'Tap to choose files',
     dropOverlay: 'Drop the file here to attach it',
     maxSize: 'Up to {size}',
+    previewImageAria: 'View {name} larger',
   },
   attachmentGrid: {
     label: 'Attachments ({count})',

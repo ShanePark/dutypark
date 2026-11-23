@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
+import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -108,6 +109,17 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("schedules[].endDateTime").description("End date time"),
                         fieldWithPath("schedules[].isTagged").description("Is tagged"),
                         fieldWithPath("schedules[].owner").description("Owner name"),
+                        fieldWithPath("schedules[].ownerMemberId").description("Schedule owner member ID"),
+                        fieldWithPath("schedules[].canEdit").description("Whether the current member can edit the schedule"),
+                        fieldWithPath("schedules[].canReport").description("Whether the current member can report the schedule"),
+                        fieldWithPath("schedules[].canBlockWithReport").description("Whether the current member can also block when reporting the schedule"),
+                        fieldWithPath("schedules[].version").description("Current schedule version"),
+                        subsectionWithPath("schedules[].createdBy").type(JsonFieldType.OBJECT)
+                            .description("Schedule creator summary (nullable)").optional(),
+                        subsectionWithPath("schedules[].lastEditedBy").type(JsonFieldType.OBJECT)
+                            .description("Latest schedule editor summary (nullable)").optional(),
+                        fieldWithPath("schedules[].lastEditedAt").type(JsonFieldType.STRING)
+                            .description("Latest schedule edit timestamp (nullable)").optional(),
                         fieldWithPath("schedules[].taggedByMember").description("Tagged-by member summary").optional(),
                         fieldWithPath("schedules[].tags").description("Tagged members"),
                         fieldWithPath("schedules[].visibility").description("Visibility"),

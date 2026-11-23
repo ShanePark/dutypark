@@ -65,6 +65,7 @@ class NotificationControllerTest : RestDocsTest() {
                         fieldWithPath("content[].referenceId").description("Reference entity ID (nullable)").optional(),
                         fieldWithPath("content[].actorId").description("Actor member ID who triggered the notification (nullable)").optional(),
                         subsectionWithPath("content[].payload").description("Notification payload snapshot used for client-side rendering (missing or invalid payloads fall back to version 0 generic payload)").optional(),
+                        subsectionWithPath("content[].scheduleChanges").description("Pinned schedule changes visible to the current recipient (nullable)").optional(),
                         fieldWithPath("content[].isRead").description("Whether notification has been read").optional(),
                         fieldWithPath("content[].createdAt").description("Notification created timestamp").optional(),
                         fieldWithPath("totalPages").description("Total pages"),
@@ -134,6 +135,7 @@ class NotificationControllerTest : RestDocsTest() {
                         fieldWithPath("[].referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("[].actorId").description("Actor member ID who triggered the notification (nullable)"),
                         subsectionWithPath("[].payload").description("Notification payload snapshot used for client-side rendering (missing or invalid payloads fall back to version 0 generic payload)"),
+                        subsectionWithPath("[].scheduleChanges").description("Pinned schedule changes visible to the current recipient (nullable)").optional(),
                         fieldWithPath("[].isRead").description("Whether notification has been read"),
                         fieldWithPath("[].createdAt").description("Notification created timestamp")
                     )
@@ -270,6 +272,7 @@ class NotificationControllerTest : RestDocsTest() {
                         fieldWithPath("referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER, INQUIRY) (nullable)"),
                         fieldWithPath("referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("actorId").description("Actor member ID (nullable)"),
+                        subsectionWithPath("scheduleChanges").description("Pinned schedule changes visible to the current recipient (nullable)").optional(),
                         subsectionWithPath("payload").description("Notification payload snapshot used for client-side rendering (missing or invalid payloads fall back to version 0 generic payload)"),
                         fieldWithPath("isRead").description("Whether notification has been read"),
                         fieldWithPath("createdAt").description("Notification created timestamp")

@@ -1520,10 +1520,7 @@ private struct NotificationDropdownRow: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(NotificationPresentation.message(for: notification))
-                        .font(notification.isRead ? DPTypography.label : DPFont.bold(size: 14, relativeTo: .subheadline))
-                        .foregroundStyle(notification.isRead ? DPColor.textSecondary : DPColor.textPrimary)
-                        .lineLimit(1)
+                    NotificationMessageText(notification: notification, ordinaryLineLimit: 1)
 
                     if let date = NotificationPresentation.date(from: notification.createdAt) {
                         NotificationRelativeTimeText(date: date)

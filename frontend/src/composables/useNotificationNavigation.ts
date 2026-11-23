@@ -44,7 +44,7 @@ export function useNotificationNavigation() {
 
         // Check if already on the duty calendar page
         const currentPath = router.currentRoute.value.path
-        const isOnDutyPage = currentPath.startsWith('/duty/')
+        const isOnDutyPage = currentPath === `/duty/${authStore.user?.id}`
         const userId = authStore.user?.id
 
         if (isOnDutyPage) {

@@ -15,6 +15,7 @@ import com.tistory.shanepark.dutypark.notification.domain.repository.Notificatio
 import com.tistory.shanepark.dutypark.notification.dto.NotificationCountDto
 import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -27,20 +28,22 @@ class NotificationService(
     private val memberRepository: MemberRepository,
     private val friendRequestRepository: FriendRequestRepository,
     private val notificationPayloadCodec: NotificationPayloadCodec,
+    private val scheduleChangesService: ScheduleNotificationChangesService,
 ) {
     private val log = logger()
 
     @Transactional(readOnly = true)
     fun getUnreadNotifications(memberId: Long): List<NotificationDto> {
         val notifications = notificationRepository.findByMemberIdAndIsReadFalseOrderByCreatedDateDesc(memberId)
-        return notifications.take(50)
-            .map { toDto(memberId, it, "getUnreadNotifications") }
+        val dtos = notifications.take(50).map { toDto(memberId, it, "getUnreadNotifications") }
+        return scheduleChangesService.enrich(memberId, dtos)
     }
 
     @Transactional(readOnly = true)
     fun getNotifications(memberId: Long, pageable: Pageable): Page<NotificationDto> {
-        return notificationRepository.findByMemberIdOrderByCreatedDateDesc(memberId, pageable)
-            .map { toDto(memberId, it, "getNotifications") }
+        val page = notificationRepository.findByMemberIdOrderByCreatedDateDesc(memberId, pageable)
+        val dtos = page.content.map { toDto(memberId, it, "getNotifications") }
+        return PageImpl(scheduleChangesService.enrich(memberId, dtos), pageable, page.totalElements)
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +66,7 @@ class NotificationService(
         notification.isRead = true
         notificationRepository.save(notification)
 
-        return toDto(memberId, notification, "markAsRead")
+        return scheduleChangesService.enrich(memberId, listOf(toDto(memberId, notification, "markAsRead"))).single()
     }
 
     fun markAllAsRead(memberId: Long): Int {

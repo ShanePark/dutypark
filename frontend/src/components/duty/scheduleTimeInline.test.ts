@@ -75,5 +75,10 @@ describe('schedule time inline display', () => {
     expect(title[0]).toContain('-webkit-line-clamp: 2')
     expect(title[0]).toContain('overflow: hidden')
     expect(title[0]).toContain('max-width: 100%')
+
+    const flowingTitle = bodies(':slotted(.calendar-item__line--chip > .calendar-item__text--flow)')
+    expect(flowingTitle).toHaveLength(1)
+    expect(flowingTitle[0]).toContain('display: inline')
+    expect(flowingTitle[0]).toContain('overflow: visible')
   })
 })

@@ -290,6 +290,9 @@ const apiErrors = {
     self: '자기 자신은 차단할 수 없습니다.',
   },
   report: {
+    currentVersion: '현재 일정 버전 {version}', deleteCurrentVersion: '확인한 현재 일정 삭제', deleteCurrentVersionConfirm: '현재 일정 버전 {version}의 내용을 확인했습니다. 이 버전을 삭제하시겠습니까?',
+    evidenceFields: { content: '제목', displayContent: '표시 제목', description: '본문', startDateTime: '시작', endDateTime: '종료', visibility: '공개 범위', tags: '태그', attachments: '첨부파일' },
+    scheduleVersionTarget: '일정 버전 신고', versionLabel: '신고 대상 버전 {version}', versionEvidence: '버전과 변경 근거', targetVersionChanged: '신고된 뒤 일정이 수정되었습니다. 최신 버전을 별도로 확인해 주세요.',
     self: '내가 올린 콘텐츠는 신고할 수 없습니다.',
     detail: {
       required: '기타 사유를 선택한 경우 상세 내용을 입력해 주세요.',
@@ -482,6 +485,15 @@ export default {
     logoutUnconfirmed: '이 기기의 로그인 정보는 안전하게 정리했지만 서버 세션이 남아 있을 수 있습니다. 다시 로그인한 뒤 내 정보 > 접속 세션 관리에서 종료하거나, 로그인된 다른 기기에서 해당 세션을 종료해 주세요.',
   },
   notifications: {
+    changes: {
+      inlineText: '‘{before}’ → ‘{after}’',
+      inlineTime: '{before} → {after}',
+      heading: '{actorName}님이 일정을 수정했습니다.',
+      headingRenamed: '{actorName}님이 ‘{before}’ 일정을 ‘{after}’{particle} 변경했습니다.',
+      headingWithTitle: '{actorName}님이 ‘{scheduleTitle}’ 일정을 수정했습니다.',
+      empty: '(비어 있음)',
+      fields: { TITLE: '제목', DESCRIPTION: '본문', TIME: '날짜·시간' },
+    },
     common: {
       ariaLabel: '알림',
       loading: '불러오는 중...',
@@ -518,6 +530,7 @@ export default {
       familyRequestAcceptedFallback: {
         v1: '가족 요청이 수락되었습니다.',
       },
+      scheduleUpdated: { v1: '{actorName}님이 일정의 {fields}을 변경했습니다.' },
       scheduleTagged: {
         v1: '{actorName}님의 [{scheduleTitle}] 일정에 태그되었습니다.',
       },
@@ -1315,12 +1328,16 @@ export default {
         edit: '수정',
         delete: '삭제',
         editTag: '태그 수정',
+        latestVersion: '다른 사람이 저장한 최신 일정', reloadLatest: '입력 내용을 버리고 최신 버전으로 수정',
+        lastEditor: '최종 수정자',
+        editingOwner: '{name}님의 일정 수정',
       },
       messages: {
         created: '일정이 저장되었습니다.',
         duplicate: '이미 동일한 일정이 있어 새로 등록하지 않았습니다.',
         createFailed: '일정 저장에 실패했습니다.',
         updateFailed: '일정 수정에 실패했습니다.',
+        versionConflict: '다른 사람이 일정을 수정했습니다. 입력 내용은 유지됩니다. 최신 일정을 확인한 뒤 다시 수정해 주세요.',
         deleteConfirm: '“{title}” 일정을 삭제하시겠습니까?',
         deleted: '일정이 삭제되었습니다.',
         deleteFailed: '일정 삭제에 실패했습니다.',
@@ -1650,6 +1667,7 @@ export default {
     dropMobile: '탭해서 파일을 선택하세요',
     dropOverlay: '이곳에 파일을 놓으면 첨부됩니다',
     maxSize: '최대 {size}',
+    previewImageAria: '{name} 크게 보기',
   },
   attachmentGrid: {
     label: '첨부파일 ({count})',

@@ -108,6 +108,11 @@ nonisolated enum DPCalendarSpanRibbon {
     /// A true start or end stands this far in from its tile's edge.
     static let edgeInset: CGFloat = 2
     static let cornerRadius: CGFloat = 4
+    static let strokeWidth: CGFloat = 1
+    /// A barely-there shadow that lifts the band off its tiles.
+    static let shadowOpacity = 0.14
+    static let shadowRadius: CGFloat = 1
+    static let shadowY: CGFloat = 1
 
     /// Where the segment's ribbon sits relative to the lane slot of its first tile. The slot
     /// lies inside the tile's horizontal padding; the ribbon bridges the gutters between the
@@ -128,7 +133,7 @@ nonisolated enum DPCalendarSpanRibbon {
 
     /// The stretch of a band each covered day owns, in the band's own coordinates: its
     /// tile and half of the gutter on either side, so the band changes colour in the
-    /// middle of a gutter and the gutter itself never shows through.
+    /// middle of a gutter, under the centre of that gutter's divider.
     static func daySpans(
         bandWidth: CGFloat,
         columnCount: Int,
@@ -137,15 +142,43 @@ nonisolated enum DPCalendarSpanRibbon {
     ) -> [Range<CGFloat>] {
         guard columnCount > 0 else { return [] }
         let gutter = DPCalendarCellStyle.gutterWidth
-        let leading = isTrueStart ? edgeInset : 0
-        let insets = leading + (isTrueEnd ? edgeInset : 0)
-        let tileWidth = (bandWidth + insets - CGFloat(columnCount - 1) * gutter) / CGFloat(columnCount)
-        let splits = (1..<columnCount).map { CGFloat($0) * (tileWidth + gutter) - gutter / 2 - leading }
+        let splits = gutterStarts(bandWidth: bandWidth, columnCount: columnCount, isTrueStart: isTrueStart, isTrueEnd: isTrueEnd)
+            .map { $0 + gutter / 2 }
         // A band not yet measured is narrower than its gutters; its spans collapse to empty
         // rather than form inverted ranges.
         let width = max(0, bandWidth)
         let edges = [0] + splits.map { min(max($0, 0), width) } + [width]
         return (0..<columnCount).map { edges[$0]..<max(edges[$0], edges[$0 + 1]) }
+    }
+
+    /// The gutters between the tiles a band covers, in the band's own coordinates: where it
+    /// draws a divider, so the gutter line above and below the band runs on through it.
+    static func gutters(
+        bandWidth: CGFloat,
+        columnCount: Int,
+        isTrueStart: Bool,
+        isTrueEnd: Bool
+    ) -> [Range<CGFloat>] {
+        let width = max(0, bandWidth)
+        return gutterStarts(bandWidth: bandWidth, columnCount: columnCount, isTrueStart: isTrueStart, isTrueEnd: isTrueEnd)
+            .map { start in
+                let lower = min(max(start, 0), width)
+                return lower..<min(max(start + DPCalendarCellStyle.gutterWidth, lower), width)
+            }
+    }
+
+    private static func gutterStarts(
+        bandWidth: CGFloat,
+        columnCount: Int,
+        isTrueStart: Bool,
+        isTrueEnd: Bool
+    ) -> [CGFloat] {
+        guard columnCount > 1 else { return [] }
+        let gutter = DPCalendarCellStyle.gutterWidth
+        let leading = isTrueStart ? edgeInset : 0
+        let insets = leading + (isTrueEnd ? edgeInset : 0)
+        let tileWidth = (bandWidth + insets - CGFloat(columnCount - 1) * gutter) / CGFloat(columnCount)
+        return (1..<columnCount).map { CGFloat($0) * (tileWidth + gutter) - gutter - leading }
     }
 }
 
@@ -203,6 +236,7 @@ struct DPCalendarSpanLaneStack<Item, Ribbon: View>: View {
 /// brighter on a light duty fill and fainter on a dark fill or an empty tile in dark mode,
 /// so the ribbon reads as part of the tile rather than a bar laid over it. White would
 /// vanish on the white card, so an empty tile in the light theme takes a tint of its ink.
+/// Light-theme dividers carry the grid gutter through each day's glass.
 nonisolated enum DPCalendarSpanRibbonGlass: Equatable {
     case light
     case dark
@@ -226,9 +260,17 @@ nonisolated enum DPCalendarSpanRibbonGlass: Equatable {
 
     var strokeOpacity: Double {
         switch self {
-        case .light: 0.6
-        case .dark: 0.16
-        case .tinted: 0.10
+        case .light: 0.32
+        case .dark: 0.36
+        case .tinted: 0.24
+        }
+    }
+
+    var dividerOpacity: Double {
+        switch self {
+        case .light: 0.16
+        case .dark: 0.20
+        case .tinted: 0.12
         }
     }
 
@@ -248,11 +290,44 @@ nonisolated enum DPCalendarSpanRibbonGlass: Equatable {
         }
     }
 
-    /// The hairline along a day's stretch of the band.
+    /// The outline along a day's stretch of the band.
     static func strokeColor(dutyColor: String?, isCurrentMonth: Bool) -> Color {
-        dynamicColor(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth) { glass, tint, _ in
-            UIColor(red: tint[0], green: tint[1], blue: tint[2], alpha: glass.strokeOpacity)
+        inkTint(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth) { $0.strokeOpacity }
+    }
+
+    /// The divider over a gutter, on the side of it that lies over this day.
+    static func dividerColor(dutyColor: String?, isCurrentMonth: Bool) -> Color {
+        let ink = DPCalendarCellStyle.primaryForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+        return dynamicColor(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth) { glass, tint, traits in
+            if traits.userInterfaceStyle == .dark {
+                let rgb = components(ink, traits)
+                return UIColor(red: rgb[0], green: rgb[1], blue: rgb[2], alpha: glass.dividerOpacity)
+            }
+            let gutter = components(DPCalendarCellStyle.gutterColor, traits)
+            let amount = glass.fillOpacity
+            return UIColor(
+                red: gutter[0] * (1 - amount) + tint[0] * amount,
+                green: gutter[1] * (1 - amount) + tint[1] * amount,
+                blue: gutter[2] * (1 - amount) + tint[2] * amount,
+                alpha: 1
+            )
         }
+    }
+
+    /// The day's ink at the glass's opacity. The ink's own alpha (a faded outside-month
+    /// ink) is dropped so the opacity is not compounded.
+    private static func inkTint(
+        dutyColor: String?,
+        isCurrentMonth: Bool,
+        _ opacity: @escaping @Sendable (DPCalendarSpanRibbonGlass) -> Double
+    ) -> Color {
+        let tone = DPCalendarCellStyle.tone(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+        let ink = DPCalendarCellStyle.primaryForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
+        return Color(uiColor: UIColor { traits in
+            let glass = DPCalendarSpanRibbonGlass(tone: tone, isDarkTheme: traits.userInterfaceStyle == .dark)
+            let rgb = components(ink, traits)
+            return UIColor(red: rgb[0], green: rgb[1], blue: rgb[2], alpha: opacity(glass))
+        })
     }
 
     private static func dynamicColor(
@@ -392,7 +467,8 @@ nonisolated struct DPCalendarSpanRibbonRowPlan: Equatable {
 }
 
 /// One week-row segment of a multi-day schedule: a soft-glass band, each day of it the glass
-/// over that day's fill, carrying the title once, the true start and end times it holds,
+/// over that day's fill, outlined in that day's ink with a faint divider over each gutter it
+/// bridges, carrying the title once, the true start and end times it holds,
 /// the schedule's tags and a chevron when the schedule continues into the next row.
 ///
 /// Times are left out when they would cut the title short. The tags take what is left
@@ -472,8 +548,22 @@ struct DPCalendarSpanRibbonBand<Title: View>: View {
                         .frame(width: span.range.upperBound - span.range.lowerBound, height: proxy.size.height)
                         .offset(x: span.range.lowerBound)
                 }
+                ForEach(Array(dividers(width: proxy.size.width).enumerated()), id: \.offset) { _, half in
+                    DPCalendarSpanRibbonGlass.dividerColor(dutyColor: half.day.dutyColor, isCurrentMonth: half.day.isCurrentMonth)
+                        .frame(
+                            width: half.range.upperBound - half.range.lowerBound,
+                            height: max(0, proxy.size.height - 2 * DPCalendarSpanRibbon.strokeWidth)
+                        )
+                        .offset(x: half.range.lowerBound, y: DPCalendarSpanRibbon.strokeWidth)
+                }
             }
             .clipShape(shape)
+            .compositingGroup()
+            .shadow(
+                color: .black.opacity(DPCalendarSpanRibbon.shadowOpacity),
+                radius: DPCalendarSpanRibbon.shadowRadius,
+                y: DPCalendarSpanRibbon.shadowY
+            )
         }
         .overlay {
             GeometryReader { proxy in
@@ -481,7 +571,7 @@ struct DPCalendarSpanRibbonBand<Title: View>: View {
                     shape
                         .strokeBorder(
                             DPCalendarSpanRibbonGlass.strokeColor(dutyColor: span.day.dutyColor, isCurrentMonth: span.day.isCurrentMonth),
-                            lineWidth: 1
+                            lineWidth: DPCalendarSpanRibbon.strokeWidth
                         )
                         .mask(alignment: .leading) {
                             Rectangle()
@@ -501,6 +591,23 @@ struct DPCalendarSpanRibbonBand<Title: View>: View {
             isTrueEnd: isTrueEnd
         )
         return zip(days, ranges).map { ($0, $1) }
+    }
+
+    /// Each gutter's divider in two halves, split at the band's colour seam, each tinted for
+    /// the day under it.
+    private func dividers(width: CGFloat) -> [(day: DPCalendarSpanRibbonDay, range: Range<CGFloat>)] {
+        let seams = daySpans(width: width).map(\.range.upperBound)
+        let gutters = DPCalendarSpanRibbon.gutters(
+            bandWidth: width,
+            columnCount: days.count,
+            isTrueStart: isTrueStart,
+            isTrueEnd: isTrueEnd
+        )
+        return gutters.enumerated().flatMap { index, gutter -> [(day: DPCalendarSpanRibbonDay, range: Range<CGFloat>)] in
+            guard days.indices.contains(index + 1), seams.indices.contains(index) else { return [] }
+            let seam = min(max(seams[index], gutter.lowerBound), gutter.upperBound)
+            return [(days[index], gutter.lowerBound..<seam), (days[index + 1], seam..<gutter.upperBound)]
+        }
     }
 
     private func titleStyle(_ content: some View, ink: Color) -> some View {

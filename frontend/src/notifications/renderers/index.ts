@@ -24,6 +24,9 @@ export const notificationRendererRegistry: NotificationRendererRegistry = {
   FAMILY_REQUEST_ACCEPTED: {
     1: rendererV1<'FAMILY_REQUEST_ACCEPTED'>(notificationRenderersV1.FAMILY_REQUEST_ACCEPTED),
   },
+  SCHEDULE_UPDATED: {
+    1: rendererV1<'SCHEDULE_UPDATED'>(notificationRenderersV1.SCHEDULE_UPDATED),
+  },
   SCHEDULE_TAGGED: {
     1: rendererV1<'SCHEDULE_TAGGED'>(notificationRenderersV1.SCHEDULE_TAGGED),
   },

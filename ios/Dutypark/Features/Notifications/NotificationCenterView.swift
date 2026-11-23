@@ -52,6 +52,7 @@ struct NotificationCenterView: View {
     @State private var alertTitle: String?
     @State private var alertMessage: String?
     @State private var highlightedNotificationID: NotificationID?
+    @State private var openedScheduleNotificationID: NotificationID?
 
     init(
         store: NotificationStore,
@@ -90,6 +91,7 @@ struct NotificationCenterView: View {
             }
             .onChange(of: targetNotificationID) { _, _ in
                 highlightedNotificationID = nil
+                openedScheduleNotificationID = nil
                 Task {
                     if targetNotificationID != nil {
                         await store.refresh()
@@ -166,6 +168,13 @@ struct NotificationCenterView: View {
                 await Task.yield()
                 withAnimation(.easeInOut(duration: 0.25)) {
                     proxy.scrollTo(targetNotificationID, anchor: .center)
+                }
+                if openedScheduleNotificationID != targetNotificationID,
+                   let target = store.notifications.first(where: { $0.id == targetNotificationID }),
+                   target.type == .scheduleUpdated,
+                   let route = await store.open(target) {
+                    openedScheduleNotificationID = targetNotificationID
+                    _ = await onOpen(route)
                 }
                 return
             case .loadMore:
@@ -372,11 +381,7 @@ private struct NotificationRow: View {
                     .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(NotificationPresentation.message(for: notification))
-                            .font(notification.isRead ? DPTypography.label : DPFont.bold(size: 14, relativeTo: .subheadline))
-                            .foregroundStyle(notification.isRead ? DPColor.textSecondary : DPColor.textPrimary)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
+                        NotificationMessageText(notification: notification, ordinaryLineLimit: 2)
 
                         if let date = NotificationPresentation.date(from: notification.createdAt) {
                             HStack {

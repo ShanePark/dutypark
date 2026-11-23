@@ -60,8 +60,10 @@ class AdminReportController(
     fun deleteTarget(
         @Login loginMember: LoginMember,
         @PathVariable reportId: UUID,
+        @RequestParam(required = false) expectedCurrentVersion: Long? = null,
     ): AdminReportDetailDto {
-        return adminReportService.deleteTarget(reportId, loginMember = loginMember)
+        return adminReportService.deleteTarget(reportId, loginMember = loginMember,
+            expectedCurrentVersion = expectedCurrentVersion)
     }
 
     /** An omitted or `ALL` status means "every report"; anything else must name a [ReportStatus]. */

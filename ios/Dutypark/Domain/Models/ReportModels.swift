@@ -40,6 +40,8 @@ nonisolated struct ReportTarget: Identifiable, Equatable, Sendable {
     let type: ReportTargetType
     let targetID: String
     let name: String
+    var scheduleVersion: Int64? = nil
+    var canBlockWithReport: Bool = true
 
     var id: String { "\(type.rawValue)-\(targetID)" }
 }
@@ -50,6 +52,7 @@ nonisolated struct CreateReportRequest: Codable, Equatable, Sendable {
     let reason: ReportReason
     let detail: String?
     let alsoBlock: Bool
+    var scheduleVersion: Int64? = nil
 }
 
 /// How far a report has been handled. `open` is the intake state, `resolved` and

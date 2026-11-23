@@ -60,7 +60,7 @@ class ContentReport(
     val detail: String? = null,
 
     @Lob
-    @Column(name = "content_snapshot", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "content_snapshot", nullable = false, columnDefinition = "LONGTEXT")
     val contentSnapshot: String,
 
     @Column(name = "reporter_name", nullable = false, length = 50)
@@ -68,6 +68,13 @@ class ContentReport(
 
     @Column(name = "reported_member_name", nullable = false, length = 50)
     val reportedMemberName: String,
+
+    @Column(name = "schedule_version")
+    val scheduleVersion: Long? = null,
+
+    @Lob
+    @Column(name = "schedule_evidence", columnDefinition = "LONGTEXT")
+    val scheduleEvidence: String? = null,
 ) : EntityBase() {
 
     @Enumerated(EnumType.STRING)

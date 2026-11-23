@@ -157,7 +157,7 @@ onMounted(() => loadReports(0))
                   >{{ t(MY_REPORT_TARGET_TYPE_LABEL_KEYS[report.targetType]) }}</span>
                 </span>
                 <span class="mt-2 block truncate text-base font-semibold text-dp-text-primary">
-                  {{ report.reportedMemberName }}
+                  {{ report.reportedMemberName || t('report.scheduleVersionTarget') }}
                 </span>
                 <span class="mt-1 block truncate text-sm text-dp-text-secondary">
                   {{ t(MY_REPORT_REASON_LABEL_KEYS[report.reason]) }}
@@ -176,7 +176,7 @@ onMounted(() => loadReports(0))
               <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
                 <dt class="text-dp-text-muted">{{ t('support.reports.targetLabel') }}</dt>
                 <dd class="font-medium break-words text-dp-text-primary">
-                  {{ report.reportedMemberName }} · {{ t(MY_REPORT_TARGET_TYPE_LABEL_KEYS[report.targetType]) }}
+                  {{ report.reportedMemberName || t('report.scheduleVersionTarget') }} · {{ t(MY_REPORT_TARGET_TYPE_LABEL_KEYS[report.targetType]) }}
                 </dd>
                 <dt class="text-dp-text-muted">{{ t('support.reports.reasonLabel') }}</dt>
                 <dd class="font-medium break-words text-dp-text-primary">{{ t(MY_REPORT_REASON_LABEL_KEYS[report.reason]) }}</dd>

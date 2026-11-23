@@ -50,6 +50,7 @@ extension View {
     /// `translation` arrives in the same shape `DragGesture` reports it, so callers
     /// read it the same way.
     func dpHorizontalPan(
+        isEnabled: Bool = true,
         onChanged: @escaping (CGSize) -> Void,
         onEnded: @escaping (CGSize, CGSize) -> Void,
         onCancelled: @escaping (CGSize) -> Void
@@ -58,11 +59,12 @@ extension View {
         // that branch on its first change would remove the in-flight recognizer.
         // Keep its anchor on a stable layout owner across content replacements.
         ZStack(alignment: .topLeading) { self }
-            .background(DPHorizontalPanBridge(onChanged: onChanged, onEnded: onEnded, onCancelled: onCancelled))
+            .background(DPHorizontalPanBridge(isEnabled: isEnabled, onChanged: onChanged, onEnded: onEnded, onCancelled: onCancelled))
     }
 }
 
 private struct DPHorizontalPanBridge: UIViewRepresentable {
+    let isEnabled: Bool
     let onChanged: (CGSize) -> Void
     let onEnded: (CGSize, CGSize) -> Void
     let onCancelled: (CGSize) -> Void
@@ -78,6 +80,7 @@ private struct DPHorizontalPanBridge: UIViewRepresentable {
         context.coordinator.onChanged = onChanged
         context.coordinator.onEnded = onEnded
         context.coordinator.onCancelled = onCancelled
+        context.coordinator.setEnabled(isEnabled, defersCancellation: true)
         uiView.attachGestureIfPossible()
     }
 
@@ -136,6 +139,8 @@ final class DPHorizontalPanCoordinator: NSObject, UIGestureRecognizerDelegate {
     var onEnded: (CGSize, CGSize) -> Void = { _, _ in }
     var onCancelled: (CGSize) -> Void = { _ in }
     private var axis = DPHorizontalPanPolicy.Axis.undecided
+    private var isEnabled = true
+    private var lastTranslation = CGSize.zero
 
     lazy var gesture: UIPanGestureRecognizer = {
         let gesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
@@ -143,6 +148,7 @@ final class DPHorizontalPanCoordinator: NSObject, UIGestureRecognizerDelegate {
         // The decorated view keeps its own taps; a drag that turns out to be a swipe
         // is turned away by the caller rather than by cancelling the touch.
         gesture.cancelsTouchesInView = false
+        gesture.maximumNumberOfTouches = 1
         return gesture
     }()
 
@@ -153,6 +159,8 @@ final class DPHorizontalPanCoordinator: NSObject, UIGestureRecognizerDelegate {
     }
 
     func handlePan(state: UIGestureRecognizer.State, translation: CGPoint, velocity: CGPoint) {
+        guard isEnabled else { return }
+        lastTranslation = CGSize(width: translation.x, height: translation.y)
         if state == .began { axis = .undecided }
         if axis == .undecided { axis = DPHorizontalPanPolicy.axis(for: translation) }
         let isTerminal = DPHorizontalPanPolicy.shouldSendEnd(for: state)
@@ -174,12 +182,28 @@ final class DPHorizontalPanCoordinator: NSObject, UIGestureRecognizerDelegate {
     }
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        guard let pan = gestureRecognizer as? UIPanGestureRecognizer, let anchor else { return false }
+        guard isEnabled, let pan = gestureRecognizer as? UIPanGestureRecognizer, let anchor else { return false }
         guard DPHorizontalPanPolicy.shouldBegin(
             velocity: pan.velocity(in: pan.view),
             translation: pan.translation(in: pan.view)
         ) else { return false }
         return anchor.bounds.contains(pan.location(in: anchor))
+    }
+
+    func setEnabled(_ enabled: Bool, defersCancellation: Bool = false) {
+        guard isEnabled != enabled else { return }
+        let cancelsHorizontalPan = !enabled && axis == .horizontal
+        axis = .undecided
+        isEnabled = enabled
+        gesture.isEnabled = enabled
+        if cancelsHorizontalPan {
+            let translation = lastTranslation
+            if defersCancellation {
+                DispatchQueue.main.async { [weak self] in self?.onCancelled(translation) }
+            } else {
+                onCancelled(translation)
+            }
+        }
     }
 
     func gestureRecognizer(

@@ -1,5 +1,6 @@
 import type { NotificationDtoForTypeAndVersion } from '@/types'
 import type { NotificationTranslate } from './types'
+import { displayValue, koreanDirectionParticle, scheduleChangeMessage } from '../scheduleChangeMessage'
 
 function messageKey(key: string): string {
   return `notifications.items.${key}.v1`
@@ -48,6 +49,32 @@ export const notificationRenderersV1 = {
     return actorName
       ? t(messageKey('familyRequestAccepted'), { actorName })
       : t(messageKey('familyRequestAcceptedFallback'))
+  },
+  SCHEDULE_UPDATED: (
+    notification: NotificationDtoForTypeAndVersion<'SCHEDULE_UPDATED', 1>,
+    t: NotificationTranslate,
+  ) => {
+    const actorName = resolveActorName(notification) ?? t('notifications.items.someone')
+    if (notification.scheduleChanges) {
+      const changes = scheduleChangeMessage(notification.scheduleChanges, t)
+      const titleChange = notification.scheduleChanges.title
+      if (titleChange || changes) {
+        const scheduleTitle = notification.scheduleChanges.scheduleTitle?.replace(/\s+/gu, ' ').trim()
+        const heading = titleChange
+          ? t('notifications.changes.headingRenamed', {
+            actorName,
+            before: displayValue(titleChange.before, t),
+            after: displayValue(titleChange.after, t),
+            particle: koreanDirectionParticle(titleChange.after),
+          })
+          : scheduleTitle
+            ? t('notifications.changes.headingWithTitle', { actorName, scheduleTitle: displayValue(scheduleTitle, t) })
+            : t('notifications.changes.heading', { actorName })
+        return changes ? `${heading}\n${changes}` : heading
+      }
+    }
+    const fields = notification.payload.changedFields.map(field => t(`notifications.changes.fields.${field}`)).join(', ')
+    return t(messageKey('scheduleUpdated'), { actorName, fields })
   },
   SCHEDULE_TAGGED: (
     notification: NotificationDtoForTypeAndVersion<'SCHEDULE_TAGGED', 1>,

@@ -14,6 +14,7 @@ vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({ user: { id: 1 } }),
 }))
 
+vi.mock('@/api/schedule', () => ({ scheduleApi: { getScheduleById: vi.fn().mockResolvedValue({ startDateTime: '2026-11-23T14:00:00' }) } }))
 import { useNotificationNavigation } from './useNotificationNavigation'
 
 function notificationWith(
@@ -33,6 +34,20 @@ function notificationWith(
 }
 
 describe('useNotificationNavigation', () => {
+  it('opens the schedule directly for update notifications', async () => {
+    const notification = { ...notificationWith('SCHEDULE', 'schedule-id'), type: 'SCHEDULE_UPDATED' } as NotificationDto
+    vi.stubGlobal('sessionStorage', { setItem: vi.fn() })
+    await useNotificationNavigation().navigateToNotification(notification)
+    expect(routerStub.push).toHaveBeenCalledWith('/duty/1')
+  })
+  it('leaves an unrelated calendar for the signed-in recipient calendar', async () => {
+    routerStub.currentRoute.value.path = '/duty/99'
+    vi.stubGlobal('sessionStorage', { setItem: vi.fn() })
+    await useNotificationNavigation().navigateToNotification({ ...notificationWith('SCHEDULE', 'schedule-id'), type: 'SCHEDULE_UPDATED' } as NotificationDto)
+    expect(routerStub.push).toHaveBeenCalledWith('/duty/1')
+    routerStub.currentRoute.value.path = '/'
+  })
+
   it('opens the answered inquiry on the support history tab', () => {
     const { getNavigationPath } = useNotificationNavigation()
 

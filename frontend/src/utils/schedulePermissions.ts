@@ -1,5 +1,5 @@
-export function canEditCalendarSchedule(canEditCalendar: boolean, isTagged: boolean): boolean {
-  return canEditCalendar && !isTagged
+export function canEditCalendarSchedule(canEditCalendar: boolean, isTagged: boolean, serverCanEdit?: boolean): boolean {
+  return serverCanEdit ?? (canEditCalendar && !isTagged)
 }
 
 export function isOwnedCalendarSchedule(isMyCalendar: boolean, isTagged: boolean): boolean {

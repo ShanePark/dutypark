@@ -33,6 +33,9 @@ class Notification(
     @Column(name = "actor_id")
     val actorId: Long? = null,
 
+    @Column(name = "event_key", length = 120, unique = true)
+    var eventKey: String? = null,
+
     @Column(name = "payload_json", columnDefinition = "JSON")
     var payloadJson: String? = null,
 

@@ -269,6 +269,14 @@ function mapToSchedule(dto: ScheduleDto): Schedule {
 
   return {
     id: dto.id,
+    ownerMemberId: dto.ownerMemberId,
+    canEdit: dto.canEdit,
+    canReport: dto.canReport,
+    canBlockWithReport: dto.canBlockWithReport,
+    version: dto.version,
+    createdBy: dto.createdBy,
+    lastEditedBy: dto.lastEditedBy,
+    lastEditedAt: dto.lastEditedAt,
     content: dto.content,
     contentWithoutTime: dto.content, // API doesn't provide this separately
     description: dto.description,
@@ -1352,13 +1360,16 @@ async function loadFriends() {
 }
 
 interface ScheduleSaveData {
+  ownerMemberId?: number
+  expectedVersion?: number
+  complete?: (saved: boolean) => void
   id?: string
   content: string
   description: string
   startDateTime: string
   endDateTime: string
   visibility: 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
-  tagFriendIds: number[]
+  tagFriendIds?: number[]
   attachmentSessionId?: string | null
   orderedAttachmentIds?: string[]
   aiTimeParsingRequested: boolean
@@ -1398,7 +1409,8 @@ async function handleEditSchedule(data: ScheduleSaveData) {
   try {
     await scheduleApi.saveSchedule({
       id: data.id,
-      memberId: memberId.value,
+      expectedVersion: data.expectedVersion,
+      memberId: data.ownerMemberId ?? memberId.value,
       content: data.content,
       description: data.description || undefined,
       startDateTime: data.startDateTime,
@@ -1410,9 +1422,12 @@ async function handleEditSchedule(data: ScheduleSaveData) {
       aiTimeParsingRequested: data.aiTimeParsingRequested,
     })
     await loadSchedules()
+    data.complete?.(true)
   } catch (error) {
-    console.error('Failed to update schedule:', error)
-    showError(t('duty.schedule.messages.updateFailed'))
+    const status = (error as { response?: { status?: number } }).response?.status
+    if (status === 409) await loadSchedules()
+    data.complete?.(false)
+    showError(t(status === 409 ? 'duty.schedule.messages.versionConflict' : 'duty.schedule.messages.updateFailed'))
   }
 }
 
@@ -1485,6 +1500,8 @@ async function openScheduleReport(schedule: Pick<Schedule, 'id' | 'content'>) {
     targetType: 'SCHEDULE',
     targetId: schedule.id,
     targetName: schedule.content,
+    scheduleVersion: selectedDaySchedules.value.find(item => item.id === schedule.id)?.version,
+    canBlockWithReport: selectedDaySchedules.value.find(item => item.id === schedule.id)?.canBlockWithReport,
   }
 }
 
@@ -1513,6 +1530,7 @@ async function handleReportSubmit(submission: ReportSubmission) {
     await reportApi.createReport({
       targetType: target.targetType,
       targetId: target.targetId,
+      scheduleVersion: target.scheduleVersion,
       reason: submission.reason,
       detail: submission.detail || undefined,
       alsoBlock: submission.alsoBlock,

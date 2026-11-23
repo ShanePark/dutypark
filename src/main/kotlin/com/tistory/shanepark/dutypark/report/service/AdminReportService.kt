@@ -16,6 +16,7 @@ import com.tistory.shanepark.dutypark.report.repository.ContentReportRepository
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
+import com.tistory.shanepark.dutypark.schedule.service.ScheduleRevisionService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
@@ -42,6 +43,7 @@ class AdminReportService(
     private val todoRepository: TodoRepository,
     private val scheduleService: ScheduleService,
     private val todoService: TodoService,
+    private val scheduleRevisionService: ScheduleRevisionService,
 ) {
 
     private val log = logger()
@@ -101,13 +103,17 @@ class AdminReportService(
      * The report itself is kept as the record of the moderation decision.
      */
     @Transactional
-    fun deleteTarget(reportId: UUID, loginMember: LoginMember? = null): AdminReportDetailDto {
+    fun deleteTarget(reportId: UUID, loginMember: LoginMember? = null, expectedCurrentVersion: Long? = null): AdminReportDetailDto {
         val report = findReportOrThrow(reportId)
         val actor = loginMember?.toAuditActor()
         var deleted = false
         when (report.targetType) {
             ReportTargetType.MEMBER -> throw BadRequestException("report.target.notDeletable")
-            ReportTargetType.SCHEDULE -> findSchedule(report.targetId)?.let {
+            ReportTargetType.SCHEDULE -> findScheduleForUpdate(report.targetId)?.let {
+                if ((expectedCurrentVersion != null && expectedCurrentVersion != it.version) ||
+                    (report.scheduleVersion != null && report.scheduleVersion != it.version && expectedCurrentVersion == null)) {
+                    throw ReportTargetVersionChangedException()
+                }
                 scheduleService.deleteScheduleInternal(it, actor = actor)
                 deleted = true
             }
@@ -132,7 +138,14 @@ class AdminReportService(
 
     private fun toDetail(report: ContentReport, targetExists: Boolean): AdminReportDetailDto {
         val resolvedByName = report.resolvedBy?.let { memberRepository.findById(it).orElse(null)?.name }
-        return AdminReportDetailDto.of(report, targetExists = targetExists, resolvedByName = resolvedByName)
+        val currentSchedule = report.scheduleVersion?.let { findSchedule(report.targetId) }
+        val targetVersionChanged = currentSchedule != null && currentSchedule.version != report.scheduleVersion
+        return AdminReportDetailDto.of(report, targetExists = targetExists, resolvedByName = resolvedByName,
+            targetVersionChanged = targetVersionChanged,
+            currentScheduleVersion = currentSchedule?.version.takeIf { targetVersionChanged },
+            currentScheduleSnapshot = currentSchedule?.takeIf { targetVersionChanged }?.let {
+                scheduleRevisionService.snapshot(scheduleRevisionService.findRevision(it, it.version))
+            })
     }
 
     private fun targetExists(report: ContentReport): Boolean {
@@ -141,6 +154,10 @@ class AdminReportService(
             ReportTargetType.SCHEDULE -> findSchedule(report.targetId) != null
             ReportTargetType.TODO -> findTodo(report.targetId) != null
         }
+    }
+
+    private fun findScheduleForUpdate(targetId: String): Schedule? {
+        return toUuid(targetId)?.let { scheduleRepository.findByIdForUpdate(it).orElse(null) }
     }
 
     private fun findSchedule(targetId: String): Schedule? {

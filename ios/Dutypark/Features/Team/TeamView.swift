@@ -46,6 +46,7 @@ struct TeamView: View {
     @State private var calendarBodyHeight: CGFloat = 0
     @State private var isSwipingMonth = false
     @State private var isSlidingMonth = false
+    @State private var isCalendarZoomActive = false
     @State private var monthSlideTask: Task<Void, Never>?
     private let onOpenCalendar: (MemberID) -> Void
 
@@ -327,7 +328,12 @@ struct TeamView: View {
         ZStack(alignment: .top) {
             ScrollView {
                 VStack(spacing: DPSpacing.compact) {
-                    calendar
+                    DPCalendarZoom(
+                        resetID: AnyHashable("\(team.id)-\(viewModel.calendarMonth.year)-\(viewModel.calendarMonth.month)"),
+                        isActive: $isCalendarZoomActive
+                    ) {
+                        calendar
+                    }
                     selectedSchedules
                     shiftList
                     if viewModel.canLeaveTeam {
@@ -531,6 +537,7 @@ struct TeamView: View {
         .background(DPCalendarCellStyle.gutterColor)
         .clipped()
         .dpHorizontalPan(
+            isEnabled: !isCalendarZoomActive,
             onChanged: followMonthSwipe,
             onEnded: finishMonthSwipe,
             onCancelled: cancelMonthSwipe
@@ -629,7 +636,7 @@ struct TeamView: View {
     }
 
     private func followMonthSwipe(_ translation: CGSize) {
-        guard !isSlidingMonth, !viewModel.isLoading, calendarWidth > 0 else { return }
+        guard !isCalendarZoomActive, !isSlidingMonth, !viewModel.isLoading, calendarWidth > 0 else { return }
         if monthTransition == nil {
             let page = currentMonthPage
             guard page.days.count == 42,
@@ -652,7 +659,7 @@ struct TeamView: View {
     }
 
     private func finishMonthSwipe(_ translation: CGSize, velocity: CGSize) {
-        guard !isSlidingMonth else { return }
+        guard !isCalendarZoomActive, !isSlidingMonth else { return }
         let offset = CalendarMonthSwipe.monthOffset(translation: translation, velocity: velocity, viewportWidth: calendarWidth)
         guard offset != 0, let transition = monthTransition else {
             settleMonthSwipe()
