@@ -13,6 +13,7 @@ data class ScheduleTimeChange(val before: ScheduleTimeSnapshot, val after: Sched
 data class ScheduleNotificationChangesDto(
     val scheduleId: UUID,
     val scheduleVersion: Long,
+    val scheduleTitle: String,
     val title: ScheduleTextChange?,
     val description: ScheduleTextChange?,
     val time: ScheduleTimeChange?,
@@ -29,6 +30,7 @@ data class ScheduleNotificationChangesDto(
             ScheduleNotificationChangesDto(
                 scheduleId = id,
                 scheduleVersion = version,
+                scheduleTitle = after.displayContent,
                 title = if (before.displayContent != after.displayContent) ScheduleTextChange(before.displayContent, after.displayContent) else null,
                 description = if (before.description != after.description) ScheduleTextChange(before.description, after.description) else null,
                 time = if (before.startDateTime != after.startDateTime || before.endDateTime != after.endDateTime) {

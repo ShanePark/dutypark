@@ -623,6 +623,7 @@ export type NotificationType =
   | 'FAMILY_REQUEST_RECEIVED'
   | 'FAMILY_REQUEST_ACCEPTED'
   | 'SCHEDULE_TAGGED'
+  | 'SCHEDULE_UPDATED'
   | 'TODO_TAGGED'
   | 'TODO_STATUS_TODO'
   | 'TODO_STATUS_IN_PROGRESS'
@@ -663,6 +664,11 @@ export interface ScheduleTaggedPayloadV1 extends ActorNotificationPayloadV1 {
   scheduleTitle: string
 }
 
+export interface ScheduleUpdatedPayloadV1 extends ActorNotificationPayloadV1 {
+  scheduleVersion: number
+  changedFields: Array<'TITLE' | 'DESCRIPTION' | 'TIME'>
+}
+
 export interface TodoTaggedPayloadV1 extends ActorNotificationPayloadV1 {
   todoTitle: string
 }
@@ -690,6 +696,7 @@ export interface NotificationPayloadByTypeV1 {
   FAMILY_REQUEST_RECEIVED: FamilyRequestReceivedPayloadV1
   FAMILY_REQUEST_ACCEPTED: FamilyRequestAcceptedPayloadV1
   SCHEDULE_TAGGED: ScheduleTaggedPayloadV1
+  SCHEDULE_UPDATED: ScheduleUpdatedPayloadV1
   TODO_TAGGED: TodoTaggedPayloadV1
   TODO_STATUS_TODO: TodoStatusTodoPayloadV1
   TODO_STATUS_IN_PROGRESS: TodoStatusInProgressPayloadV1
@@ -703,6 +710,7 @@ export interface NotificationPayloadByTypeV0 {
   FAMILY_REQUEST_RECEIVED: UnknownNotificationPayloadV0
   FAMILY_REQUEST_ACCEPTED: UnknownNotificationPayloadV0
   SCHEDULE_TAGGED: UnknownNotificationPayloadV0
+  SCHEDULE_UPDATED: UnknownNotificationPayloadV0
   TODO_TAGGED: UnknownNotificationPayloadV0
   TODO_STATUS_TODO: UnknownNotificationPayloadV0
   TODO_STATUS_IN_PROGRESS: UnknownNotificationPayloadV0
@@ -725,6 +733,18 @@ export type NotificationPayloadForTypeAndVersion<
   V extends NotificationPayloadVersion,
 > = NotificationPayloadRegistry[V][T]
 
+export interface ScheduleChanges {
+  scheduleTitle?: string | null
+  scheduleId: string
+  scheduleVersion: number
+  title?: { before: string; after: string } | null
+  description?: { before: string; after: string } | null
+  time?: {
+    before: { startDateTime: string; endDateTime: string }
+    after: { startDateTime: string; endDateTime: string }
+  } | null
+}
+
 interface NotificationDtoBase<
   T extends NotificationType,
   V extends NotificationPayloadVersion,
@@ -735,6 +755,7 @@ interface NotificationDtoBase<
   referenceId: string | null
   actorId: number | null
   payload: NotificationPayloadForTypeAndVersion<T, V>
+  scheduleChanges?: ScheduleChanges | null
   isRead: boolean
   createdAt: string
 }

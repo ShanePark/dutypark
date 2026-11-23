@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "notifications.changes.inlineClause" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "‘%@’ → ‘%@’"}}, "ko": {"stringUnit": {"state": "translated", "value": "‘%@’ → ‘%@’"}}}} ,
+    "notifications.changes.heading" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "%@ updated the schedule."}}, "ko": {"stringUnit": {"state": "translated", "value": "%@님이 일정을 수정했습니다."}}}} ,
+    "notifications.changes.headingFallback" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The schedule was updated."}}, "ko": {"stringUnit": {"state": "translated", "value": "일정이 수정되었습니다."}}}} ,
+    "notifications.changes.titledHeading" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "%@ updated the ‘%@’ schedule."}}, "ko": {"stringUnit": {"state": "translated", "value": "%@님이 ‘%@’ 일정을 수정했습니다."}}}} ,
+    "notifications.changes.titledHeadingFallback" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The ‘%@’ schedule was updated."}}, "ko": {"stringUnit": {"state": "translated", "value": "‘%@’ 일정이 수정되었습니다."}}}} ,
+    "notifications.changes.timeOnly" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Time"}}, "ko": {"stringUnit": {"state": "translated", "value": "시간"}}}} ,
+    "notifications.changes.renameHeadingRo" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "%@ renamed the ‘%@’ schedule to ‘%@’."}}, "ko": {"stringUnit": {"state": "translated", "value": "%@님이 ‘%@’ 일정을 ‘%@’로 변경했습니다."}}}} ,
+    "notifications.changes.renameHeadingFallbackRo" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The ‘%@’ schedule was renamed to ‘%@’."}}, "ko": {"stringUnit": {"state": "translated", "value": "‘%@’ 일정이 ‘%@’로 변경되었습니다."}}}} ,
+    "notifications.changes.renameHeadingEuro" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "%@ renamed the ‘%@’ schedule to ‘%@’."}}, "ko": {"stringUnit": {"state": "translated", "value": "%@님이 ‘%@’ 일정을 ‘%@’으로 변경했습니다."}}}} ,
+    "notifications.changes.renameHeadingFallbackEuro" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "The ‘%@’ schedule was renamed to ‘%@’."}}, "ko": {"stringUnit": {"state": "translated", "value": "‘%@’ 일정이 ‘%@’으로 변경되었습니다."}}}} ,
     "notifications.items.scheduleUpdatedTitle" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ changed the schedule title" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 일정의 제목을 변경했습니다" } }
     } },
@@ -48,6 +58,18 @@
     } },
     "notifications.items.scheduleUpdatedFallback" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "A schedule was updated" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정이 수정되었습니다" } }
+    } },
+    "notifications.changes.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Title" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "제목" } }
+    } },
+    "notifications.changes.description" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Description" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "본문" } }
+    } },
+    "notifications.changes.time" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Date and time" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "날짜·시간" } }
+    } },
+    "notifications.changes.empty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Empty" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "없음" } }
     } },
     "notifications.bell.unread" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ unread" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽지 않음 %@개" } }

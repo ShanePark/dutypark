@@ -43,6 +43,35 @@ class ScheduleUpdateNotificationIntegrationTest : DutyparkIntegrationTest() {
     @Autowired lateinit var blockService: BlockService
 
     @Test
+    fun `inline schedule title comes from the notified version after later title changes`() {
+        val owner = TestData.member
+        val tagged = TestData.member2
+        makeThemFriend(owner, tagged)
+        val initial = request(owner, listOf(tagged))
+        val schedule = scheduleService.createSchedule(loginMember(owner), initial).schedule
+        scheduleService.updateSchedule(loginMember(owner), initial.copy(id = schedule.id, description = "Body changed"))
+        val bodyNotice = updates().single()
+
+        scheduleService.updateSchedule(loginMember(owner), initial.copy(
+            id = schedule.id, description = "Body changed", content = "Later title",
+        ))
+        val earlier = notificationService.getUnreadNotifications(tagged.id!!).single { it.id == bodyNotice.id }
+        val inline = jsonMapper.valueToTree<tools.jackson.databind.JsonNode>(earlier).path("scheduleChanges")
+        assertThat(inline.path("scheduleTitle").asText()).isEqualTo("Meeting")
+        assertThat(inline.path("title").isNull).isTrue()
+        val detail = jsonMapper.valueToTree<tools.jackson.databind.JsonNode>(changes.getChanges(loginMember(tagged), bodyNotice.id))
+        assertThat(detail.path("scheduleTitle").asText()).isEqualTo("Meeting")
+        val titleNotice = notificationService.getUnreadNotifications(tagged.id!!).single { it.id != bodyNotice.id && it.type == NotificationType.SCHEDULE_UPDATED }
+        assertThat(jsonMapper.valueToTree<tools.jackson.databind.JsonNode>(titleNotice).path("scheduleChanges").path("scheduleTitle").asText()).isEqualTo("Later title")
+        assertThat(jsonMapper.writeValueAsString(NotificationDto.of(bodyNotice, decoded(bodyNotice))))
+            .doesNotContain("Meeting", "Later title", "Body changed")
+        assertThrows<NoSuchElementException> { changes.getChanges(loginMember(owner), bodyNotice.id) }
+        scheduleService.untagSelf(loginMember(tagged), schedule.id)
+        assertThat(notificationService.getNotifications(tagged.id!!, PageRequest.of(0, 20)).content)
+            .allMatch { it.scheduleChanges == null }
+    }
+
+    @Test
     fun `blocking a delegated actor hides inline changes while retaining the other owner's tag`() {
         val owner = TestData.member
         val manager = TestData.member2

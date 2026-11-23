@@ -483,6 +483,15 @@ export default {
     logoutUnconfirmed: 'This device was signed out safely, but a server session may remain. Sign in again and open My info > Sessions, or use another signed-in device, to end it.',
   },
   notifications: {
+    changes: {
+      inlineText: '“{before}” → “{after}”',
+      inlineTime: '{before} → {after}',
+      heading: '{actorName} updated a schedule.',
+      headingRenamed: '{actorName} renamed “{before}” to “{after}”.',
+      headingWithTitle: '{actorName} updated “{scheduleTitle}”.',
+      empty: '(empty)',
+      fields: { TITLE: 'Title', DESCRIPTION: 'Description', TIME: 'Date and time' },
+    },
     common: {
       ariaLabel: 'Notifications',
       loading: 'Loading...',
@@ -519,6 +528,7 @@ export default {
       familyRequestAcceptedFallback: {
         v1: 'Your family request was accepted.',
       },
+      scheduleUpdated: { v1: '{actorName} changed the schedule {fields}.' },
       scheduleTagged: {
         v1: '{actorName} tagged you in [{scheduleTitle}].',
       },

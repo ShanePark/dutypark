@@ -485,6 +485,15 @@ export default {
     logoutUnconfirmed: '이 기기의 로그인 정보는 안전하게 정리했지만 서버 세션이 남아 있을 수 있습니다. 다시 로그인한 뒤 내 정보 > 접속 세션 관리에서 종료하거나, 로그인된 다른 기기에서 해당 세션을 종료해 주세요.',
   },
   notifications: {
+    changes: {
+      inlineText: '‘{before}’ → ‘{after}’',
+      inlineTime: '{before} → {after}',
+      heading: '{actorName}님이 일정을 수정했습니다.',
+      headingRenamed: '{actorName}님이 ‘{before}’ 일정을 ‘{after}’{particle} 변경했습니다.',
+      headingWithTitle: '{actorName}님이 ‘{scheduleTitle}’ 일정을 수정했습니다.',
+      empty: '(비어 있음)',
+      fields: { TITLE: '제목', DESCRIPTION: '본문', TIME: '날짜·시간' },
+    },
     common: {
       ariaLabel: '알림',
       loading: '불러오는 중...',
@@ -521,6 +530,7 @@ export default {
       familyRequestAcceptedFallback: {
         v1: '가족 요청이 수락되었습니다.',
       },
+      scheduleUpdated: { v1: '{actorName}님이 일정의 {fields}을 변경했습니다.' },
       scheduleTagged: {
         v1: '{actorName}님의 [{scheduleTitle}] 일정에 태그되었습니다.',
       },

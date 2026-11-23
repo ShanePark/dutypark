@@ -45,6 +45,17 @@ describe('pushNotificationPresentation', () => {
     expect(resolvePushNotificationBody(createPayload(), 'en-US')).toBe('Shane tagged you in [팀 회의].')
   })
 
+  it('keeps protected change values out of the lock screen message', () => {
+    const notification = createNotification({
+      type: 'SCHEDULE_UPDATED',
+      payload: { version: 1, actor: { name: 'Shane', hasProfilePhoto: false, profilePhotoVersion: 0 }, scheduleVersion: 3, changedFields: ['DESCRIPTION'] },
+      scheduleChanges: { scheduleId: 's', scheduleVersion: 3, description: { before: 'private before', after: 'private after' } },
+    })
+    const body = resolvePushNotificationBody(createPayload({ notification }), 'ko')
+    expect(body).toContain('본문')
+    expect(body).not.toContain('private')
+  })
+
   it('falls back to English for an unsupported worker locale', () => {
     expect(resolvePushNotificationBody(createPayload(), 'es-ES')).toBe('Shane tagged you in [팀 회의].')
   })

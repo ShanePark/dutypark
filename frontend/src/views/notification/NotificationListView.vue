@@ -284,8 +284,17 @@ watch(
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-start justify-between gap-2">
-              <p class="notification-list-item-title text-sm font-medium line-clamp-2">
-                {{ getNotificationMessage(notification) }}
+              <p class="notification-list-item-title text-sm font-medium"
+                :class="notification.type === 'SCHEDULE_UPDATED' ? 'whitespace-normal break-words break-keep' : 'line-clamp-2'">
+                <template v-if="notification.type === 'SCHEDULE_UPDATED'">
+                  <span
+                    v-for="(line, index) in getNotificationMessage(notification).split('\n')"
+                    :key="index"
+                    class="block"
+                    :class="index > 0 ? 'mt-1 font-normal text-dp-text-secondary' : ''"
+                  >{{ line }}</span>
+                </template>
+                <template v-else>{{ getNotificationMessage(notification) }}</template>
               </p>
               <button
                 type="button"

@@ -20,7 +20,7 @@ export function resolvePushNotificationBody(
 ): string {
   if (isNotificationDto(payload.notification)) {
     return formatNotificationMessage(
-      payload.notification,
+      { ...payload.notification, scheduleChanges: undefined },
       createStaticNotificationTranslate(locale),
     )
   }

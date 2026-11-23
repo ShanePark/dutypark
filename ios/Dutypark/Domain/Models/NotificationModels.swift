@@ -6,6 +6,7 @@ nonisolated enum NotificationType: Codable, Hashable, Sendable {
     case familyRequestReceived
     case familyRequestAccepted
     case scheduleTagged
+    case scheduleUpdated
     case todoTagged
     case todoStatusTodo
     case todoStatusInProgress
@@ -20,6 +21,7 @@ nonisolated enum NotificationType: Codable, Hashable, Sendable {
         case .familyRequestReceived: "FAMILY_REQUEST_RECEIVED"
         case .familyRequestAccepted: "FAMILY_REQUEST_ACCEPTED"
         case .scheduleTagged: "SCHEDULE_TAGGED"
+        case .scheduleUpdated: "SCHEDULE_UPDATED"
         case .todoTagged: "TODO_TAGGED"
         case .todoStatusTodo: "TODO_STATUS_TODO"
         case .todoStatusInProgress: "TODO_STATUS_IN_PROGRESS"
@@ -37,6 +39,7 @@ nonisolated enum NotificationType: Codable, Hashable, Sendable {
         case "FAMILY_REQUEST_RECEIVED": .familyRequestReceived
         case "FAMILY_REQUEST_ACCEPTED": .familyRequestAccepted
         case "SCHEDULE_TAGGED": .scheduleTagged
+        case "SCHEDULE_UPDATED": .scheduleUpdated
         case "TODO_TAGGED": .todoTagged
         case "TODO_STATUS_TODO": .todoStatusTodo
         case "TODO_STATUS_IN_PROGRESS": .todoStatusInProgress
@@ -101,9 +104,11 @@ nonisolated struct NotificationPayloadDTO: Codable, Equatable, Sendable {
     let scheduleTitle: String?
     let todoTitle: String?
     let subject: String?
+    let scheduleVersion: Int64?
+    let changedFields: [String]
 
     private enum CodingKeys: String, CodingKey {
-        case version, actor, scheduleTitle, todoTitle, subject
+        case version, actor, scheduleTitle, todoTitle, subject, scheduleVersion, changedFields
     }
 
     init(from decoder: Decoder) throws {
@@ -113,6 +118,8 @@ nonisolated struct NotificationPayloadDTO: Codable, Equatable, Sendable {
         scheduleTitle = try container.decodeIfPresent(String.self, forKey: .scheduleTitle)
         todoTitle = try container.decodeIfPresent(String.self, forKey: .todoTitle)
         subject = try container.decodeIfPresent(String.self, forKey: .subject)
+        scheduleVersion = try container.decodeIfPresent(Int64.self, forKey: .scheduleVersion)
+        changedFields = try container.decodeIfPresent([String].self, forKey: .changedFields) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
@@ -122,6 +129,8 @@ nonisolated struct NotificationPayloadDTO: Codable, Equatable, Sendable {
         try container.encodeIfPresent(scheduleTitle, forKey: .scheduleTitle)
         try container.encodeIfPresent(todoTitle, forKey: .todoTitle)
         try container.encodeIfPresent(subject, forKey: .subject)
+        try container.encodeIfPresent(scheduleVersion, forKey: .scheduleVersion)
+        if !changedFields.isEmpty { try container.encode(changedFields, forKey: .changedFields) }
     }
 }
 
@@ -134,6 +143,24 @@ nonisolated struct NotificationDTO: Codable, Equatable, Sendable {
     let payload: NotificationPayloadDTO
     let isRead: Bool
     let createdAt: LocalDateTimeValue
+    let scheduleChanges: ScheduleNotificationChangesDTO?
+
+    init(
+        id: NotificationID, type: NotificationType, referenceType: NotificationReferenceType?,
+        referenceId: String?, actorId: MemberID?, payload: NotificationPayloadDTO,
+        isRead: Bool, createdAt: LocalDateTimeValue,
+        scheduleChanges: ScheduleNotificationChangesDTO? = nil
+    ) {
+        self.id = id
+        self.type = type
+        self.referenceType = referenceType
+        self.referenceId = referenceId
+        self.actorId = actorId
+        self.payload = payload
+        self.isRead = isRead
+        self.createdAt = createdAt
+        self.scheduleChanges = scheduleChanges
+    }
 }
 
 nonisolated struct NotificationCountDTO: Codable, Equatable, Sendable {
