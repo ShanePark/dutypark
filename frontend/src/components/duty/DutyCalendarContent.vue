@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { Flag, MessageSquareText, CheckSquare } from '@lucide/vue'
+import { CalendarCheck, MessageSquareText, CheckSquare } from '@lucide/vue'
 import { isLightColor } from '@/utils/color'
 import { dutyTypeLabel } from '@/utils/dutyAbbreviation'
 import { parseDateOnly } from '@/utils/date'
@@ -14,6 +14,7 @@ import { buildDisplayTagMembers } from '@/utils/tagMembers'
 import { canOpenCalendarDay } from '@/utils/calendarDayOpening'
 import { assignCalendarSpanLanes } from '@/utils/calendarSpanLanes'
 import { useCalendarMonthSwipe } from '@/composables/useCalendarMonthSwipe'
+import { syncCalendarScheduleTextFlow } from '@/utils/calendarScheduleTextFlow'
 
 const props = defineProps<{
   days: CalendarDay[]
@@ -58,17 +59,21 @@ let calendarTrackResizeObserver: ResizeObserver | null = null
 
 function syncCalendarHeight() {
   const track = calendarGridTrack.value
-  if (!track || props.isMonthLoading) return
+  if (!track || typeof track.getBoundingClientRect !== 'function' || props.isMonthLoading) return
+
+  syncCalendarScheduleTextFlow(track)
 
   const height = track.getBoundingClientRect().height
   if (height > 0) calendarHeight.value = height
 }
 
 onMounted(() => {
+  syncCalendarHeight()
   if (!calendarGridTrack.value || typeof ResizeObserver === 'undefined') return
 
   calendarTrackResizeObserver = new ResizeObserver(syncCalendarHeight)
   calendarTrackResizeObserver.observe(calendarGridTrack.value)
+  if (typeof document !== 'undefined') void document.fonts?.ready.then(syncCalendarHeight)
 })
 
 // Calendar rows and their contents arrive separately. Keep the old footprint
@@ -181,6 +186,11 @@ const spanLanesByDays = computed(() => (props.batchEditMode
   : assignCalendarSpanLanes(props.schedulesByDays, schedule => JSON.stringify([schedule.id, schedule.startDateTime]))))
 const cellSchedulesByDays = computed(() => props.schedulesByDays.map(schedules =>
   schedules.filter(schedule => schedule.totalDays <= 1)))
+
+watch([cellSchedulesByDays, () => props.batchEditMode, () => props.isMyCalendar], syncCalendarHeight, {
+  deep: true,
+  flush: 'post',
+})
 
 function hasScheduleDetails(schedule: Schedule) {
   return !!(schedule.description || schedule.attachments?.length)
@@ -372,7 +382,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               @click.stop="emit('dday-click', dday)"
               class="calendar-item calendar-dday-marker"
             >
-              <span class="calendar-item__line"><Flag class="calendar-dday-marker__icon" aria-hidden="true" />{{ dday.title }}</span>
+              <span class="calendar-item__line calendar-item__line--dday"><CalendarCheck class="calendar-dday-marker__icon" aria-hidden="true" />{{ dday.title }}</span>
             </button>
 
             <div
@@ -540,17 +550,12 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   border-top: 1px solid var(--calendar-rule);
 }
 
-.calendar-item.calendar-dday-marker::before {
-  content: none;
-}
-
 .calendar-dday-marker__icon {
   display: inline;
   width: 8px;
   height: 8px;
   margin-right: 1px;
   vertical-align: -0.5px;
-  fill: currentColor;
 }
 
 .calendar-dday-marker:disabled {

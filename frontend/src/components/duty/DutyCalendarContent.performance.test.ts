@@ -9,7 +9,7 @@ vi.mock('@/i18n', () => ({ getCurrentLocale: () => 'ko' }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'ko' }, t: (key: string) => key }) }))
 vi.mock('@lucide/vue', () => {
   const icon = defineComponent({ setup: () => () => h('span') })
-  return { Flag: icon, MessageSquareText: icon, CheckSquare: icon, ChevronRight: icon, User: icon }
+  return { CalendarCheck: icon, MessageSquareText: icon, CheckSquare: icon, ChevronRight: icon, User: icon }
 })
 vi.mock('@/components/common/ProfileAvatar.vue', () => ({
   default: defineComponent({
@@ -133,6 +133,7 @@ describe('calendar month transition layout', () => {
       constructor(callback: () => void) { notifyResize = callback }
       observe(target: HTMLElement) {
         target.getBoundingClientRect = () => ({ height: measuredHeight }) as DOMRect
+        target.querySelectorAll = (() => []) as unknown as HTMLElement['querySelectorAll']
       }
       disconnect() {}
     })

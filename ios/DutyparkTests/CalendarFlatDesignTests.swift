@@ -121,6 +121,8 @@ struct CalendarFlatDesignTests {
         let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
         #expect(!style.contains("spanBar"), "The underline is gone")
         #expect(!style.contains("DPCalendarScheduleTitle"), "No (n/m) counter in month tiles")
+        let scheduleLine = try source("Dutypark/Components/DPCalendarScheduleLine.swift")
+        #expect(scheduleLine.contains("container.maximumNumberOfLines = 2"), "Inline clock titles keep their two-line limit")
 
         let cells = [
             try declaration(
@@ -142,7 +144,7 @@ struct CalendarFlatDesignTests {
             #expect(lanes.lowerBound < holidays.lowerBound, "Lanes come first, under the date number")
             #expect(cell.contains("DPCalendarSpanRibbonBand("))
             #expect(cell.contains("ribbonColumn"), "A tile drawing a ribbon is layered over the tiles it crosses")
-            #expect(cell.contains(".lineLimit(2)"), "Single-day titles still wrap to two lines")
+            #expect(cell.contains("DPCalendarScheduleLine(") || cell.contains(".lineLimit(2)"), "Single-day titles still wrap to two lines")
             #expect(!cell.contains("dayCounter"), "No (n/m) counter in month tiles")
         }
 

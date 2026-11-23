@@ -592,10 +592,16 @@ function handleDayClick(day: CalendarDay, index: number) {
   overflow-wrap: anywhere;
 }
 
-/* A schedule line clamps only its title, so a long title never hides the time
-   chip that follows it. The title box shrinks to its text, letting a short title
-   share its line with the chip; top alignment keeps an overflow-clipped box from
-   lifting the line's baseline to its bottom edge. */
+:slotted(.calendar-item__line--dday) {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: none;
+  line-clamp: none;
+  overflow-wrap: anywhere;
+}
+
+/* Only overflowing titles retain a clamped box, keeping their time visible.
+   Titles that fit two lines flow inline so the time can use their final line. */
 :slotted(.calendar-item__line--chip) {
   display: block;
   overflow: visible;
@@ -611,6 +617,12 @@ function handleDayClick(day: CalendarDay, index: number) {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   vertical-align: top;
+}
+
+:slotted(.calendar-item__line--chip > .calendar-item__text--flow) {
+  display: inline;
+  overflow: visible;
+  vertical-align: baseline;
 }
 
 /* An atomic pill moves to the next line whole; only a range wider than the
@@ -845,7 +857,7 @@ function handleDayClick(day: CalendarDay, index: number) {
   }
 
   :slotted(.calendar-item) {
-    padding: 0 0 0 10px;
+    padding: 0;
     font-size: 12px;
     line-height: 1.38;
     letter-spacing: normal;
@@ -853,17 +865,6 @@ function handleDayClick(day: CalendarDay, index: number) {
 
   :slotted(.calendar-item + .calendar-item) {
     border-top: 0;
-  }
-
-  :slotted(.calendar-item)::before {
-    content: '';
-    position: absolute;
-    top: 0.5em;
-    left: 1px;
-    width: 4px;
-    height: 4px;
-    border-radius: 9999px;
-    background: var(--calendar-ink-muted);
   }
 
   :slotted(.calendar-item__time) {

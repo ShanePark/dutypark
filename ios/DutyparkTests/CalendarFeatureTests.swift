@@ -339,26 +339,14 @@ final class CalendarFeatureTests: XCTestCase {
         // ribbons and carry no (n/m) counter in the tile.
         XCTAssertTrue(calendarDayCell.contains("var line = Text(verbatim: schedule.content)"))
         XCTAssertFalse(calendarDayCell.contains("dayCounter"))
-        // The time chip sits on its own line under the title so the title's two-line limit
-        // can never clip it; it starts at the row's leading edge, before the tags.
-        let cellTitleLine = try Self.declaration(
-            named: "private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text",
-            in: calendarDayCell
-        )
-        XCTAssertFalse(cellTitleLine.contains("calendarScheduleTimeText"), "The title line carries no time")
         let cellItem = try Self.declaration(
             named: "private func scheduleItem(_ schedule: ScheduleDTO) -> some View",
             in: calendarDayCell
         )
-        let cellTitle = try XCTUnwrap(cellItem.range(of: "scheduleTitleLine(schedule)"))
-        let cellTimeSource = try XCTUnwrap(cellItem.range(of: "CalendarVisualLogic.calendarScheduleTimeText("))
-        let cellTimeLine = try XCTUnwrap(cellItem.range(
-            of: "DPCalendarScheduleTime(time: time, dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)"
-        ))
-        let cellTags = try XCTUnwrap(cellItem.range(of: "DPMemberTagChips("))
-        XCTAssertLessThan(cellTitle.lowerBound, cellTimeSource.lowerBound)
-        XCTAssertLessThan(cellTimeSource.lowerBound, cellTimeLine.lowerBound)
-        XCTAssertLessThan(cellTimeLine.lowerBound, cellTags.lowerBound, "The time line sits between the title and the tags")
+        XCTAssertTrue(cellItem.contains("DPCalendarScheduleLine("))
+        XCTAssertTrue(cellItem.contains("showsPrivateLock: showsPrivateBadge(schedule)"))
+        XCTAssertTrue(cellItem.contains("hasDetails: !schedule.description.isEmpty || !schedule.attachments.isEmpty"))
+        XCTAssertFalse(cellItem.contains("DPCalendarScheduleTime("), "The time flows in the title's text layout")
 
         let dayDetail = try Self.declaration(
             named: "private struct DayDetailView: View",
@@ -373,26 +361,13 @@ final class CalendarFeatureTests: XCTestCase {
             .deletingLastPathComponent()
             .appending(path: "Dutypark/Features/Guest/GuestPublicCalendarView.swift")
         let guestSource = try String(contentsOf: guestSourceURL, encoding: .utf8)
-        // The guest tile matches the member tile: the title line, then the time chip on its
-        // own line, and no counter folded into the title text.
         let guestDayCell = try Self.declaration(
             named: "private struct GuestCalendarDayCell: View",
             in: guestSource
         )
-        XCTAssertTrue(guestDayCell.contains("var line = Text(verbatim: schedule.content)"))
-        XCTAssertFalse(guestDayCell.contains("dayCounter"))
-        let guestTitleLine = try Self.declaration(
-            named: "private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text",
-            in: guestDayCell
-        )
-        XCTAssertFalse(guestTitleLine.contains("calendarScheduleTimeText"), "The title line carries no time")
-        let guestTitle = try XCTUnwrap(guestDayCell.range(of: "scheduleTitleLine(schedule)"))
-        let guestTimeSource = try XCTUnwrap(guestDayCell.range(of: "CalendarVisualLogic.calendarScheduleTimeText("))
-        let guestTimeLine = try XCTUnwrap(guestDayCell.range(
-            of: "DPCalendarScheduleTime(time: time, dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)"
-        ))
-        XCTAssertLessThan(guestTitle.lowerBound, guestTimeSource.lowerBound)
-        XCTAssertLessThan(guestTimeSource.lowerBound, guestTimeLine.lowerBound, "The time line sits under the title")
+        XCTAssertTrue(guestDayCell.contains("DPCalendarScheduleLine("))
+        XCTAssertTrue(guestDayCell.contains("hasDetails: !schedule.description.isEmpty || !schedule.attachments.isEmpty"))
+        XCTAssertFalse(guestDayCell.contains("DPCalendarScheduleTime("), "The time flows in the title's text layout")
         let guestDetail = try Self.declaration(
             named: "private struct GuestCalendarDayDetailView: View",
             in: guestSource

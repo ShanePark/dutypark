@@ -2162,10 +2162,11 @@ private struct CalendarDayCell: View {
 
     @ViewBuilder
     private func dDayMarker(_ item: DDayDTO) -> some View {
-        let label = (Text(Image(systemName: "flag.fill")).font(.system(size: 7)) + Text(verbatim: " \(item.title)"))
+        let label = (Text(Image(systemName: "calendar.badge.checkmark")).font(.system(size: 7)) + Text(verbatim: " \(item.title)"))
             .font(DPFont.bold(size: CalendarTypography.cellContent, relativeTo: .caption2))
             .foregroundStyle(primaryForeground)
-            .lineLimit(2)
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
         if let openDDay {
             Button { openDDay(item) } label: { label }
@@ -2179,27 +2180,19 @@ private struct CalendarDayCell: View {
     private func scheduleItem(_ schedule: ScheduleDTO) -> some View {
         let tags = ScheduleTagDisplayPolicy.displayTags(for: schedule, calendarMemberID: calendarMemberID)
         return VStack(alignment: .leading, spacing: 1) {
-            HStack(alignment: .top, spacing: 2) {
-                if showsPrivateBadge(schedule) {
-                    DPCalendarLockBadge(onFill: isOnFill)
-                }
-                scheduleTitleLine(schedule)
-                    .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
-                    .tracking(-0.3)
-                    .lineSpacing(1)
-                    .foregroundStyle(primaryForeground)
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-            }
-
-            if let time = CalendarVisualLogic.calendarScheduleTimeText(
-                start: schedule.startDateTime,
-                end: schedule.endDateTime,
-                daysFromStart: schedule.daysFromStart,
-                totalDays: schedule.totalDays
-            ) {
-                DPCalendarScheduleTime(time: time, dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
-            }
+            DPCalendarScheduleLine(
+                title: schedule.content,
+                time: CalendarVisualLogic.calendarScheduleTimeText(
+                    start: schedule.startDateTime,
+                    end: schedule.endDateTime,
+                    daysFromStart: schedule.daysFromStart,
+                    totalDays: schedule.totalDays
+                ),
+                hasDetails: !schedule.description.isEmpty || !schedule.attachments.isEmpty,
+                showsPrivateLock: showsPrivateBadge(schedule),
+                dutyColor: dutyColor,
+                isCurrentMonth: isCurrentMonth
+            )
 
             if !tags.isEmpty {
                 // Two tags already outgrow a 47pt cell, so they wrap and settle against
@@ -2220,8 +2213,7 @@ private struct CalendarDayCell: View {
         isMyCalendar && !schedule.isTagged && schedule.visibility == .privateAccess
     }
 
-    /// One week-row segment of a multi-day schedule, with the same private badge and
-    /// details mark as a single-day item.
+    /// One week-row segment of a multi-day schedule, with its private badge and details mark.
     private func spanRibbon(_ placement: DPCalendarSpanLanes.Placement<ScheduleDTO>) -> some View {
         let schedule = placement.item
         return DPCalendarSpanRibbonBand(
@@ -2246,8 +2238,7 @@ private struct CalendarDayCell: View {
         }
     }
 
-    /// The title and the details mark run as one flow of text; the time has a chip of its
-    /// own below.
+    /// Ribbon titles share one flow with their details mark.
     private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
         var line = Text(verbatim: schedule.content)
         if !schedule.description.isEmpty || !schedule.attachments.isEmpty {

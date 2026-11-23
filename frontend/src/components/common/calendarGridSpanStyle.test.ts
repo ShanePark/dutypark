@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { compileStyle, parse } from 'vue/compiler-sfc'
 import calendarGrid from './CalendarGrid.vue?raw'
 import calendarSpanTags from '../duty/CalendarSpanTags.vue?raw'
+import dutyCalendarContent from '../duty/DutyCalendarContent.vue?raw'
 
 const template = calendarGrid.slice(0, calendarGrid.indexOf('<style scoped>'))
 const style = calendarGrid.slice(calendarGrid.indexOf('<style scoped>'))
@@ -28,6 +29,19 @@ function expectTwoLineClamp(body: string) {
 // A multi-day schedule is one glass ribbon per week row, drawn in a lane under
 // the date so its days line up across the week.
 describe('multi-day schedule bands', () => {
+  it('wraps full D-Day titles while preserving the schedule title clamp', () => {
+    expect(dutyCalendarContent).toContain('class="calendar-item__line calendar-item__line--dday"')
+    const ddayLine = ruleBody(baseBlock, ':slotted(.calendar-item__line--dday)')
+    expect(ddayLine).toContain('display: block')
+    expect(ddayLine).toContain('overflow: visible')
+    expect(ddayLine).toContain('-webkit-line-clamp: none')
+    expect(ddayLine).toContain('line-clamp: none')
+    expect(ddayLine).toContain('overflow-wrap: anywhere')
+    const scheduleTitle = ruleBody(baseBlock, ':slotted(.calendar-item__line--chip > .calendar-item__text)')
+    expect(scheduleTitle).toContain('-webkit-line-clamp: 2')
+    expect(scheduleTitle).toContain('overflow: hidden')
+  })
+
   it('aligns lanes across a week through a shared header row', () => {
     const day = ruleBody(baseBlock, '.calendar-day')
     expect(day).toContain('grid-row: span 2')
@@ -183,6 +197,11 @@ describe('multi-day schedule bands', () => {
 })
 
 describe('responsive calendar day headers', () => {
+  it('aligns desktop calendar items without a leading dot or reserved dot space', () => {
+    expect(ruleBody(desktopBlock, ':slotted(.calendar-item)')).toContain('padding: 0;')
+    expect(style).not.toContain(':slotted(.calendar-item)::before')
+  })
+
   it('wraps the full D-Day header while keeping the date and today badge intact', () => {
     expect(ruleBody(baseBlock, '.calendar-day-top')).toContain('flex-wrap: wrap')
     expect(ruleBody(baseBlock, '.calendar-day-top')).toContain('container: calendar-day-header / inline-size')
