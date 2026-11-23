@@ -121,10 +121,13 @@ describe('CalendarGrid multi-day ribbons', () => {
   })
   const light = 'color-mix(in srgb, #fff 45%, #9DDBDE)'
   const dark = 'color-mix(in srgb, #fff 10%, #334155)'
-  const band = (days: number) => {
-    const day = `(100% + var(--calendar-span-start) + var(--calendar-span-end) + var(--calendar-gap)) / ${days}`
-    return (n: number) => `calc(${n} * ${day} - var(--calendar-span-start))`
-  }
+  const onLight = 'var(--dp-text-on-light)'
+  const onDark = 'var(--dp-text-on-dark)'
+  const step = (days: number) => `(100% + var(--calendar-span-start) + var(--calendar-span-end) + var(--calendar-gap)) / ${days}`
+  // Seams sit in the middle of the gutter before day n; dividers cover that gutter.
+  const seam = (days: number) => (n: number) => `calc(${n} * ${step(days)} - var(--calendar-span-start) - var(--calendar-gap) / 2)`
+  const gutter = (days: number, n: number) => `calc(${n} * ${step(days)} - var(--calendar-span-start) - var(--calendar-gap))`
+  const outline = (ink: string) => `color-mix(in srgb, ${ink} var(--calendar-span-outline-strength), transparent)`
 
   function bands() {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
@@ -134,26 +137,36 @@ describe('CalendarGrid multi-day ribbons', () => {
     return findHostNodes(mounted.root, node => hasClass(node, 'calendar-span'))
   }
 
-  // The band is opaque: each day's stretch is the glass composited over that
-  // day's own tile, and the gutter after a day takes that day's colour, so the
-  // gutters never show through as lines. Empty tiles take a theme tint
-  // (--calendar-span-empty-*), since white glass would vanish on a white tile.
-  it('paints each covered day as glass over its own fill, gutters included', async () => {
+  function dividers(band: HostNode) {
+    return findHostNodes(band, node => node.type === 'span' && hasClass(node, 'calendar-span__divider'))
+  }
+
+  // The band is opaque glass over each covered day's own tile, and each day's
+  // stretch meets the next in the middle of the gutter between them. Empty
+  // tiles take a theme tint (--calendar-span-empty-*), since white glass would
+  // vanish on a white tile. Its rim takes the ink of the day it runs over.
+  it('paints each covered day as glass over its own fill, rimmed in that day\'s ink', async () => {
     await nextTick()
     const [trip] = bands()
     const empty = 'color-mix(in srgb, var(--calendar-span-empty-tint) var(--calendar-span-empty-glass), var(--dp-calendar-cell-bg))'
-    const edge = band(3)
+    const at = seam(3)
+    const stops = (colors: string[]) => `linear-gradient(to right, ${colors[0]} 0 ${at(1)}, ${colors[1]} ${at(1)} ${at(2)}, ${colors[2]} ${at(2)} 100%)`
     expect(trip!.props.style).toEqual({
       '--calendar-span-days': 3,
-      '--calendar-span-fill': `linear-gradient(to right, ${light} 0 ${edge(1)}, ${dark} ${edge(1)} ${edge(2)}, ${empty} ${edge(2)} 100%)`,
+      '--calendar-span-fill': stops([light, dark, empty]),
+      '--calendar-span-outline': stops([outline(onLight), outline(onDark), outline('var(--dp-text-primary)')]),
       // Each tag takes the ink and ring of the day it sits over; the end time
       // and chevron sit on the last day.
-      '--calendar-span-ink-0': 'var(--dp-text-on-light)',
-      '--calendar-span-ink-1': 'var(--dp-text-on-dark)',
+      '--calendar-span-ink-0': onLight,
+      '--calendar-span-ink-1': onDark,
       '--calendar-span-ink-2': 'var(--dp-text-primary)',
       '--calendar-span-glass-0': light,
       '--calendar-span-glass-1': dark,
       '--calendar-span-glass-2': empty,
+      // The same glass over the gutter: what a light-theme divider shows.
+      '--calendar-span-gutter-glass-0': 'color-mix(in srgb, #fff 45%, var(--calendar-gutter))',
+      '--calendar-span-gutter-glass-1': 'color-mix(in srgb, #fff 10%, var(--calendar-gutter))',
+      '--calendar-span-gutter-glass-2': 'color-mix(in srgb, var(--calendar-span-empty-tint) var(--calendar-span-empty-glass), var(--calendar-gutter))',
       '--calendar-span-end-ink': 'var(--dp-text-primary)',
       '--calendar-span-ring': empty,
     })
@@ -161,15 +174,18 @@ describe('CalendarGrid multi-day ribbons', () => {
 
   it('writes the end of a dark-to-light ribbon in the light tile ink', async () => {
     await nextTick()
-    const edge = band(2)
+    const at = seam(2)
     expect(bands()[1]!.props.style).toEqual({
       '--calendar-span-days': 2,
-      '--calendar-span-fill': `linear-gradient(to right, ${dark} 0 ${edge(1)}, ${light} ${edge(1)} 100%)`,
-      '--calendar-span-ink-0': 'var(--dp-text-on-dark)',
-      '--calendar-span-ink-1': 'var(--dp-text-on-light)',
+      '--calendar-span-fill': `linear-gradient(to right, ${dark} 0 ${at(1)}, ${light} ${at(1)} 100%)`,
+      '--calendar-span-outline': `linear-gradient(to right, ${outline(onDark)} 0 ${at(1)}, ${outline(onLight)} ${at(1)} 100%)`,
+      '--calendar-span-ink-0': onDark,
+      '--calendar-span-ink-1': onLight,
       '--calendar-span-glass-0': dark,
       '--calendar-span-glass-1': light,
-      '--calendar-span-end-ink': 'var(--dp-text-on-light)',
+      '--calendar-span-gutter-glass-0': 'color-mix(in srgb, #fff 10%, var(--calendar-gutter))',
+      '--calendar-span-gutter-glass-1': 'color-mix(in srgb, #fff 45%, var(--calendar-gutter))',
+      '--calendar-span-end-ink': onLight,
       '--calendar-span-ring': light,
     })
   })
@@ -182,6 +198,52 @@ describe('CalendarGrid multi-day ribbons', () => {
       '--calendar-span-fill': `linear-gradient(to right, ${outside} 0 100%)`,
       '--calendar-span-ring': outside,
     })
+  })
+
+  // Each gutter the band crosses gets a divider over exactly that gutter, split
+  // at the seam into each side's glass and ink (dark theme) or each side's
+  // glass over the gutter (light theme).
+  it('draws a divider over each gutter the band crosses', async () => {
+    await nextTick()
+    const [trip, mixedBand, next] = bands()
+    expect(dividers(trip!).map(divider => divider.props.style)).toEqual([1, 2].map(n => ({
+      left: gutter(3, n),
+      '--calendar-span-before-ink': `var(--calendar-span-ink-${n - 1})`,
+      '--calendar-span-before-glass': `var(--calendar-span-glass-${n - 1})`,
+      '--calendar-span-after-ink': `var(--calendar-span-ink-${n})`,
+      '--calendar-span-after-glass': `var(--calendar-span-glass-${n})`,
+      '--calendar-span-before-gutter': `var(--calendar-span-gutter-glass-${n - 1})`,
+      '--calendar-span-after-gutter': `var(--calendar-span-gutter-glass-${n})`,
+    })))
+    expect(dividers(trip!).every(divider => divider.props['aria-hidden'] === 'true')).toBe(true)
+    expect(dividers(mixedBand!)).toHaveLength(1)
+    expect(dividers(next!)).toHaveLength(0)
+  })
+
+  // Resolves a band offset as the browser would, for a band whose first cell
+  // starts at 0 in a grid of equal fractional tracks.
+  function resolve(expr: string, band: { width: number; start: number; end: number; gap: number }) {
+    const js = expr
+      .replaceAll('calc(', '(')
+      .replaceAll('100%', String(band.width))
+      .replaceAll('var(--calendar-span-start)', String(band.start))
+      .replaceAll('var(--calendar-span-end)', String(band.end))
+      .replaceAll('var(--calendar-gap)', String(band.gap))
+    return Function(`return ${js}`)() as number
+  }
+
+  it.each([
+    { track: 101.857142, gap: 2, start: 4, end: 4, days: 4 },
+    { track: 49.6428571, gap: 2, start: 2, end: 0, days: 6 },
+    { track: 177.3333, gap: 2, start: 0, end: 0, days: 7 },
+  ])('lines dividers and seams up with the grid gutters ($days days over $track px tracks)', ({ track, gap, start, end, days }) => {
+    // The band starts `start` into its first cell and spans its days and the gutters between them.
+    const band = { width: days * track + (days - 1) * gap - start - end, start, end, gap }
+    for (let n = 1; n < days; n++) {
+      const gutterLeft = n * track + (n - 1) * gap
+      expect(start + resolve(gutter(days, n), band)).toBeCloseTo(gutterLeft, 9)
+      expect(start + resolve(seam(days)(n), band)).toBeCloseTo(gutterLeft + gap / 2, 9)
+    }
   })
 })
 

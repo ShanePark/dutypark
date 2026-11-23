@@ -148,10 +148,10 @@ function getDayStyle(day: CalendarDay): Record<string, string> {
 
 // White glass over a tile: strong on light fills, faint on dark ones; empty
 // tiles take the theme's tint (--calendar-span-empty-*).
-function getSpanGlass(day: CalendarDay): string {
+function getSpanGlass(day: CalendarDay, surface?: string): string {
   const fill = getFillColor(day)
-  if (fill) return `color-mix(in srgb, #fff ${isLightColor(fill) ? 45 : 10}%, ${fill})`
-  const tile = isCurrentMonth(day) ? 'var(--dp-calendar-cell-bg)' : 'var(--calendar-surface)'
+  if (fill) return `color-mix(in srgb, #fff ${isLightColor(fill) ? 45 : 10}%, ${surface ?? fill})`
+  const tile = surface ?? (isCurrentMonth(day) ? 'var(--dp-calendar-cell-bg)' : 'var(--calendar-surface)')
   return `color-mix(in srgb, var(--calendar-span-empty-tint) var(--calendar-span-empty-glass), ${tile})`
 }
 
@@ -162,28 +162,51 @@ function getSpanInk(day: CalendarDay): string {
   return isLightColor(fill) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
 }
 
-// The band is opaque so the gutters it crosses never show through: each day's
-// stretch is the glass over that day's tile, and the gutter after a day takes
-// that day's colour. Stops are in band coordinates, where one day plus its
-// gutter is (band width + insets + gap) / days.
+// Offsets inside a band are in band coordinates, where one day plus its gutter
+// is (band width + insets + gap) / days, so they land on the grid's own gutters.
+function getSpanGutterOffset(n: number, days: number, gapShare: string): string {
+  const day = `(100% + var(--calendar-span-start) + var(--calendar-span-end) + var(--calendar-gap)) / ${days}`
+  return `calc(${n} * ${day} - var(--calendar-span-start) - ${gapShare})`
+}
+
+// The band is opaque: each day's stretch is the glass over that day's tile, and
+// neighbouring days meet in the middle of the gutter between them, under its
+// divider. The rim takes each day's ink the same way.
 function getSpanStyle(firstIndex: number, days: number): Record<string, string | number> {
   const covered = visibleDays.value.slice(firstIndex, firstIndex + days)
-  const glasses = covered.map(getSpanGlass)
+  const glasses = covered.map(day => getSpanGlass(day))
+  const inks = covered.map(getSpanInk)
   const perDay: Record<string, string> = {}
-  covered.forEach((coveredDay, n) => { perDay[`--calendar-span-ink-${n}`] = getSpanInk(coveredDay) })
+  inks.forEach((ink, n) => { perDay[`--calendar-span-ink-${n}`] = ink })
   glasses.forEach((glass, n) => { perDay[`--calendar-span-glass-${n}`] = glass })
-  const day = `(100% + var(--calendar-span-start) + var(--calendar-span-end) + var(--calendar-gap)) / ${days}`
-  const edge = (n: number) => `calc(${n} * ${day} - var(--calendar-span-start))`
-  const stops = glasses.map((glass, n) =>
-    `${glass} ${n === 0 ? '0' : edge(n)} ${n === glasses.length - 1 ? '100%' : edge(n + 1)}`)
+  covered.forEach((day, n) => { perDay[`--calendar-span-gutter-glass-${n}`] = getSpanGlass(day, 'var(--calendar-gutter)') })
+  const seam = (n: number) => getSpanGutterOffset(n, days, 'var(--calendar-gap) / 2')
+  const gradient = (colors: string[]) => `linear-gradient(to right, ${colors.map((color, n) =>
+    `${color} ${n === 0 ? '0' : seam(n)} ${n === colors.length - 1 ? '100%' : seam(n + 1)}`).join(', ')})`
   return {
     '--calendar-span-days': days,
-    '--calendar-span-fill': `linear-gradient(to right, ${stops.join(', ')})`,
+    '--calendar-span-fill': gradient(glasses),
+    '--calendar-span-outline': gradient(inks.map(ink =>
+      `color-mix(in srgb, ${ink} var(--calendar-span-outline-strength), transparent)`)),
     // Tags read the ink and glass of the day each one sits over (CalendarSpanTags);
     // the end time and chevron always sit on the last day.
     ...perDay,
     '--calendar-span-end-ink': getSpanInk(covered[covered.length - 1]!),
     '--calendar-span-ring': glasses[glasses.length - 1]!,
+  }
+}
+
+// The divider over the gutter before covered day n is a box, not a gradient
+// stop, so it snaps to device pixels exactly like the gutter it covers.
+function getSpanDividerStyle(n: number, days: number): Record<string, string> {
+  return {
+    left: getSpanGutterOffset(n, days, 'var(--calendar-gap)'),
+    '--calendar-span-before-ink': `var(--calendar-span-ink-${n - 1})`,
+    '--calendar-span-before-glass': `var(--calendar-span-glass-${n - 1})`,
+    '--calendar-span-after-ink': `var(--calendar-span-ink-${n})`,
+    '--calendar-span-after-glass': `var(--calendar-span-glass-${n})`,
+    '--calendar-span-before-gutter': `var(--calendar-span-gutter-glass-${n - 1})`,
+    '--calendar-span-after-gutter': `var(--calendar-span-gutter-glass-${n})`,
   }
 }
 
@@ -302,6 +325,13 @@ function handleDayClick(day: CalendarDay, index: number) {
               }"
               :style="getSpanStyle(idx, lane.segment.days)"
             >
+              <span
+                v-for="n in lane.segment.days - 1"
+                :key="n"
+                class="calendar-span__divider"
+                :style="getSpanDividerStyle(n, lane.segment.days)"
+                aria-hidden="true"
+              />
               <slot name="span" :segment="lane.segment" />
               <ChevronRight v-if="!lane.segment.isEnd" class="calendar-span__more" aria-hidden="true" />
             </div>
@@ -336,7 +366,6 @@ function handleDayClick(day: CalendarDay, index: number) {
   /* White glass would vanish on a light empty tile, so it takes a faint ink tint. */
   --calendar-span-empty-tint: var(--dp-text-primary);
   --calendar-span-empty-glass: 6%;
-  --calendar-span-empty-edge: color-mix(in srgb, var(--dp-text-primary) 10%, transparent);
 
   position: relative;
   display: grid;
@@ -352,7 +381,6 @@ function handleDayClick(day: CalendarDay, index: number) {
 :global(.dark .calendar-grid) {
   --calendar-span-empty-tint: #fff;
   --calendar-span-empty-glass: 10%;
-  --calendar-span-empty-edge: rgb(255 255 255 / 16%);
 }
 
 :global(.dark) .calendar-grid {
@@ -625,15 +653,16 @@ function handleDayClick(day: CalendarDay, index: number) {
    between them, is inset with rounded ends only at the schedule's true start
    and end, and runs square to the row edge where the schedule continues into
    another week. Clicks fall through to the day underneath. Its fill is glass
-   over each covered day (getSpanStyle). Its edge and title follow the tile it
-   starts in; each tag follows the tile under it, and the end time and chevron
-   the tile it ends in. */
+   over each covered day (getSpanStyle), rimmed in each day's ink. Its title
+   follows the tile it starts in; each tag follows the tile under it, and the
+   end time and chevron the tile it ends in. */
 .calendar-span {
   --calendar-span-inset: 2px;
   --calendar-span-radius: 4px;
   --calendar-span-start: 0px;
   --calendar-span-end: 0px;
-  --calendar-span-edge: rgb(255 255 255 / 60%);
+  --calendar-span-outline-strength: 34%;
+  --calendar-span-shadow: 0 1px 2px rgb(15 23 42 / 16%);
 
   position: absolute;
   z-index: 2;
@@ -651,7 +680,7 @@ function handleDayClick(day: CalendarDay, index: number) {
   padding: 0 4px;
   overflow: hidden;
   background: var(--calendar-span-fill);
-  box-shadow: inset 0 0 0 1px var(--calendar-span-edge);
+  box-shadow: var(--calendar-span-shadow);
   color: var(--calendar-ink);
   font-size: 10px;
   line-height: 1.2;
@@ -661,12 +690,45 @@ function handleDayClick(day: CalendarDay, index: number) {
   container-type: inline-size;
 }
 
-.calendar-day--on-dark .calendar-span {
-  --calendar-span-edge: rgb(255 255 255 / 16%);
+:global(.dark) .calendar-span {
+  --calendar-span-shadow: 0 1px 2px rgb(0 0 0 / 40%);
 }
 
-.calendar-day:not(.calendar-day--on-light):not(.calendar-day--on-dark) .calendar-span {
-  --calendar-span-edge: var(--calendar-span-empty-edge);
+/* The rim: a transparent 1px border shows the per-day ink outline over the
+   band's fill while the padding box repaints the fill, so it follows the
+   rounded ends. */
+.calendar-span::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  background: var(--calendar-span-fill) padding-box, var(--calendar-span-outline) border-box;
+  background-origin: border-box;
+}
+
+/* Light gutters show through each side's glass, keeping their light polarity
+   through the band. The opaque divider covers the fill's seam inside the rim. */
+.calendar-span__divider {
+  position: absolute;
+  z-index: -1;
+  top: 1px;
+  bottom: 1px;
+  width: var(--calendar-gap);
+  background: linear-gradient(to right, var(--calendar-span-before-gutter) 50%, var(--calendar-span-after-gutter) 50%);
+}
+
+:global(.dark .calendar-span__divider) {
+  --calendar-span-divider-strength: 18%;
+
+  background:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--calendar-span-before-ink) var(--calendar-span-divider-strength), transparent) 50%,
+      color-mix(in srgb, var(--calendar-span-after-ink) var(--calendar-span-divider-strength), transparent) 50%
+    ),
+    linear-gradient(to right, var(--calendar-span-before-glass) 50%, var(--calendar-span-after-glass) 50%);
 }
 
 .calendar-span--start {

@@ -297,6 +297,7 @@ describe('calendar derived display data', () => {
     const bands = (cell: HostNode) => findHostNodes(cell, node => hasClass(node, 'calendar-span'))
     const visible = (node: HostNode) => node.children
       .filter(child => child.type !== '#comment' && !(child.type === '#text' && !child.text))
+      .filter(child => !hasClass(child, 'calendar-span__divider'))
       .map(child => hasClass(child, 'calendar-span__more') ? '›' : hasClass(child, 'calendar-span__tags') ? 'tags' : hostText(child))
     // Tag widths are measured from a hidden copy of every chip, in display order.
     const tagLabels = (band: HostNode) => findHostNodes(band, node => hasClass(node, 'span-tags-measure'))
