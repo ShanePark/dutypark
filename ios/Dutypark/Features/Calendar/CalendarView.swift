@@ -144,6 +144,21 @@ nonisolated enum CalendarDayOpenPolicy {
     }
 }
 
+/// Together view: compared duties sit right under the date number, above the ribbon
+/// lanes. Each tile gives every member compared anywhere in the month its own row, in
+/// member order, kept empty on a day without that member's duty; with one-line chips of
+/// a fixed height, the lanes below start at the same height in every tile of a week row.
+nonisolated enum CalendarComparedDutyRows {
+    static let chipHeight: CGFloat = 17
+
+    static func rows(for days: [[ComparedDuty]]) -> [[ComparedDuty?]] {
+        let members = Set(days.flatMap { $0.map(\.memberID) }).sorted()
+        return days.map { duties in
+            members.map { member in duties.first { $0.memberID == member } }
+        }
+    }
+}
+
 /// Who a schedule names, in the order the web names them.
 ///
 /// A schedule's tags leave out the member whose calendar is being read — their own
@@ -1225,6 +1240,7 @@ struct CalendarView: View {
         let ribbonDays = days.map {
             DPCalendarSpanRibbonDay(dutyColor: $0.duty?.dutyColor, isCurrentMonth: $0.cell.isCurrentMonth)
         }
+        let comparedDutyRows = CalendarComparedDutyRows.rows(for: days.map(\.comparedDuties))
 
         return CalendarMonthCellGrid(items: days) { index, day in
                 let opensDetail = isInteractive
@@ -1232,6 +1248,7 @@ struct CalendarView: View {
                 let cell = CalendarDayCell(
                     day: day,
                     weekday: index % 7,
+                    comparedDuties: comparedDutyRows[index],
                     spanLanes: spanLanes[index],
                     weekDays: DPCalendarSpanRibbonDay.week(containing: index, in: ribbonDays),
                     highlighted: model.highlightedDate == day.cell.date,
@@ -2020,6 +2037,8 @@ private struct CalendarMemberAvatar: View {
 private struct CalendarDayCell: View {
     let day: CalendarDayContent
     let weekday: Int
+    /// The month's compared-duty rows for this day; `nil` keeps an empty row.
+    let comparedDuties: [ComparedDuty?]
     let spanLanes: [DPCalendarSpanLanes.Placement<ScheduleDTO>?]
     let weekDays: [DPCalendarSpanRibbonDay]
     let highlighted: Bool
@@ -2089,6 +2108,18 @@ private struct CalendarDayCell: View {
     // any behind a count.
     private var details: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if !comparedDuties.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(comparedDuties.enumerated()), id: \.offset) { _, item in
+                        if let item {
+                            comparedDutyChip(item)
+                        } else {
+                            Color.clear.frame(height: CalendarComparedDutyRows.chipHeight)
+                        }
+                    }
+                }
+                .padding(.bottom, 4)
+            }
             DPCalendarSpanLaneStack(lanes: spanLanes, column: weekday) { placement in
                 spanRibbon(placement)
             }
@@ -2100,14 +2131,6 @@ private struct CalendarDayCell: View {
                     .foregroundStyle(holiday.isHoliday
                         ? DPCalendarCellStyle.holidayForeground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
                         : secondaryForeground)
-            }
-            if !day.comparedDuties.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(Array(day.comparedDuties.enumerated()), id: \.offset) { _, item in
-                        comparedDutyChip(item)
-                    }
-                }
-                .padding(.bottom, 4)
             }
             ForEach(Array(day.dDays.enumerated()), id: \.element.id) { index, item in
                 DPCalendarItemRow(showsRule: index > 0, rule: ruleColor) {
@@ -2284,15 +2307,18 @@ private struct CalendarDayCell: View {
                 profilePhotoVersion: item.profilePhotoVersion,
                 size: 10
             )
+            // One line at a fixed height: the ribbon lanes below line up across the week.
             Text(item.duty.dutyType ?? CalendarLocalization.text("calendar.off"))
-                .lineLimit(2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
         .foregroundStyle(foreground)
         .padding(.leading, 2)
         .padding(.trailing, 3)
         .padding(.vertical, 1)
-        .frame(maxWidth: .infinity, minHeight: 17, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: CalendarComparedDutyRows.chipHeight)
         .background(background, in: Capsule())
         .overlay(Capsule().stroke(Color.white.opacity(0.5), lineWidth: 1))
         .accessibilityElement(children: .ignore)

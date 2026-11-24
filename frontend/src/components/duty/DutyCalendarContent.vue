@@ -320,6 +320,33 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
           </span>
         </template>
 
+        <template #day-pinned="{ index }">
+          <div v-if="!batchEditMode && otherDuties.length > 0" class="other-duty-chips mb-1 grid gap-0.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-1">
+            <div
+              v-for="otherDuty in otherDuties"
+              :key="otherDuty.memberId"
+              class="other-duty-chip w-full max-w-full border border-dp-overlay-light/50 sm:w-auto"
+              :title="`${otherDuty.memberName}: ${otherDuty.duties[index]?.dutyType ?? ''}`"
+              :style="{
+                backgroundColor: otherDuty.duties[index]?.dutyColor || 'var(--dp-duty-fallback)',
+                color: getOtherDutyTextColor(otherDuty.duties[index]?.dutyColor || null),
+              }"
+            >
+              <ProfileAvatar
+                :member-id="otherDuty.memberId"
+                :name="otherDuty.memberName"
+                :has-profile-photo="otherDuty.hasProfilePhoto"
+                :profile-photo-version="otherDuty.profilePhotoVersion"
+                size="xs"
+                class="other-duty-chip__avatar"
+              />
+              <span class="other-duty-chip__label">
+                {{ otherDuty.duties[index]?.dutyType ?? '' }}
+              </span>
+            </div>
+          </div>
+        </template>
+
         <template #day-content="{ day, index }">
           <div v-if="batchEditMode && day.isCurrentMonth" class="mt-1 hidden sm:grid grid-cols-2 gap-0.5">
             <button
@@ -347,31 +374,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
           </div>
 
           <div v-if="!batchEditMode" class="calendar-items">
-            <div v-if="otherDuties.length > 0" class="mb-1 grid gap-0.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-1">
-              <div
-                v-for="otherDuty in otherDuties"
-                :key="otherDuty.memberId"
-                class="other-duty-chip w-full max-w-full border border-dp-overlay-light/50 sm:w-auto"
-                :title="`${otherDuty.memberName}: ${otherDuty.duties[index]?.dutyType ?? ''}`"
-                :style="{
-                  backgroundColor: otherDuty.duties[index]?.dutyColor || 'var(--dp-duty-fallback)',
-                  color: getOtherDutyTextColor(otherDuty.duties[index]?.dutyColor || null),
-                }"
-              >
-                <ProfileAvatar
-                  :member-id="otherDuty.memberId"
-                  :name="otherDuty.memberName"
-                  :has-profile-photo="otherDuty.hasProfilePhoto"
-                  :profile-photo-version="otherDuty.profilePhotoVersion"
-                  size="xs"
-                  class="other-duty-chip__avatar"
-                />
-                <span class="other-duty-chip__label">
-                  {{ otherDuty.duties[index]?.dutyType ?? '' }}
-                </span>
-              </div>
-            </div>
-
             <button
               v-for="dday in getDDaysForDay(day)"
               :key="dday.id"
@@ -598,10 +600,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
     font-size: 12px;
   }
 
-  .calendar-item + .calendar-item.calendar-dday-marker {
-    border-top: 0;
-  }
-
   .calendar-dday-marker__icon {
     width: 11px;
     height: 11px;
@@ -772,8 +770,8 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 
 .calendar-day--on-light .calendar-items :deep(.schedule-tag-avatar.profile-avatar),
 .calendar-day--on-dark .calendar-items :deep(.schedule-tag-avatar.profile-avatar),
-.calendar-day--on-light .calendar-items :deep(.other-duty-chip__avatar.profile-avatar),
-.calendar-day--on-dark .calendar-items :deep(.other-duty-chip__avatar.profile-avatar) {
+.calendar-day--on-light .other-duty-chips :deep(.other-duty-chip__avatar.profile-avatar),
+.calendar-day--on-dark .other-duty-chips :deep(.other-duty-chip__avatar.profile-avatar) {
   border-color: rgba(255, 255, 255, 0.9);
   background-color: #e5e7eb;
 }

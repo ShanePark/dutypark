@@ -475,3 +475,35 @@ it.skipIf(!process.env.DUTYPARK_PERFORMANCE_BENCHMARK)('measures calendar mount 
     highlightSamplesMs: highlightSamples, highlightMedianMs: highlightSamples[4],
   }))
 }, 30_000)
+
+describe('together view chips', () => {
+  function otherDutyChips(root: HostNode) {
+    return findHostNodes(root, node => String(node.props.class ?? '').split(/\s+/).includes('other-duty-chip'))
+  }
+
+  function hasAncestorClass(node: HostNode, className: string) {
+    for (let parent = node.parent; parent; parent = parent.parent) {
+      if (String(parent.props.class ?? '').split(/\s+/).includes(className)) return true
+    }
+    return false
+  }
+
+  it('pins compared duties under the date, above the multi-day lanes, and hides them in batch edit', async () => {
+    const props = reactive(makeProps(0))
+    props.schedulesByDays = []
+    props.otherDuties = [{
+      memberId: 5, memberName: 'Friend', hasProfilePhoto: false, profilePhotoVersion: 0,
+      duties: props.days.map(() => ({ dutyType: 'OFF', dutyColor: '#ffffff' })),
+    }]
+    const root = mountCalendar(props)
+
+    const chips = otherDutyChips(root)
+    expect(chips).toHaveLength(35)
+    expect(chips.every(chip => hasAncestorClass(chip, 'calendar-day-head'))).toBe(true)
+    expect(chips.some(chip => hasAncestorClass(chip, 'calendar-items'))).toBe(false)
+
+    props.batchEditMode = true
+    await nextTick()
+    expect(otherDutyChips(root)).toHaveLength(0)
+  })
+})
