@@ -289,3 +289,26 @@ describe('CalendarGrid day states', () => {
     expect(todayBorders(today)).toHaveLength(0)
   })
 })
+
+describe('CalendarGrid pinned day content', () => {
+  it('renders pinned content in the week-shared header row, above the multi-day lanes', async () => {
+    const spanLanes = Array.from({ length: 35 }, (_, index) =>
+      index === 1 ? [{ segment: { item: 'trip', days: 1, isStart: true, isEnd: true }, isFirstDay: true }] : [])
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays(null), currentYear: 2026, currentMonth: 11, spanLanes,
+    }, {
+      'day-pinned': ({ index }: { index: number }) => h('div', { class: 'pinned' }, `pinned ${index}`),
+    })))
+    await nextTick()
+    const cell = dayCells(mounted.root)[1]!
+    // The cell stays two subgrid rows: the header row and the body row.
+    const rows = cell.children.filter(node => node.type === 'div')
+    expect(rows.map(node => String(node.props.class))).toEqual(['calendar-day-head', 'calendar-day-body'])
+    const [head, body] = rows as [HostNode, HostNode]
+    expect(head.children.filter(node => node.type === 'div').map(node => String(node.props.class)))
+      .toEqual(['calendar-day-top', 'pinned'])
+    expect(hostText(head)).toContain('pinned 1')
+    expect(findHostNodes(body, node => hasClass(node, 'pinned'))).toHaveLength(0)
+    expect(findHostNodes(body, node => hasClass(node, 'calendar-span-lanes'))).toHaveLength(1)
+  })
+})

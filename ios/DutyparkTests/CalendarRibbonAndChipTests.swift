@@ -598,3 +598,44 @@ struct CalendarSpanRibbonRowPlanTests {
         #expect(plan.titleWidth == 67, "100 - 3 - 20 - 10")
     }
 }
+
+/// Together view: compared duties sit above the ribbon lanes, so each tile must hold the
+/// same chip rows for the lanes below to stay level across a week row.
+struct CalendarComparedDutyRowsTests {
+    private func duty(_ member: MemberID, day: Int) -> ComparedDuty {
+        ComparedDuty(
+            memberID: member,
+            name: "Member \(member)",
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0,
+            duty: DutyDTO(
+                year: 2026, month: 11, day: day,
+                dutyType: "OFF", dutyColor: nil, isOff: true, dutyTypeId: nil, source: .override
+            )
+        )
+    }
+
+    @Test
+    func everyDayGetsARowForEachComparedMemberInOneOrder() {
+        let rows = CalendarComparedDutyRows.rows(for: [
+            [duty(3, day: 9), duty(5, day: 9)],
+            [duty(5, day: 10)],
+            [],
+            [duty(5, day: 12), duty(3, day: 12)],
+        ])
+
+        #expect(rows.map { $0.map { $0?.memberID } } == [
+            [3, 5],
+            [nil, 5],
+            [nil, nil],
+            [3, 5],
+        ])
+        #expect(rows[1][1]?.duty.day == 10)
+    }
+
+    @Test
+    func noComparisonLeavesNoRows() {
+        let rows = CalendarComparedDutyRows.rows(for: [[], []])
+        #expect(rows.map(\.count) == [0, 0])
+    }
+}

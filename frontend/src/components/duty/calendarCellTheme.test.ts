@@ -19,7 +19,7 @@ describe('duty calendar in-cell styling', () => {
   it.each([
     '.calendar-day--on-light .schedule-tag',
     '.calendar-day--on-light .calendar-items :deep(.schedule-tag-avatar.profile-avatar)',
-    '.calendar-day--on-light .calendar-items :deep(.other-duty-chip__avatar.profile-avatar)',
+    '.calendar-day--on-light .other-duty-chips :deep(.other-duty-chip__avatar.profile-avatar)',
     '.calendar-day--on-light .calendar-items :deep(.calendar-visibility-hint .visibility-hint-button--xs)',
     '.calendar-day--on-light .calendar-action-bubble--todo',
     '.calendar-day--on-light .calendar-action-bubble--progress',

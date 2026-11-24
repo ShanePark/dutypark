@@ -43,6 +43,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 defineSlots<{
   'day-header'?: (props: { day: CalendarDay; index: number }) => unknown
+  /** Rendered under the date in the week-shared header row, above the multi-day lanes. */
+  'day-pinned'?: (props: { day: CalendarDay; index: number }) => unknown
   'day-content'?: (props: { day: CalendarDay; index: number }) => unknown
   span?: (props: { segment: CalendarSpanSegment<TSpan> }) => unknown
 }>()
@@ -293,18 +295,21 @@ function handleDayClick(day: CalendarDay, index: number) {
         class="calendar-day-highlight-border"
         aria-hidden="true"
       />
-      <div class="calendar-day-top">
-        <span
-          class="calendar-day-number"
-          :style="{ color: getDayNumberColor(day, idx % 7) }"
-        >
-          <template v-if="isToday(day)">
-            <span class="calendar-day-today-circle">{{ day.day }}</span>
-            <span class="calendar-day-today-label">{{ t('common.calendar.today') }}</span>
-          </template>
-          <template v-else>{{ day.day }}</template>
-        </span>
-        <slot name="day-header" :day="day" :index="getSourceIndex(idx)" />
+      <div class="calendar-day-head">
+        <div class="calendar-day-top">
+          <span
+            class="calendar-day-number"
+            :style="{ color: getDayNumberColor(day, idx % 7) }"
+          >
+            <template v-if="isToday(day)">
+              <span class="calendar-day-today-circle">{{ day.day }}</span>
+              <span class="calendar-day-today-label">{{ t('common.calendar.today') }}</span>
+            </template>
+            <template v-else>{{ day.day }}</template>
+          </span>
+          <slot name="day-header" :day="day" :index="getSourceIndex(idx)" />
+        </div>
+        <slot name="day-pinned" :day="day" :index="getSourceIndex(idx)" />
       </div>
 
       <div class="calendar-day-body">
@@ -417,6 +422,12 @@ function handleDayClick(day: CalendarDay, index: number) {
   min-width: 0;
   padding: 4px var(--calendar-pad-x) 5px;
   color: var(--calendar-ink);
+}
+
+/* The header row holds the date and pinned content; the tallest header of the
+   week sets where every day's lanes start. */
+.calendar-day-head {
+  min-width: 0;
 }
 
 /* A subgrid ignores its own min-height, so the body carries the tile's minimum. */
