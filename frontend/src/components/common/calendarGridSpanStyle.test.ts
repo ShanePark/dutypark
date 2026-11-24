@@ -196,6 +196,23 @@ describe('multi-day schedule bands', () => {
   })
 })
 
+describe('calendar item dividers', () => {
+  it('keeps a rule between day items on every breakpoint', () => {
+    expect(ruleBody(baseBlock, ':slotted(.calendar-item + .calendar-item)')).toContain('border-top: 1px solid var(--calendar-rule)')
+    const desktop = ruleBody(desktopBlock, ':slotted(.calendar-item + .calendar-item)')
+    expect(desktop).not.toContain('border-top: 0')
+    // The rule sits in the middle of the 4px desktop gap.
+    expect(desktop).toContain('margin-top: -2px')
+    expect(desktop).toContain('padding-top: 2px')
+  })
+
+  it('keeps the rule above D-Day markers on desktop', () => {
+    const dutyStyle = dutyCalendarContent.slice(dutyCalendarContent.indexOf('<style scoped>'))
+    const desktop = dutyStyle.slice(dutyStyle.indexOf('@media (min-width: 640px)'))
+    expect(desktop).not.toMatch(/\.calendar-item \+ \.calendar-item\.calendar-dday-marker \{\s*border-top: 0/)
+  })
+})
+
 describe('responsive calendar day headers', () => {
   it('aligns desktop calendar items without a leading dot or reserved dot space', () => {
     expect(ruleBody(desktopBlock, ':slotted(.calendar-item)')).toContain('padding: 0;')

@@ -863,8 +863,10 @@ function handleDayClick(day: CalendarDay, index: number) {
     letter-spacing: normal;
   }
 
+  /* Center the rule in the 4px gap instead of hugging the next item. */
   :slotted(.calendar-item + .calendar-item) {
-    border-top: 0;
+    margin-top: -2px;
+    padding-top: 2px;
   }
 
   :slotted(.calendar-item__time) {

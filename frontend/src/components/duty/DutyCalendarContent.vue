@@ -598,10 +598,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
     font-size: 12px;
   }
 
-  .calendar-item + .calendar-item.calendar-dday-marker {
-    border-top: 0;
-  }
-
   .calendar-dday-marker__icon {
     width: 11px;
     height: 11px;
