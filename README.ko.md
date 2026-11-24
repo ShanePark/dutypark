@@ -3,6 +3,11 @@
     <img src="frontend/public/apple-touch-icon.png" width="120" alt="Dutypark 앱 아이콘">
   </a>
 </p>
+<p align="center">
+  <a href="https://apps.apple.com/kr/app/dutypark/id6801560782"><img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/ko-kr?size=250x83" width="156" alt="App Store에서 다운로드하기"></a>
+  <br>
+  <sub><a href="https://dutypark.o-r.kr/">웹</a>에서도 사용할 수 있습니다</sub>
+</p>
 
 # Dutypark
 
@@ -11,8 +16,6 @@
 > 근무와 일정, 소중한 사람들을 위한 소셜 캘린더
 
 Dutypark은 근무표와 일상의 약속을 하나의 캘린더에서 관리하고, 친구·가족·팀과 필요한 일정만 나눌 수 있는 서비스입니다.
-
-[웹](https://dutypark.o-r.kr/) · [App Store](https://apps.apple.com/kr/app/dutypark/id6801560782)
 
 ## 주요 기능
 

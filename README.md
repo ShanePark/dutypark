@@ -3,6 +3,11 @@
     <img src="frontend/public/apple-touch-icon.png" width="120" alt="Dutypark app icon">
   </a>
 </p>
+<p align="center">
+  <a href="https://apps.apple.com/us/app/dutypark/id6801560782"><img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/en-us?size=250x83" width="144" alt="Download on the App Store"></a>
+  <br>
+  <sub>Also available on the <a href="https://dutypark.o-r.kr/">web</a></sub>
+</p>
 
 # Dutypark
 
@@ -11,8 +16,6 @@
 > A social calendar for shifts, schedules, and the people who matter.
 
 Dutypark brings work schedules and everyday plans into one calendar, with sharing controls for friends, family, and teams.
-
-[Web](https://dutypark.o-r.kr/) · [App Store](https://apps.apple.com/us/app/dutypark/id6801560782)
 
 ## Highlights
 
