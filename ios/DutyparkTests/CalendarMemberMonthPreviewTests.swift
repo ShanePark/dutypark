@@ -2,9 +2,10 @@ import Foundation
 import Testing
 @testable import Dutypark
 
-/// Another member's calendar has no offline cache, so the swipe preview needs
-/// the neighbouring months fetched in memory. Without it the swipe shows
-/// date-only cells and the duty colours appear only after the committed load.
+/// The swipe preview needs the neighbouring months fetched in memory: another
+/// member's calendar has no offline cache, and the owner's cache keeps only a
+/// rolling window that can be stale. Without it the swipe shows date-only cells
+/// and the duty colours appear only after the committed load.
 @MainActor
 struct CalendarMemberMonthPreviewTests {
     @Test func dutySummaryKeepsTheLoadedMonthUntilTheNewResponseArrives() async throws {
@@ -124,10 +125,131 @@ struct CalendarMemberMonthPreviewTests {
         #expect(await repository.dutyRequestCount(year: 2026, month: 9) > requestsBefore)
     }
 
+    @Test func ownCalendarNeighbouringMonthsCarryRealDutiesWithoutAnOfflineSnapshot() async {
+        // The offline cache keeps only today ±6 months, so a month beyond that
+        // window has no snapshot and must still get an in-memory preview.
+        let model = Self.model(repository: MemberMonthPreviewRepository(), memberID: 1)
+
+        await model.load()
+
+        let previous = await model.cachedMonthPreview(year: 2026, month: 7)
+        let next = await model.cachedMonthPreview(year: 2026, month: 9)
+        #expect(Self.dutyColor(in: previous, on: "2026-07-12") == MemberMonthPreviewRepository.color(member: 1, month: 7))
+        #expect(Self.dutyColor(in: next, on: "2026-09-12") == MemberMonthPreviewRepository.color(member: 1, month: 9))
+        #expect(
+            Self.dutyColor(in: model.readyMonthPreview(year: 2026, month: 9), on: "2026-09-12")
+                == MemberMonthPreviewRepository.color(member: 1, month: 9),
+            "The swipe's synchronous placeholder page must use the ready own-calendar preview"
+        )
+
+        #expect(await model.changeMonth(by: 1))
+        let following = await model.cachedMonthPreview(year: 2026, month: 10)
+        #expect(Self.dutyColor(in: following, on: "2026-10-12") == MemberMonthPreviewRepository.color(member: 1, month: 10))
+    }
+
+    @Test func ownCalendarPrefersTheFetchedPreviewOverAStaleOfflineSnapshot() async {
+        let cache = MemberMonthPreviewCache(months: [Self.staleOwnSnapshot(year: 2026, month: 9)])
+        let model = Self.model(repository: MemberMonthPreviewRepository(), memberID: 1, cache: cache)
+
+        await model.load()
+
+        let next = await model.cachedMonthPreview(year: 2026, month: 9)
+        #expect(Self.dutyColor(in: next, on: "2026-09-12") == MemberMonthPreviewRepository.color(member: 1, month: 9))
+    }
+
+    @Test func ownCalendarFallsBackToTheOfflineSnapshotWhenThePreviewFails() async {
+        let cache = MemberMonthPreviewCache(months: [Self.staleOwnSnapshot(year: 2026, month: 9)])
+        let repository = MemberMonthPreviewRepository(failingMonths: [OfflineMonthKey(year: 2026, month: 9)])
+        let model = Self.model(repository: repository, memberID: 1, cache: cache)
+
+        await model.load()
+
+        let next = await model.cachedMonthPreview(year: 2026, month: 9)
+        #expect(Self.dutyColor(in: next, on: "2026-09-12") == Self.staleColor)
+        #expect(model.readyMonthPreview(year: 2026, month: 9) == nil)
+        #expect(model.errorMessage == nil)
+    }
+
+    @Test func switchingBetweenOwnAndAnotherCalendarNeverReusesPreviews() async throws {
+        let model = Self.model(repository: MemberMonthPreviewRepository(), memberID: 1)
+        await model.load()
+        _ = await model.cachedMonthPreview(year: 2026, month: 9)
+        #expect(model.readyMonthPreview(year: 2026, month: 9) != nil)
+
+        model.selectedMemberID = 2
+        #expect(model.readyMonthPreview(year: 2026, month: 9) == nil)
+        #expect(await model.cachedMonthPreview(year: 2026, month: 9) == nil)
+
+        try await model.loadMonth()
+        let friend = await model.cachedMonthPreview(year: 2026, month: 9)
+        #expect(Self.dutyColor(in: friend, on: "2026-09-12") == MemberMonthPreviewRepository.color(member: 2, month: 9))
+
+        model.selectedMemberID = 1
+        #expect(model.readyMonthPreview(year: 2026, month: 9) == nil)
+        #expect(await model.cachedMonthPreview(year: 2026, month: 9) == nil)
+    }
+
+    @Test func changingTheOwnComparisonRefetchesPreviewsWithTheComparedDuties() async throws {
+        // Only friends with a team are selectable for comparison.
+        let model = Self.model(repository: MemberMonthPreviewRepository(friendTeamID: 9), memberID: 1)
+        await model.load()
+        _ = await model.cachedMonthPreview(year: 2026, month: 9)
+
+        model.comparedMemberIDs = [2]
+        #expect(model.readyMonthPreview(year: 2026, month: 9) == nil)
+
+        try await model.loadMonth()
+        let after = await model.cachedMonthPreview(year: 2026, month: 9)
+        #expect(Self.day(in: after, on: "2026-09-12")?.comparedDuties.map(\.memberID) == [2])
+    }
+
+    @Test func anOwnEditRefetchesTheOwnPreviews() async throws {
+        // Fresh snapshots keep the rolling offline prefetch off the network, so
+        // the counted requests come only from the in-memory previews.
+        let window = OfflineCacheRangePolicy.rollingThirteenMonths.months(around: OfflineMonthKey(year: 2026, month: 8))
+        let cache = MemberMonthPreviewCache(months: window.map {
+            Self.ownSnapshot(year: $0.year, month: $0.month, storedAt: Date())
+        })
+        let repository = MemberMonthPreviewRepository()
+        let model = Self.model(repository: repository, memberID: 1, cache: cache)
+        await model.load()
+        _ = await model.cachedMonthPreview(year: 2026, month: 9)
+        let requestsBefore = await repository.dutyRequestCount(year: 2026, month: 9)
+
+        #expect(await model.deleteSchedule(MemberMonthPreviewRepository.schedule(year: 2026, month: 8)))
+
+        _ = await model.cachedMonthPreview(year: 2026, month: 9)
+        #expect(await repository.dutyRequestCount(year: 2026, month: 9) > requestsBefore)
+    }
+
+    private static let staleColor = "#999999"
+
+    private static func staleOwnSnapshot(year: Int, month: Int) -> OfflineMonthSnapshot {
+        ownSnapshot(year: year, month: month, storedAt: Date().addingTimeInterval(-3 * 24 * 60 * 60))
+    }
+
+    private static func ownSnapshot(year: Int, month: Int, storedAt: Date) -> OfflineMonthSnapshot {
+        let cells = CalendarDateSupport.placeholderCells(year: year, month: month)
+        return OfflineMonthSnapshot(
+            accountID: 1,
+            key: OfflineMonthKey(year: year, month: month),
+            calendar: cells.map { TeamDayDTO(year: $0.year, month: $0.month, day: $0.day) },
+            schedules: Array(repeating: [], count: 42),
+            duties: [DutyDTO(
+                year: year, month: month, day: 12, dutyType: "Day", dutyColor: staleColor,
+                isOff: false, dutyTypeId: 7, source: .override, dutyAbbreviation: "D"
+            )],
+            holidays: Array(repeating: [], count: 42),
+            otherDuties: [],
+            storedAt: storedAt
+        )
+    }
+
     private static func model(
         repository: MemberMonthPreviewRepository,
         memberID: MemberID,
-        haptics: DPHapticCenter = DPHapticCenter()
+        haptics: DPHapticCenter = DPHapticCenter(),
+        cache: MemberMonthPreviewCache? = nil
     ) -> CalendarViewModel {
         CalendarViewModel(
             repository: repository,
@@ -135,7 +257,7 @@ struct CalendarMemberMonthPreviewTests {
             memberID: memberID,
             accountID: 1,
             hapticCenter: haptics,
-            cache: MemberMonthPreviewCache(),
+            cache: cache ?? MemberMonthPreviewCache(),
             outbox: MemberMonthPreviewOutbox()
         )
     }
@@ -157,16 +279,19 @@ private actor MemberMonthPreviewRepository: CalendarRepositoryProtocol {
     private let failingMonths: Set<OfflineMonthKey>
     private let emptyMonths: Set<OfflineMonthKey>
     private let includesAdjacentMonthDuties: Bool
+    private let friendTeamID: TeamID?
     private var dutyRequests: [OfflineMonthKey: Int] = [:]
 
     init(
         failingMonths: Set<OfflineMonthKey> = [],
         emptyMonths: Set<OfflineMonthKey> = [],
-        includesAdjacentMonthDuties: Bool = false
+        includesAdjacentMonthDuties: Bool = false,
+        friendTeamID: TeamID? = nil
     ) {
         self.failingMonths = failingMonths
         self.emptyMonths = emptyMonths
         self.includesAdjacentMonthDuties = includesAdjacentMonthDuties
+        self.friendTeamID = friendTeamID
     }
 
     nonisolated static func color(member: MemberID, month: Int) -> String {
@@ -205,7 +330,7 @@ private actor MemberMonthPreviewRepository: CalendarRepositoryProtocol {
     func friends() async throws -> [FriendDTO] {
         [2, 3].map {
             FriendDTO(
-                id: $0, name: "Friend \($0)", teamId: nil, team: nil,
+                id: $0, name: "Friend \($0)", teamId: friendTeamID, team: nil,
                 hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, displayOrder: nil
             )
         }
@@ -270,11 +395,19 @@ private actor MemberMonthPreviewRepository: CalendarRepositoryProtocol {
 }
 
 private actor MemberMonthPreviewCache: OfflineCacheProviding {
+    private let months: [OfflineMonthKey: OfflineMonthSnapshot]
+
+    init(months: [OfflineMonthSnapshot] = []) {
+        self.months = Dictionary(uniqueKeysWithValues: months.map { ($0.key, $0) })
+    }
+
     func saveAccount(_ snapshot: OfflineAccountSnapshot) async throws {}
     func saveAccount(member: LoginMember, friends: [FriendDTO], dDays: [DDayDTO], now: Date) async throws {}
     func loadAccount(memberID: MemberID) async -> OfflineAccountSnapshot? { nil }
     func saveMonth(_ snapshot: OfflineMonthSnapshot) async throws {}
-    func loadMonth(accountID: MemberID, key: OfflineMonthKey) async -> OfflineMonthSnapshot? { nil }
+    func loadMonth(accountID: MemberID, key: OfflineMonthKey) async -> OfflineMonthSnapshot? {
+        months[key].flatMap { $0.accountID == accountID ? $0 : nil }
+    }
     func loadCachedMonths(accountID: MemberID, around current: OfflineMonthKey) async -> [OfflineMonthSnapshot] { [] }
     func saveTodoBoard(accountID: MemberID, board: TodoBoardDTO, now: Date) async throws {}
     func loadTodoBoard(accountID: MemberID) async -> TodoBoardDTO? { nil }

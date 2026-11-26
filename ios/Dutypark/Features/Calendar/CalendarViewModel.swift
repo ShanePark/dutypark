@@ -87,7 +87,7 @@ nonisolated enum CalendarDutyBatchFileSizeValidation: Equatable, Sendable {
     case unavailable
 }
 
-/// One neighbouring month of another member's calendar, held only in memory.
+/// One neighbouring month of the visible calendar, held only in memory.
 private nonisolated struct CalendarMemberMonthPreview: Sendable {
     let calendar: [TeamDayDTO]
     let schedules: [[ScheduleDTO]]
@@ -99,6 +99,7 @@ private nonisolated struct CalendarMemberMonthPreview: Sendable {
 private nonisolated struct CalendarMemberPreviewIdentity: Equatable, Sendable {
     let memberID: MemberID
     let accountID: MemberID?
+    let isMine: Bool
     let comparedMemberIDs: Set<MemberID>
 }
 
@@ -125,10 +126,11 @@ final class CalendarViewModel: ObservableObject {
     private var prefetchGeneration = 0
     private var prefersOfflineCache: Bool
     private var prefetchTask: Task<Void, Never>?
-    // Another member's months are never written to the offline cache, so the
-    // months a swipe reveals are fetched into this store instead. It belongs to
-    // one member and comparison set; the revision discards in-flight results
-    // once the store is invalidated.
+    // The months a swipe reveals are fetched into this store: another member's
+    // months are never written to the offline cache, and the owner's cache keeps
+    // only a rolling window that may be up to a day old. It belongs to one
+    // member, account and comparison set; the revision discards in-flight
+    // results once the store is invalidated.
     private var memberPreviewIdentity: CalendarMemberPreviewIdentity?
     private var memberPreviews: [OfflineMonthKey: CalendarMemberMonthPreview] = [:]
     private var memberPreviewTasks: [OfflineMonthKey: Task<Void, Never>] = [:]
@@ -741,9 +743,7 @@ final class CalendarViewModel: ObservableObject {
         if !serverRecoveryAttemptInProgress {
             cancelServerRecovery(clearPending: true)
         }
-        if !context.isMine {
-            startMemberMonthPreviews()
-        }
+        startMemberMonthPreviews()
 
         guard isCurrentMonthRequest(context),
               context.isMine,
@@ -822,11 +822,12 @@ final class CalendarViewModel: ObservableObject {
     }
 
     /// Reads an adjacent month for the swipe preview without changing the active
-    /// month request or its loading state. The account owner's months come from
-    /// the offline cache; another member's come from the in-memory preview store.
+    /// month request or its loading state. The in-memory preview store comes
+    /// first; the account owner falls back to the offline cache when it has no
+    /// preview (offline, still unavailable, or failed).
     func cachedMonthPreview(year: Int, month: Int) async -> [CalendarDayContent]? {
-        if !isMyCalendar {
-            return await memberMonthPreview(key: OfflineMonthKey(year: year, month: month))
+        if let preview = await memberMonthPreview(key: OfflineMonthKey(year: year, month: month)) {
+            return preview
         }
         guard let memberID = targetMemberID,
               isMyCalendar,
@@ -858,8 +859,8 @@ final class CalendarViewModel: ObservableObject {
         )
     }
 
-    /// Another member's neighbouring month when it has already been fetched, so
-    /// a swipe can start on real content instead of date-only placeholder cells.
+    /// A neighbouring month when it has already been fetched, so a swipe can
+    /// start on real content instead of date-only placeholder cells.
     func readyMonthPreview(year: Int, month: Int) -> [CalendarDayContent]? {
         guard !isOfflineMode,
               let identity = memberPreviewIdentity,
@@ -878,10 +879,11 @@ final class CalendarViewModel: ObservableObject {
     }
 
     private var currentMemberPreviewIdentity: CalendarMemberPreviewIdentity? {
-        guard let memberID = targetMemberID, !isMyCalendar else { return nil }
+        guard let memberID = targetMemberID else { return nil }
         return CalendarMemberPreviewIdentity(
             memberID: memberID,
             accountID: cacheAccountID,
+            isMine: isMyCalendar,
             comparedMemberIDs: activeComparedMemberIDs
         )
     }
@@ -898,8 +900,8 @@ final class CalendarViewModel: ObservableObject {
         return readyMonthPreview(year: key.year, month: key.month)
     }
 
-    /// Fetches the months on either side of the visible one for another member's
-    /// calendar. Failures stay silent: the committed month load owns feedback.
+    /// Fetches the months on either side of the visible one. Failures stay
+    /// silent: the committed month load owns feedback.
     private func startMemberMonthPreviews() {
         invalidateMemberMonthPreviews()
         // Same gate as the owner prefetch: test doubles and guest screens never
@@ -2386,9 +2388,8 @@ final class CalendarViewModel: ObservableObject {
     }
 
     /// Neighbouring grids share leading and trailing days with the visible month,
-    /// so an edit to another member's calendar refetches their previews.
+    /// so an edit refetches the previews.
     private func refreshMemberMonthPreviewsIfNeeded() {
-        guard !isMyCalendar else { return }
         startMemberMonthPreviews()
     }
 

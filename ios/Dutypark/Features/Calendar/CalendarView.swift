@@ -1287,8 +1287,8 @@ struct CalendarView: View {
         .accessibilityHidden(!isInteractive)
     }
 
-    /// Starts a swipe on another member's already-fetched neighbouring month when
-    /// it is ready; otherwise date-only cells keep the neutral no-duty surface.
+    /// Starts a swipe on the already-fetched neighbouring month when it is ready;
+    /// otherwise date-only cells keep the neutral no-duty surface.
     private func placeholderMonthPage(for key: OfflineMonthKey) -> CalendarMonthPage {
         if let days = model.readyMonthPreview(year: key.year, month: key.month) {
             return CalendarMonthPage(key: key, days: days)
