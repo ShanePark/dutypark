@@ -65,6 +65,14 @@ describe.each([
     expect(functionBody(script, 'openSearchModal')).toContain('searchedKeyword.value = null')
   })
 
+  it('treats an empty keyword as no search, like the disabled search button', () => {
+    const search = functionBody(script, 'search')
+    const guard = search.indexOf('if (!keyword.trim()) {')
+    expect(guard).toBeGreaterThan(-1)
+    expect(guard).toBeLessThan(search.indexOf('friendApi.searchPossibleFriends'))
+    expect(search.slice(guard, search.indexOf('return', guard))).toContain('searchedKeyword.value = null')
+  })
+
   it('passes the submitted keyword to the modal', () => {
     expect(view).toContain(':searched-keyword="searchedKeyword"')
   })
