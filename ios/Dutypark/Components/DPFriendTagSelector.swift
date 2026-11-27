@@ -378,7 +378,7 @@ struct DPFriendTagSelector: View {
             .padding(.leading, 3)
             .padding(.trailing, DPSpacing.small)
             .padding(.vertical, 3)
-            .background(DPColor.backgroundCard, in: Capsule())
+            .background { DPMemberTagSurface(castsShadow: true) }
             .overlay {
                 Capsule().stroke(DPColor.accentBorder)
             }

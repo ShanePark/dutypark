@@ -285,3 +285,16 @@ describe('mobile month grid geometry', () => {
     expect(ruleBody(dutyStyle, '.calendar-month-swipe')).toContain('padding-inline: 8px')
   })
 })
+
+describe('ribbon tag chip gloss', () => {
+  it.each([
+    { selector: '.span-tag-chip', tint: 'background: color-mix(in srgb, var(--calendar-ink) 9%, transparent);' },
+    { selector: '.span-tag-pill', tint: 'background: color-mix(in srgb, var(--calendar-ink) 10%, transparent);' },
+  ])('keeps the ink tint of $selector under a white sheen', ({ selector, tint }) => {
+    const body = ruleBody(spanTags, selector)
+    expect(body).toContain(tint)
+    expect(body.indexOf('background-image')).toBeGreaterThan(body.indexOf(tint))
+    expect(body).toContain('background-image: linear-gradient(180deg, rgb(255 255 255 / 0.3) 0%, rgb(255 255 255 / 0) 85%);')
+    expect(body).toContain('box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.7), 0 0.5px 1px rgb(15 23 42 / 0.12);')
+  })
+})

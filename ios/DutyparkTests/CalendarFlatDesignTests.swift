@@ -56,7 +56,9 @@ struct CalendarFlatDesignTests {
                     DPCalendarCellStyle.dayNumberColor(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth, weekdayIndex: 0, hasHoliday: false),
                     DPCalendarCellStyle.dayNumberColor(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth, weekdayIndex: 6, hasHoliday: false),
                     DPCalendarCellStyle.dayNumberColor(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth, weekdayIndex: 3, hasHoliday: false),
-                    DPMemberTagPalette.background(onCalendarFill: true),
+                    DPMemberTagPalette.gradient(onCalendarFill: true).top,
+                    DPMemberTagPalette.gradient(onCalendarFill: true).bottom,
+                    DPMemberTagPalette.highlight(onCalendarFill: true),
                     DPMemberTagPalette.border(onCalendarFill: true),
                     DPMemberTagPalette.foreground(onCalendarFill: true)
                 ]

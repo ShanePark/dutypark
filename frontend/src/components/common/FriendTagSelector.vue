@@ -404,7 +404,9 @@ function getSubtitle(friend: TaggableFriend) {
   padding: 0.1875rem 0.5rem 0.1875rem 0.1875rem;
   border: 1px solid var(--dp-accent-border);
   border-radius: 9999px;
-  background: var(--dp-bg-card);
+  background-color: var(--dp-bg-card);
+  background-image: var(--dp-tag-chip-sheen);
+  box-shadow: inset 0 1px 0 var(--dp-tag-chip-highlight), var(--dp-tag-chip-drop);
   color: var(--dp-text-primary);
   font-size: 0.75rem;
   font-weight: 500;
@@ -414,7 +416,7 @@ function getSubtitle(friend: TaggableFriend) {
 
 .friend-tag-selector__chip:hover {
   border-color: var(--dp-accent);
-  background: var(--dp-accent-bg-hover);
+  background-color: var(--dp-accent-bg-hover);
 }
 
 .friend-tag-selector__chip:focus-visible {

@@ -149,13 +149,66 @@ nonisolated enum DPMemberTagPresentation {
 
 /// Tag colours. A calendar duty fill is the same in light and dark, so a chip drawn on
 /// it uses fixed colours (the web's `rgba(255,255,255,.72)` / `#374151`).
+///
+/// The surface is the web's "A" gloss: a gradient lit slightly from above, a hairline top
+/// highlight and a faint shadow just below.
 nonisolated enum DPMemberTagPalette {
-    static let fillBackground = Color(white: 1, opacity: 0.72)
+    /// Averages the web's flat `rgba(255,255,255,.72)`, so the fill contract holds.
+    static let fillGradientTop = Color(white: 1, opacity: 0.84)
+    static let fillGradientBottom = Color(white: 1, opacity: 0.62)
     static let fillBorder = Color(red: 31 / 255, green: 41 / 255, blue: 55 / 255).opacity(0.14)
     static let fillForeground = Color(red: 55 / 255, green: 65 / 255, blue: 81 / 255)
+    static let fillHighlight = Color(white: 1, opacity: 0.95)
 
-    static func background(onCalendarFill: Bool) -> Color {
-        onCalendarFill ? fillBackground : DPColor.backgroundCard
+    /// `--dp-bg-card` in light at the top, 5% toward `#0F172A` at the bottom; in dark,
+    /// 12% toward white at the top and the card itself at the bottom.
+    private static let themeGradientTop = cardMix(light: nil, dark: (UIColor.white, 0.12))
+    private static let themeGradientBottom = cardMix(
+        light: (UIColor(red: 15 / 255, green: 23 / 255, blue: 42 / 255, alpha: 1), 0.05),
+        dark: nil
+    )
+    private static let themeHighlight = Color(uiColor: UIColor { traits in
+        UIColor(white: 1, alpha: traits.userInterfaceStyle == .dark ? 0.10 : 0.95)
+    })
+
+    static func gradient(onCalendarFill: Bool) -> (top: Color, bottom: Color) {
+        onCalendarFill ? (fillGradientTop, fillGradientBottom) : (themeGradientTop, themeGradientBottom)
+    }
+
+    static func highlight(onCalendarFill: Bool) -> Color {
+        onCalendarFill ? fillHighlight : themeHighlight
+    }
+
+    /// The web's soft `0 1px 2px` shadow drawn as an unblurred capsule a point lower, so a
+    /// month of chips costs no blur passes.
+    static let shadow = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(white: 0, alpha: 0.35)
+            : UIColor(red: 15 / 255, green: 23 / 255, blue: 42 / 255, alpha: 0.10)
+    })
+    static let shadowOffset: CGFloat = 1
+
+    /// A translucent chip on a duty fill would show the shadow through itself, and a month
+    /// cell has neither the room nor the budget for one.
+    static func castsShadow(size: DPMemberTagSize, onCalendarFill: Bool) -> Bool {
+        !onCalendarFill && size != .micro
+    }
+
+    private static func cardMix(light: (UIColor, CGFloat)?, dark: (UIColor, CGFloat)?) -> Color {
+        Color(uiColor: UIColor { traits in
+            let card = UIColor(DPColor.backgroundCard).resolvedColor(with: traits)
+            guard let (other, amount) = traits.userInterfaceStyle == .dark ? dark : light else { return card }
+            var cardRed: CGFloat = 0, cardGreen: CGFloat = 0, cardBlue: CGFloat = 0
+            var otherRed: CGFloat = 0, otherGreen: CGFloat = 0, otherBlue: CGFloat = 0
+            card.getRed(&cardRed, green: &cardGreen, blue: &cardBlue, alpha: nil)
+            other.getRed(&otherRed, green: &otherGreen, blue: &otherBlue, alpha: nil)
+            return UIColor(
+                red: cardRed * (1 - amount) + otherRed * amount,
+                green: cardGreen * (1 - amount) + otherGreen * amount,
+                blue: cardBlue * (1 - amount) + otherBlue * amount,
+                alpha: 1
+            )
+        })
     }
 
     private static let authorBorder = Color(uiColor: UIColor { traits in
@@ -200,6 +253,35 @@ struct DPMemberAvatar: View {
     }
 }
 
+/// The capsule behind a member tag: the gradient, its top highlight just inside the
+/// border, and the hard shadow when the chip casts one. The border stays with the chip.
+struct DPMemberTagSurface: View {
+    var onCalendarFill = false
+    var castsShadow = false
+
+    var body: some View {
+        let fill = DPMemberTagPalette.gradient(onCalendarFill: onCalendarFill)
+        let highlight = DPMemberTagPalette.highlight(onCalendarFill: onCalendarFill)
+        Capsule()
+            .fill(LinearGradient(colors: [fill.top, fill.bottom], startPoint: .top, endPoint: .bottom))
+            .overlay {
+                Capsule()
+                    .inset(by: DPChrome.borderWidth / 2)
+                    .strokeBorder(
+                        LinearGradient(colors: [highlight, highlight.opacity(0)], startPoint: .top, endPoint: .center),
+                        lineWidth: 0.5
+                    )
+            }
+            .background {
+                if castsShadow {
+                    Capsule()
+                        .fill(DPMemberTagPalette.shadow)
+                        .offset(y: DPMemberTagPalette.shadowOffset)
+                }
+            }
+    }
+}
+
 /// A single member tag.
 struct DPMemberTagChip: View {
     let item: DPMemberTagItem
@@ -219,7 +301,12 @@ struct DPMemberTagChip: View {
         .padding(.leading, size.verticalPadding)
         .padding(.trailing, size.horizontalPadding)
         .padding(.vertical, size.verticalPadding)
-        .background(DPMemberTagPalette.background(onCalendarFill: onCalendarFill), in: Capsule())
+        .background {
+            DPMemberTagSurface(
+                onCalendarFill: onCalendarFill,
+                castsShadow: DPMemberTagPalette.castsShadow(size: size, onCalendarFill: onCalendarFill)
+            )
+        }
         .overlay {
             Capsule().stroke(
                 DPMemberTagPalette.border(onCalendarFill: onCalendarFill, isAuthor: item.isAuthor && size == .regular),
@@ -314,7 +401,12 @@ struct DPMemberTagChips: View {
                     .foregroundStyle(DPMemberTagPalette.foreground(onCalendarFill: onCalendarFill))
                     .padding(.horizontal, size.horizontalPadding)
                     .padding(.vertical, size.verticalPadding + size.avatarDiameter / 2 - size.fontSize / 2)
-                    .background(DPMemberTagPalette.background(onCalendarFill: onCalendarFill), in: Capsule())
+                    .background {
+                        DPMemberTagSurface(
+                            onCalendarFill: onCalendarFill,
+                            castsShadow: DPMemberTagPalette.castsShadow(size: size, onCalendarFill: onCalendarFill)
+                        )
+                    }
                     .overlay { Capsule().stroke(DPMemberTagPalette.border(onCalendarFill: onCalendarFill), lineWidth: DPChrome.borderWidth) }
                     .accessibilityLabel(Text(verbatim: "+\(hiddenCount)"))
             }

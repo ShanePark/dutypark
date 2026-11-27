@@ -714,8 +714,9 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 .schedule-tag {
   padding: 0;
   border-radius: 9999px;
-  box-shadow: none;
-  background: var(--dp-bg-primary);
+  box-shadow: inset 0 0.5px 0 var(--dp-tag-chip-highlight), var(--dp-tag-chip-drop-mini);
+  background-color: var(--dp-bg-primary);
+  background-image: var(--dp-tag-chip-sheen);
   border-color: var(--dp-border-primary);
   color: var(--dp-text-secondary);
 }
@@ -775,7 +776,10 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
    The ancestor tile class comes from CalendarGrid, hence the unscoped prefix. */
 .calendar-day--on-light .schedule-tag,
 .calendar-day--on-dark .schedule-tag {
-  background: rgba(255, 255, 255, 0.72);
+  /* White glass whose gradient averages the former flat 0.72 white. */
+  background-color: transparent;
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.84) 0%, rgb(255 255 255 / 0.62) 100%);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.95), 0 0.5px 1px rgb(15 23 42 / 0.14);
   border-color: rgba(31, 41, 55, 0.14);
   color: #374151;
 }

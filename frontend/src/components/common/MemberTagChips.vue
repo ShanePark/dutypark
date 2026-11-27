@@ -118,6 +118,8 @@ function handleChipClick(member: DisplayTagMember) {
   align-items: center;
   border-radius: 9999px;
   border: 1px solid transparent;
+  background-image: var(--dp-tag-chip-sheen);
+  box-shadow: inset 0 1px 0 var(--dp-tag-chip-highlight), var(--dp-tag-chip-drop);
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
@@ -141,7 +143,7 @@ function handleChipClick(member: DisplayTagMember) {
 
 .member-tag-chip--accent {
   border-color: var(--dp-accent-border);
-  background-color: var(--dp-accent-soft);
+  background-color: var(--dp-accent-bg);
   color: var(--dp-text-primary);
 }
 
@@ -170,7 +172,7 @@ function handleChipClick(member: DisplayTagMember) {
 
 .member-tag-chip--interactive:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--dp-accent-ring);
+  box-shadow: inset 0 1px 0 var(--dp-tag-chip-highlight), 0 0 0 3px var(--dp-accent-ring);
 }
 
 .member-tag-chip--interactive:active {

@@ -207,6 +207,12 @@
     --dp-overlay-transparent: rgba(0, 0, 0, 0);
     --dp-overlay-blur: 4px;
     --dp-chip-on-dark-bg: rgba(255, 255, 255, 0.9);
+    /* Member tag chip gloss. The sheen is a translucent overlay, so a chip's own
+       background-color (and its hover colour) shows through underneath. */
+    --dp-tag-chip-sheen: linear-gradient(180deg, rgb(255 255 255 / 0) 0%, rgb(15 23 42 / 0.05) 100%);
+    --dp-tag-chip-highlight: rgb(255 255 255 / 0.95);
+    --dp-tag-chip-drop: 0 1px 2px rgb(15 23 42 / 0.08), 0 1px 1px rgb(15 23 42 / 0.04);
+    --dp-tag-chip-drop-mini: 0 0.5px 1px rgb(15 23 42 / 0.14);
 
     --dp-footer-active-bg: rgba(255, 255, 255, 0.25);
     --dp-footer-hover-bg: rgba(255, 255, 255, 0.1);
@@ -308,6 +314,10 @@
     --dp-overlay-transparent: rgba(0, 0, 0, 0);
     --dp-overlay-blur: 4px;
     --dp-chip-on-dark-bg: rgba(255, 255, 255, 0.9);
+    --dp-tag-chip-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.12) 0%, rgb(255 255 255 / 0) 100%);
+    --dp-tag-chip-highlight: rgb(255 255 255 / 0.1);
+    --dp-tag-chip-drop: 0 1px 2px rgb(0 0 0 / 0.45);
+    --dp-tag-chip-drop-mini: 0 0.5px 1px rgb(0 0 0 / 0.45);
 
     --dp-footer-active-bg: rgba(255, 255, 255, 0.25);
     --dp-footer-hover-bg: rgba(255, 255, 255, 0.1);
