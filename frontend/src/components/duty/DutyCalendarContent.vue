@@ -93,6 +93,10 @@ const monthSwipe = useCalendarMonthSwipe({
   getWidth: () => swipeContainer.value?.clientWidth ?? 0,
 })
 
+// The previous grid stays up while a jumped-to month loads, and its outside cells
+// may repeat the target date; start the spotlight only on the month's own grid.
+const spotlightDay = computed(() => props.isCalendarMonthLoaded ? props.highlightDay : null)
+
 const focusedCalendarDay = computed(() => {
   if (!props.batchEditMode || !props.focusedDay || !props.isCalendarMonthLoaded) return null
   return { year: props.currentYear, month: props.currentMonth, day: props.focusedDay }
@@ -277,7 +281,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
         :current-month="calendarDataMonth"
         :holidays="displayHolidays"
         :get-duty-color="getDutyColorForDay"
-        :highlight-day="highlightDay"
+        :highlight-day="spotlightDay"
         :focused-day="focusedCalendarDay"
         :clickable="isCalendarMonthLoaded && (!batchEditMode || canEdit)"
         :is-day-clickable="isDayClickable"

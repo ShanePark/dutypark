@@ -171,6 +171,28 @@ describe('calendar month transition layout', () => {
     const track = findHostNode(mounted.root, node => node.props.class === 'calendar-month-swipe__track')!
     expect(findHostNode(track, node => node.props['data-test'] === 'dday-list')).not.toBeNull()
   })
+
+  it('spotlights a jumped-to day in another month only once that month is on screen', async () => {
+    const props = reactive(makeProps(0))
+    const root = mountCalendar(props)
+    const highlightedCells = () => calendarDayCells(root)
+      .filter(cell => String(cell.props.class).split(' ').includes('calendar-day--highlighted'))
+
+    // October 3 is also a trailing cell of the September grid that stays up while October loads.
+    props.currentMonth = 10
+    props.isCalendarMonthLoaded = false
+    props.highlightDay = { year: 2026, month: 10, day: 3 }
+    await nextTick()
+    expect(highlightedCells()).toHaveLength(0)
+
+    props.days = makeMonthDays(2026, 9, 27)
+    props.calendarDataMonth = 10
+    props.isCalendarMonthLoaded = true
+    await nextTick()
+    const cells = calendarDayCells(root)
+    const octoberThird = props.days.findIndex(day => day.month === 10 && day.day === 3)
+    expect(highlightedCells()).toEqual([cells[octoberThird]])
+  })
 })
 
 describe('calendar derived display data', () => {
