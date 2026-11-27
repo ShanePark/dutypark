@@ -366,8 +366,9 @@ function handleDayClick(day: CalendarDay, index: number) {
   --calendar-gutter: var(--dp-border-primary);
   --calendar-surface: var(--dp-calendar-cell-prev-next);
   --calendar-today: var(--dp-danger-hover);
-  --calendar-gap: 2px;
-  --calendar-pad-x: 3px;
+  /* Phones use the 1pt iOS gutter. */
+  --calendar-gap: 1px;
+  --calendar-pad-x: 1.5px;
   /* White glass would vanish on a light empty tile, so it takes a faint ink tint. */
   --calendar-span-empty-tint: var(--dp-text-primary);
   --calendar-span-empty-glass: 6%;
@@ -491,13 +492,14 @@ function handleDayClick(day: CalendarDay, index: number) {
 }
 
 /* Today: a ring over the gutter (unless the day is selected), a filled date
-   circle, and (on wider screens) a label. */
+   circle, and (on wider screens) a label. On phones the ring stays within the
+   gutter, so it carries no outer halo onto the neighbouring days. */
 .calendar-day-today-border {
   position: absolute;
-  inset: -2px;
-  border: 2px solid var(--calendar-today);
+  inset: calc(-1 * var(--calendar-gap));
+  border: 1.5px solid var(--calendar-today);
   border-radius: 3px;
-  box-shadow: 0 0 0 1px var(--calendar-gutter), inset 0 0 0 1.5px #fff;
+  box-shadow: inset 0 0 0 1.5px #fff;
   pointer-events: none;
   z-index: 2;
 }
@@ -612,9 +614,10 @@ function handleDayClick(day: CalendarDay, index: number) {
 }
 
 /* Only overflowing titles retain a clamped box, keeping their time visible.
-   Titles that fit two lines flow inline so the time can use their final line. */
+   Titles that fit two lines flow inline so the time can use their final line.
+   The line contains the floated time chip, so a wrapped chip adds to its height. */
 :slotted(.calendar-item__line--chip) {
-  display: block;
+  display: flow-root;
   overflow: visible;
   -webkit-line-clamp: none;
   line-clamp: none;
@@ -636,22 +639,42 @@ function handleDayClick(day: CalendarDay, index: number) {
   vertical-align: baseline;
 }
 
-/* An atomic pill moves to the next line whole; only a range wider than the
-   line breaks inside it, at the <wbr> after "~". On a duty fill the tile sets a
-   tone-on-tone pair; otherwise the chip is a neutral ink tint. */
+/* The gap before the chip, as on iOS: a preserved space takes room when the chip
+   shares the title's last line, but hangs at a line end, so it neither wraps the
+   title nor narrows a chip on its own line. */
+:slotted(.calendar-item__line--chip > .calendar-item__text--flow)::after {
+  content: ' ';
+  white-space: pre-wrap;
+}
+
+/* Floated after the title, the whole pill sits at the right edge of the title's
+   last line when it fits beside it, and at the right edge of the next line
+   otherwise. Only a range wider than the line breaks inside it, at the <wbr>
+   after "~", with both lines flush right. On a duty fill the tile sets a
+   tone-on-tone pair; otherwise the chip is a neutral ink tint. On phones a short
+   box with the iOS tracking and a hairline of side room fits a narrow row. */
 :slotted(.calendar-item__time) {
   display: inline-block;
+  float: right;
   max-width: 100%;
   margin-top: 1px;
-  padding: 1px 3px;
-  border-radius: 4px;
+  margin-left: 0;
+  padding: 0 1px;
+  border-radius: 2.5px;
   background: var(--calendar-time-bg, color-mix(in srgb, var(--calendar-ink) 8.5%, transparent));
   color: var(--calendar-time-ink, color-mix(in srgb, var(--calendar-ink) 82%, transparent));
-  font-size: 0.84em;
+  font-size: 0.77em;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
-  letter-spacing: normal;
+  letter-spacing: -0.36px;
+  text-align: right;
+}
+
+/* A lone time has room to spare on a phone row, so it stops short of the edge;
+   a range keeps the whole row. */
+:slotted(.calendar-item__time--single) {
+  margin-right: 2px;
 }
 
 :slotted(.calendar-item__time-part) {
@@ -818,6 +841,7 @@ function handleDayClick(day: CalendarDay, index: number) {
 
 @media (min-width: 640px) {
   .calendar-grid {
+    --calendar-gap: 2px;
     --calendar-pad-x: 8px;
 
     border-width: 2px;
@@ -882,8 +906,20 @@ function handleDayClick(day: CalendarDay, index: number) {
 
   :slotted(.calendar-item__time) {
     margin-top: 0;
+    margin-left: 0.25em;
     padding: 1px 5px;
     border-radius: 5px;
+    font-size: 0.84em;
+    line-height: 1.4;
+    letter-spacing: normal;
+  }
+
+  :slotted(.calendar-item__time--single) {
+    margin-right: 0;
+  }
+
+  :slotted(.calendar-item__line--chip > .calendar-item__text--flow)::after {
+    content: none;
   }
 
   .calendar-span-lanes {

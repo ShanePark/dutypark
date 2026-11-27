@@ -401,7 +401,11 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                 />{{ schedule.contentWithoutTime || schedule.content }}<MessageSquareText
                   v-if="hasScheduleDetails(schedule)"
                   class="calendar-schedule-detail-icon"
-                /></span> <span v-if="formatScheduleTime(schedule)" class="calendar-item__time"><template
+                /></span><span
+                  v-if="formatScheduleTime(schedule)"
+                  class="calendar-item__time"
+                  :class="{ 'calendar-item__time--single': getScheduleTimeParts(schedule).length === 1 }"
+                ><template
                   v-for="(part, partIndex) in getScheduleTimeParts(schedule)"
                   :key="partIndex"
                 ><wbr v-if="partIndex > 0"><span class="calendar-item__time-part">{{ part }}</span></template></span>
@@ -505,6 +509,14 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 
 .calendar-month-swipe__grid {
   display: flow-root;
+}
+
+/* iOS strokes the grid rim over its 8px inset, while the web border takes layout
+   width; on phones the grid reaches 1px into the inset so day columns match iOS. */
+@media (max-width: 639.98px) {
+  .calendar-month-swipe__grid {
+    margin-inline: -1px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

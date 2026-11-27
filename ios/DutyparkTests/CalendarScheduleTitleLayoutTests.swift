@@ -42,17 +42,66 @@ struct CalendarScheduleTitleLayoutTests {
     /// read back with TextKit at that same width.
     @Test
     func aTimeRangeWrapsOnlyAfterItsTildeInAMonthTile() throws {
-        let measured = layOutTimes(["12:00~13:00", "12:00"])
+        let measured = layOutTimes(["00:40~04:00", "12:00"])
         let width = try #require(measured.values[-1])
         let range = try #require(measured.values[0])
         let single = try #require(measured.values[1])
 
         // The chip's text sits inside its horizontal padding.
         let textWidth = width - DPCalendarScheduleTime.horizontalPadding * 2
-        #expect(timeLines("12:00~13:00", width: textWidth) == ["12:00~\u{200B}", "13:00"])
+        #expect(timeLines("00:40~04:00", width: textWidth) == ["00:40~\u{200B}", "04:00"])
         #expect(timeLines("~13:00", width: textWidth) == ["~13:00"])
         #expect(timeLines("12:00", width: textWidth) == ["12:00"])
         #expect(range > single * 1.5 && range < single * 2.5, "A range takes exactly two lines in the tile")
+    }
+
+    /// On the iPhone 13 mini (375pt), a typical "HH:MM~HH:MM" range stays on one line in a
+    /// month tile's schedule row. The font has no tabular digits, so zero-heavy ranges are
+    /// the widest; with the box insets those may break after their "~".
+    @Test
+    func aFullTimeRangeFitsOnOneLineInAMonthTileAtTheIPhone13MiniWidth() throws {
+        let rowWidth = try #require(layOutTimes(["12:00"]).values[-1])
+        let label = DPCalendarScheduleLabel()
+        label.numberOfLines = 0
+        label.lineBreakMode = .byWordWrapping
+        let timeFont = UIFont(name: DPFont.boldPostScriptName, size: DPCalendarScheduleTime.fontSize)
+            ?? .systemFont(ofSize: DPCalendarScheduleTime.fontSize, weight: .bold)
+        let titleFont = UIFont(name: DPFont.lightPostScriptName, size: CalendarTypography.cellContent)
+            ?? .systemFont(ofSize: CalendarTypography.cellContent, weight: .light)
+        func height(_ time: String) -> CGFloat {
+            label.setContent(
+                title: "", time: time, hasDetails: false, showsPrivateLock: false,
+                titleFont: titleFont, timeFont: timeFont,
+                foreground: .label, timeForeground: .label, timeBackground: .secondarySystemBackground
+            )
+            return label.fittingSize(width: rowWidth).height
+        }
+        let single = height("12:00")
+        for range in ["12:00~13:00", "07:00~08:00", "09:00~09:30", "20:00~22:00", "18:00~20:00", "04:00~08:00", "08:00~20:00"] {
+            #expect(abs(height(range) - single) < 0.5, "\(range) stays on one line in a \(rowWidth)pt row")
+        }
+        // The widest range a tile can show outgrows the row with its box insets and breaks after "~".
+        #expect(height("00:40~04:00") > single * 1.5, "00:40~04:00 breaks after its tilde in a \(rowWidth)pt row")
+    }
+
+    /// 1pt gutters leave each 375pt-wide tile's item row (375 - 16 grid inset - 6 gutters) / 7
+    /// minus its side padding.
+    @Test
+    func aMonthTileItemRowUsesTheWidthTheOnePointGuttersLeave() throws {
+        let rowWidth = try #require(layOutTimes(["12:00"]).values[-1])
+        let expected = (375 - DPSpacing.small * 2 - 6 * 1) / 7 - DPCalendarCellStyle.cellHorizontalPadding * 2
+        #expect(abs(rowWidth - expected) < 0.01, "Row is \(rowWidth)pt")
+    }
+
+    /// The rings stay lighter than a 2pt line beside the 1pt gutters, and today's ring still
+    /// spans exactly the gutter around its tile.
+    @Test
+    func tileRingsStayLightBesideOnePointGutters() {
+        #expect(DPCalendarCellStyle.gutterWidth == 1)
+        #expect(DPCalendarTodayRing.strokeWidth == 1.5)
+        #expect(DPCalendarTodayRing.innerLineWidth == 1)
+        #expect(DPCalendarTodayRing.outset == DPCalendarCellStyle.gutterWidth)
+        #expect(DPCalendarTileRing.highlightWidth == 1.5)
     }
 
     /// Index -1 holds the width a tile gives its item row; the others hold each time's height.

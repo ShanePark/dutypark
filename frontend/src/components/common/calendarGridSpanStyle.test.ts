@@ -234,3 +234,36 @@ describe('responsive calendar day headers', () => {
     expect(ruleBody(baseBlock, '.calendar-day-today-label')).toContain('white-space: nowrap')
   })
 })
+
+// The phone month grid matches the iOS geometry: day columns are
+// (viewport - 2 * 8 inset - 6 * 2 gutters) / 7 and each cell is padded by 1.5px.
+describe('mobile month grid geometry', () => {
+  it('pads phone cells by 1.5px and keeps the desktop padding', () => {
+    expect(ruleBody(baseBlock, '.calendar-grid')).toContain('--calendar-pad-x: 1.5px')
+    // Phones use the 1pt iOS gutter; desktop keeps its 2px gutter.
+    expect(ruleBody(baseBlock, '.calendar-grid')).toContain('--calendar-gap: 1px')
+    expect(ruleBody(desktopBlock, '.calendar-grid')).toContain('--calendar-gap: 2px')
+    expect(ruleBody(desktopBlock, '.calendar-grid')).toContain('--calendar-pad-x: 8px')
+    expect(ruleBody(baseBlock, '.calendar-day')).toContain('padding: 4px var(--calendar-pad-x) 5px')
+  })
+
+  it('lets the phone grid border reach into the page inset so columns match iOS', () => {
+    const dutyStyle = dutyCalendarContent.slice(dutyCalendarContent.indexOf('<style scoped>'))
+    const phone = dutyStyle.slice(dutyStyle.indexOf('@media (max-width: 639.98px)'))
+    expect(dutyStyle).toContain('@media (max-width: 639.98px)')
+    expect(ruleBody(phone, '.calendar-month-swipe__grid')).toContain('margin-inline: -1px')
+    expect(ruleBody(dutyStyle, '.calendar-month-swipe')).toContain('padding-inline: 8px')
+  })
+
+  it('draws today\'s ring exactly over the gutter without reaching into neighbouring days', () => {
+    const ring = ruleBody(baseBlock, '.calendar-day-today-border')
+    expect(ring).toContain('inset: calc(-1 * var(--calendar-gap))')
+    expect(ring).toContain('border: 1.5px solid var(--calendar-today)')
+    // An outer halo would spill past a 1px gutter onto the neighbours.
+    expect(ring).toContain('box-shadow: inset 0 0 0 1.5px #fff')
+    expect(ring).not.toMatch(/box-shadow: 0 0 0/)
+    const desktopRing = ruleBody(desktopBlock, '.calendar-day-today-border')
+    expect(desktopRing).toContain('border-width: 3px')
+    expect(desktopRing).toContain('box-shadow: 0 0 0 2px var(--calendar-gutter), inset 0 0 0 2px #fff')
+  })
+})

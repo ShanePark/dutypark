@@ -23,10 +23,11 @@ nonisolated enum DPCalendarCellStyle {
     static let weekdayHeaderHeight: CGFloat = 24
     /// The gutters between tiles are the only separators, so equal duty colours on
     /// neighbouring days still read as separate days.
-    static let gutterWidth: CGFloat = 2
+    static let gutterWidth: CGFloat = 1
     static let cornerRadius: CGFloat = 8
     static let cellMinimumHeight: CGFloat = 64
-    static let cellHorizontalPadding: CGFloat = 3
+    /// Narrow enough that a full "HH:MM~HH:MM" time fits one line at the 375pt width.
+    static let cellHorizontalPadding: CGFloat = 1.5
     static let todayCircleDiameter: CGFloat = 20
     static let outsideDutyWeight = 0.6
 
@@ -337,7 +338,7 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
             switch ring {
             case .highlight:
                 if let highlight {
-                    Rectangle().strokeBorder(highlight, lineWidth: 2)
+                    Rectangle().strokeBorder(highlight, lineWidth: DPCalendarTileRing.highlightWidth)
                         .allowsHitTesting(false)
                 }
             case .today:
@@ -361,6 +362,9 @@ nonisolated enum DPCalendarTileRing: Equatable {
     case today
     case highlight
 
+    /// Matches today's ring beside the 1pt gutters.
+    static let highlightWidth: CGFloat = 1.5
+
     init(isToday: Bool, hasHighlight: Bool) {
         self = hasHighlight ? .highlight : isToday ? .today : .none
     }
@@ -377,15 +381,20 @@ nonisolated enum DPCalendarTileRing: Equatable {
 /// Today's marker on an unselected tile: a red ring over the gutter with a thin
 /// white inner line that keeps it legible on any fill.
 nonisolated struct DPCalendarTodayRing: View {
+    /// Light enough not to outweigh the 1pt gutters it covers.
+    static let strokeWidth: CGFloat = 1.5
+    static let innerLineWidth: CGFloat = 1
+    static let outset = DPCalendarCellStyle.gutterWidth
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 3)
-                .strokeBorder(DPCalendarCellStyle.todayColor, lineWidth: 2)
+                .strokeBorder(DPCalendarCellStyle.todayColor, lineWidth: Self.strokeWidth)
             RoundedRectangle(cornerRadius: 1.5)
-                .strokeBorder(Color.white, lineWidth: 1.5)
-                .padding(2)
+                .strokeBorder(Color.white, lineWidth: Self.innerLineWidth)
+                .padding(Self.strokeWidth)
         }
-        .padding(-DPCalendarCellStyle.gutterWidth)
+        .padding(-Self.outset)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
