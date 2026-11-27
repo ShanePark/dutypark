@@ -3199,6 +3199,48 @@ final class CalendarFeatureTests: XCTestCase {
         }
     }
 
+    /// Search runs only on submit, so its summary describes the last search that ran,
+    /// not whatever is in the field now.
+    func testSearchSummaryFollowsTheSubmittedQueryNotTheField() async throws {
+        let repository = CalendarRepositoryMock(canManage: true, searchPages: 2)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)
+        await model.load()
+
+        model.searchQuery = "dd"
+        XCTAssertNil(model.searchedQuery, "Nothing is summarised before the first search")
+
+        await model.search()
+        XCTAssertEqual(model.searchedQuery, "dd")
+        XCTAssertEqual(model.searchResults.count, 1)
+
+        model.searchQuery = "ddx"
+        XCTAssertEqual(model.searchedQuery, "dd", "Typing does not change the summary")
+        model.searchQuery = ""
+        XCTAssertEqual(model.searchedQuery, "dd", "Clearing the field keeps the last search until the next submit")
+
+        model.searchQuery = "ddx"
+        await model.loadMoreSearchResults()
+        XCTAssertEqual(model.searchResults.map(\.content), ["dd 0", "dd 1"], "More results continue the submitted search")
+        XCTAssertEqual(model.searchedQuery, "dd")
+
+        await model.search()
+        XCTAssertEqual(model.searchedQuery, "ddx")
+        XCTAssertEqual(model.searchResults.map(\.content), ["ddx 0"])
+        let requests = await repository.searchRequests
+        XCTAssertEqual(requests, ["dd#0", "dd#1", "ddx#0"])
+
+        let searchView = try Self.declaration(named: "private struct ScheduleSearchView: View", in: Self.calendarViewSource())
+        XCTAssertTrue(searchView.contains("if let searchedQuery = model.searchedQuery"), "The summary appears once a search has run")
+        XCTAssertTrue(
+            searchView.contains("\"calendar.search.summary\", searchedQuery, model.searchResults.count"),
+            "The summary names the submitted query"
+        )
+        XCTAssertFalse(
+            searchView.contains("\"calendar.search.summary\", trimmedQuery"),
+            "The summary does not follow the live field"
+        )
+    }
+
     func testReadOnlyFriendCalendarDoesNotOfferScheduleSearch() async {
         let readOnly = CalendarViewModel(
             repository: CalendarRepositoryMock(canManage: false),
@@ -3331,6 +3373,10 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var saveDDayCount = 0
     var dutyRequestCount = 0
     var teamRequestCount = 0
+    /// Each search request as "query#page".
+    var searchRequests: [String] = []
+    /// Pages of one result each answered for any query; zero answers an empty page.
+    let searchPages: Int
     let canManageValue: Bool
     let cancelMemberLoad: Bool
     let friendValues: [FriendDTO]
@@ -3364,8 +3410,10 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         saveDDayError: APIError? = nil,
         scheduleCreated: Bool = true,
         duties: [DutyDTO] = [],
-        dutyTypes: [DutyTypeDTO] = []
+        dutyTypes: [DutyTypeDTO] = [],
+        searchPages: Int = 0
     ) {
+        self.searchPages = searchPages
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
         friendValues = friends
@@ -3477,7 +3525,29 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         if failDestructiveMutations { throw APIError.invalidResponse }
     }
     func searchSchedules(memberID: MemberID, query: String, page: Int) async throws -> PageResponse<ScheduleSearchResultDTO> {
-        try JSONDecoder().decode(PageResponse<ScheduleSearchResultDTO>.self, from: Data(#"{"content":[],"totalPages":0,"totalElements":0,"last":true,"first":true,"size":10,"number":0,"numberOfElements":0,"empty":true}"#.utf8))
+        searchRequests.append("\(query)#\(page)")
+        guard searchPages > 0 else {
+            return try JSONDecoder().decode(PageResponse<ScheduleSearchResultDTO>.self, from: Data(#"{"content":[],"totalPages":0,"totalElements":0,"last":true,"first":true,"size":10,"number":0,"numberOfElements":0,"empty":true}"#.utf8))
+        }
+        let result = ScheduleSearchResultDTO(
+            content: "\(query) \(page)",
+            startDateTime: LocalDateTimeValue(rawValue: "2026-08-12T09:00:00"),
+            endDateTime: LocalDateTimeValue(rawValue: "2026-08-12T10:00:00"),
+            visibility: .privateAccess,
+            isTagged: false,
+            author: "Tester"
+        )
+        return PageResponse(
+            content: [result],
+            totalPages: searchPages,
+            totalElements: Int64(searchPages),
+            last: page >= searchPages - 1,
+            first: page == 0,
+            size: 1,
+            number: page,
+            numberOfElements: 1,
+            empty: false
+        )
     }
     func scheduleBasic(id: ScheduleID) async throws -> ScheduleBasicInfoDTO {
         ScheduleBasicInfoDTO(id: id, memberId: scheduleOwnerID, memberName: "Tester", startDateTime: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"), content: "Night duty")

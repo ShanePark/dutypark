@@ -203,6 +203,8 @@ final class CalendarViewModel: ObservableObject {
     @Published var selectedMemberID: MemberID?
     @Published var selectedDay: CalendarDayContent?
     @Published var searchQuery = ""
+    /// The query of the last search that ran; `searchQuery` is only the field being edited.
+    @Published private(set) var searchedQuery: String?
     @Published var isSearching = false
     /// The focused day of quick duty editing, a persistent selection.
     @Published var highlightedDate: DateOnly?
@@ -2086,12 +2088,17 @@ final class CalendarViewModel: ObservableObject {
 
     func search() async {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard canEdit, let memberID = targetMemberID, !query.isEmpty else { searchResults = []; return }
+        guard canEdit, let memberID = targetMemberID, !query.isEmpty else {
+            searchResults = []
+            searchedQuery = nil
+            return
+        }
         isSearching = true
         defer { isSearching = false }
         do {
             let response = try await repository.searchSchedules(memberID: memberID, query: query, page: 0)
             searchResults = response.content
+            searchedQuery = query
             searchPage = 0
             canLoadMoreSearchResults = !response.last
         }
@@ -2110,8 +2117,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func loadMoreSearchResults() async {
-        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard canEdit, let memberID = targetMemberID, !query.isEmpty, canLoadMoreSearchResults, !isSearching else { return }
+        guard canEdit, let memberID = targetMemberID, let query = searchedQuery, canLoadMoreSearchResults, !isSearching else { return }
         isSearching = true
         defer { isSearching = false }
         do {
@@ -2141,6 +2147,7 @@ final class CalendarViewModel: ObservableObject {
         guard !(await cache.loadCachedMonths(accountID: accountID, around: OfflineMonthKey(year: year, month: month))).isEmpty
         else { return false }
         searchResults = await cache.searchSchedules(accountID: accountID, query: query, keys: keys)
+        searchedQuery = query
         searchPage = 0
         canLoadMoreSearchResults = false
         return true

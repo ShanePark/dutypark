@@ -4401,10 +4401,10 @@ private struct ScheduleSearchView: View {
             .padding(.bottom, DPSpacing.small)
 
             HStack {
-                if trimmedQuery.isEmpty {
-                    Text(CalendarLocalization.text("calendar.search.hint"))
+                if let searchedQuery = model.searchedQuery {
+                    Text(CalendarLocalization.format("calendar.search.summary", searchedQuery, model.searchResults.count))
                 } else {
-                    Text(CalendarLocalization.format("calendar.search.summary", trimmedQuery, model.searchResults.count))
+                    Text(CalendarLocalization.text("calendar.search.hint"))
                 }
                 Spacer(minLength: 0)
             }
@@ -4418,7 +4418,7 @@ private struct ScheduleSearchView: View {
     private var results: some View {
         LazyVStack(spacing: DPSpacing.small) {
             if model.searchResults.isEmpty {
-                Text(CalendarLocalization.text(trimmedQuery.isEmpty ? "calendar.search.hint" : "calendar.search.empty"))
+                Text(CalendarLocalization.text(model.searchedQuery == nil ? "calendar.search.hint" : "calendar.search.empty"))
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .multilineTextAlignment(.center)
