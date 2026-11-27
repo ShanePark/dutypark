@@ -587,8 +587,8 @@ final class CalendarFeatureTests: XCTestCase {
 
         XCTAssertTrue(dayCell.contains("DPCalendarDayTile("), "The month cell should be drawn by the shared flat tile")
         XCTAssertTrue(
-            dayCell.contains("isToday: isToday && !hidesDetails"),
-            "Quick duty editing keeps its own selection indicator without the today ring"
+            dayCell.contains("private var showsToday: Bool { isToday && !hidesDetails }"),
+            "Quick duty editing keeps its own selection indicator without the today strip"
         )
         XCTAssertTrue(
             dayCell.contains("return hidesDetails ? DPColor.accent : DPColor.warning"),
@@ -600,10 +600,11 @@ final class CalendarFeatureTests: XCTestCase {
             "The duty fill stays the tile's source of truth"
         )
         XCTAssertTrue(
-            tile.contains("DPCalendarTileRing(isToday: isToday, hasHighlight: highlight != nil)"),
-            "The tile draws one ring, and a selection border replaces today's ring instead of stacking on it"
+            tile.contains("DPCalendarTileRing(hasHighlight: highlight != nil)"),
+            "The tile draws only a selection ring; today has none"
         )
-        XCTAssertTrue(tile.contains("DPCalendarTodayRing()"), "An unselected today is marked with the red ring")
+        XCTAssertTrue(tile.contains("DPCalendarTodayStrip.Band()"), "Today is marked by the red date strip")
+        XCTAssertFalse(tile.contains("DPCalendarTodayRing"), "Today no longer draws a ring")
     }
 
     func testAMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() throws {

@@ -62,7 +62,7 @@ function getSourceIndex(visibleIndex: number): number {
   return calendarGridSlice.value.startIndex + visibleIndex
 }
 
-const { locale, t } = useI18n()
+const { locale } = useI18n()
 const weekDays = computed(() => {
   const formatter = new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
   return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2024, 0, 7 + index)))
@@ -101,10 +101,10 @@ function isSelected(day: CalendarDay): boolean {
   )
 }
 
-// The selection border wins over today's border; today stays recognisable by
-// its filled date circle and label.
-function hasSelectionBorder(day: CalendarDay): boolean {
-  return !props.focusedDay && (isHighlighted(day) || isSelected(day))
+// Today's date strip would cover the inset selection ring, so a selected today
+// redraws the ring above it.
+function hasTodaySelectionBorder(day: CalendarDay): boolean {
+  return !props.focusedDay && isToday(day) && isSelected(day) && !isHighlighted(day)
 }
 
 function isFocused(day: CalendarDay): boolean {
@@ -231,6 +231,8 @@ function getWeekendColor(day: CalendarDay, weekend: 'sunday' | 'saturday'): stri
 }
 
 function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
+  // Today's date strip sets its own (white) ink.
+  if (isToday(day)) return 'var(--calendar-ink)'
   if (!isCurrentMonth(day)) return 'var(--calendar-ink-muted)'
   if (dayOfWeek === 0) return getWeekendColor(day, 'sunday')
   if (dayOfWeek === 6) return getWeekendColor(day, 'saturday')
@@ -286,8 +288,8 @@ function handleDayClick(day: CalendarDay, index: number) {
       :style="getDayStyle(day)"
     >
       <span
-        v-if="isToday(day) && !hasSelectionBorder(day)"
-        class="calendar-day-today-border"
+        v-if="hasTodaySelectionBorder(day)"
+        class="calendar-day-selection-border"
         aria-hidden="true"
       />
       <span
@@ -301,11 +303,7 @@ function handleDayClick(day: CalendarDay, index: number) {
             class="calendar-day-number"
             :style="{ color: getDayNumberColor(day, idx % 7) }"
           >
-            <template v-if="isToday(day)">
-              <span class="calendar-day-today-circle">{{ day.day }}</span>
-              <span class="calendar-day-today-label">{{ t('common.calendar.today') }}</span>
-            </template>
-            <template v-else>{{ day.day }}</template>
+            {{ day.day }}
           </span>
           <slot name="day-header" :day="day" :index="getSourceIndex(idx)" />
         </div>
@@ -465,7 +463,6 @@ function handleDayClick(day: CalendarDay, index: number) {
 }
 
 .calendar-day-top {
-  container: calendar-day-header / inline-size;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -491,44 +488,25 @@ function handleDayClick(day: CalendarDay, index: number) {
   font-weight: 600;
 }
 
-/* Today: a ring over the gutter (unless the day is selected), a filled date
-   circle, and (on wider screens) a label. On phones the ring stays within the
-   gutter, so it carries no outer halo onto the neighbouring days. */
-.calendar-day-today-border {
+/* Today: the date row becomes a red strip bled to the tile's top and sides,
+   cancelling the tile's padding, with white ink for the date and a pinned
+   D-Day label. */
+.calendar-day--today .calendar-day-top {
+  --calendar-ink: #fff;
+  --calendar-ink-muted: #fff;
+
+  margin: -4px calc(-1 * var(--calendar-pad-x)) 2px;
+  padding: 4px calc(var(--calendar-pad-x) + 2px) 2px;
+  background: var(--calendar-today);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 20%);
+}
+
+.calendar-day-selection-border {
   position: absolute;
-  inset: calc(-1 * var(--calendar-gap));
-  border: 1.5px solid var(--calendar-today);
-  border-radius: 3px;
-  box-shadow: inset 0 0 0 1.5px #fff;
+  inset: 0;
+  border: 2px solid var(--dp-accent);
   pointer-events: none;
-  z-index: 2;
-}
-
-.calendar-day-today-circle {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 19px;
-  height: 19px;
-  margin-left: -1px;
-  border-radius: 9999px;
-  background: var(--calendar-today);
-  color: #fff;
-  font-size: 11.5px;
-}
-
-/* A filled pill keeps the optional label legible on any fill. */
-.calendar-day-today-label {
-  display: none;
-  white-space: nowrap;
-  padding: 3px 6px;
-  border-radius: 9999px;
-  background: var(--calendar-today);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
+  z-index: 1;
 }
 
 .calendar-day-highlight-border {
@@ -831,14 +809,6 @@ function handleDayClick(day: CalendarDay, index: number) {
   stroke-width: 2.5;
 }
 
-/* Use the tile's available width: the date and full D-Day label can wrap
-   onto separate header lines before either is squeezed or clipped. */
-@container calendar-day-header (min-width: 6rem) {
-  .calendar-day-today-label {
-    display: inline-block;
-  }
-}
-
 @media (min-width: 640px) {
   .calendar-grid {
     --calendar-gap: 2px;
@@ -870,17 +840,9 @@ function handleDayClick(day: CalendarDay, index: number) {
     font-size: 17px;
   }
 
-  .calendar-day-today-border {
-    border-width: 3px;
-    border-radius: 4px;
-    box-shadow: 0 0 0 2px var(--calendar-gutter), inset 0 0 0 2px #fff;
-  }
-
-  .calendar-day-today-circle {
-    width: 26px;
-    height: 26px;
-    margin: -1px 0 0 -3px;
-    font-size: 15px;
+  .calendar-day--today .calendar-day-top {
+    margin: -7px calc(-1 * var(--calendar-pad-x)) 4px;
+    padding: 6px var(--calendar-pad-x) 4px;
   }
 
   .calendar-day-holiday {

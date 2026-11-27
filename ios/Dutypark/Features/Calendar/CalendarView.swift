@@ -2056,12 +2056,12 @@ private struct CalendarDayCell: View {
             weekdayIndex: weekday,
             dutyColor: dutyColor,
             isCurrentMonth: isCurrentMonth,
-            isToday: isToday && !hidesDetails,
+            isToday: showsToday,
             hasHoliday: !hidesDetails && !day.holidays.isEmpty,
             highlight: highlightBorder,
             ribbonColumn: !hidesDetails && DPCalendarSpanLanes.startsRibbon(spanLanes, column: weekday) ? weekday : nil
         ) {
-            if let pinnedDDay, !hidesDetails, let label = relativeLabel(pinnedDDay) {
+            if let label = pinLabel {
                 Text(verbatim: label)
                     .font(label == "D-Day"
                         ? DPFont.bold(size: CalendarTypography.cellMicro, relativeTo: .caption2)
@@ -2069,7 +2069,9 @@ private struct CalendarDayCell: View {
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                    .foregroundStyle(label == "D-Day" ? primaryForeground : secondaryForeground)
+                    .foregroundStyle(showsToday
+                        ? DPCalendarTodayStrip.ink.opacity(label == "D-Day" ? 1 : 0.95)
+                        : label == "D-Day" ? primaryForeground : secondaryForeground)
             }
         } content: {
             if !hidesDetails {
@@ -2188,6 +2190,14 @@ private struct CalendarDayCell: View {
     private var isToday: Bool {
         let today = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: Date())
         return day.cell.year == today.year && day.cell.month == today.month && day.cell.day == today.day
+    }
+
+    /// Quick duty editing keeps its own selection indicator without the today strip.
+    private var showsToday: Bool { isToday && !hidesDetails }
+
+    private var pinLabel: String? {
+        guard let pinnedDDay, !hidesDetails else { return nil }
+        return relativeLabel(pinnedDDay)
     }
 
     @ViewBuilder

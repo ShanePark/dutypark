@@ -248,11 +248,31 @@ describe('CalendarGrid multi-day ribbons', () => {
 })
 
 describe('CalendarGrid day states', () => {
-  function todayBorders(cell: HostNode) {
-    return findHostNodes(cell, node => node.type === 'span' && hasClass(node, 'calendar-day-today-border'))
+  function cellsWithBorder(cell: HostNode, className: string) {
+    return findHostNodes(cell, node => node.type === 'span' && hasClass(node, className))
   }
 
-  it('draws the selection border instead of the today border when today is selected', async () => {
+  // Today is marked by a red date strip, not a ring: only a plain white numeral
+  // sits in the date row, whatever the weekday ink would be. Screen readers get
+  // today from aria-current instead of a visible word.
+  it('marks today with the date strip instead of a ring or a date circle', async () => {
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
+    })))
+    await nextTick()
+    const today = dayCells(mounted.root)[0]!
+    expect(hasClass(today, 'calendar-day--today')).toBe(true)
+    expect(today.props['aria-current']).toBe('date')
+    expect(cellsWithBorder(today, 'calendar-day-today-border')).toHaveLength(0)
+    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-today-circle'))).toHaveLength(0)
+    const number = findHostNodes(today, node => hasClass(node, 'calendar-day-number'))[0]!
+    // Sunday ink would vanish on the red strip, so today's numeral takes the strip's ink.
+    expect(number.props.style).toMatchObject({ color: 'var(--calendar-ink)' })
+    expect(hostText(number)).toBe('1')
+    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-today-label'))).toHaveLength(0)
+  })
+
+  it('redraws the selection border above the strip when today is selected', async () => {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
       days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
       selectedDay: { year: 2026, month: 11, day: 1 },
@@ -260,33 +280,47 @@ describe('CalendarGrid day states', () => {
     await nextTick()
     const today = dayCells(mounted.root)[0]!
     expect(hasClass(today, 'ring-dp-accent')).toBe(true)
-    expect(todayBorders(today)).toHaveLength(0)
-    // Today stays identifiable by its filled date circle and label.
-    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-today-circle'))).toHaveLength(1)
-    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-today-label'))).toHaveLength(1)
+    expect(hasClass(today, 'calendar-day--today')).toBe(true)
+    expect(cellsWithBorder(today, 'calendar-day-selection-border')).toHaveLength(1)
   })
 
-  it('keeps the today border while another day is selected', async () => {
+  it('leaves other selected days to the plain inset ring', async () => {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
       days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
       selectedDay: { year: 2026, month: 11, day: 5 },
     })))
     await nextTick()
     const cells = dayCells(mounted.root)
-    expect(todayBorders(cells[0]!)).toHaveLength(1)
     expect(hasClass(cells[0]!, 'ring-dp-accent')).toBe(false)
+    expect(cellsWithBorder(cells[0]!, 'calendar-day-selection-border')).toHaveLength(0)
     expect(hasClass(cells[4]!, 'ring-dp-accent')).toBe(true)
+    expect(cellsWithBorder(cells[4]!, 'calendar-day-selection-border')).toHaveLength(0)
   })
 
-  it('draws the highlight border instead of the today border when today is highlighted', async () => {
+  it('draws only the highlight border when today is highlighted', async () => {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
       days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
       highlightDay: { year: 2026, month: 11, day: 1 },
+      selectedDay: { year: 2026, month: 11, day: 1 },
     })))
     await nextTick()
     const today = dayCells(mounted.root)[0]!
-    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-highlight-border'))).toHaveLength(1)
-    expect(todayBorders(today)).toHaveLength(0)
+    expect(cellsWithBorder(today, 'calendar-day-highlight-border')).toHaveLength(1)
+    expect(cellsWithBorder(today, 'calendar-day-selection-border')).toHaveLength(0)
+  })
+
+  // The pin label must be a direct child of the date row so it shares today's
+  // strip, right of the date.
+  it('renders the day-header slot as a direct child of the date row', async () => {
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
+    }, {
+      'day-header': () => h('span', { class: 'calendar-pin-label' }, 'D-3'),
+    })))
+    await nextTick()
+    const top = findHostNodes(dayCells(mounted.root)[0]!, node => hasClass(node, 'calendar-day-top'))[0]!
+    expect(top.children.filter(node => node.type === 'span').map(node => String(node.props.class)))
+      .toEqual(['calendar-day-number', 'calendar-pin-label'])
   })
 })
 

@@ -25,8 +25,11 @@ describe('calendar cell clickability', () => {
     expect(calendarGrid).not.toContain('hover:brightness-95')
     expect(calendarGrid).not.toContain('opacity: isCurrentMonth(day) ? 1 : 0.5')
     expect(calendarGrid).toContain('calendar-day-hoverable')
-    expect(calendarGrid).toContain('calendar-day-today-border')
-    expect(calendarGrid).toContain('calendar-day-today-circle')
+    expect(calendarGrid).toContain('.calendar-day--today .calendar-day-top {')
+    expect(calendarGrid).not.toContain('calendar-day-today-label')
+    expect(calendarGrid).toMatch(
+      /v-if="hasTodaySelectionBorder\(day\)"[\s\S]*class="calendar-day-selection-border"/
+    )
     expect(calendarGrid).toMatch(
       /v-if="!focusedDay && isHighlighted\(day\)"[\s\S]*class="calendar-day-highlight-border"/
     )

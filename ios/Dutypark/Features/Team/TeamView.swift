@@ -974,7 +974,7 @@ private struct TeamCalendarDayCell: View {
         .buttonStyle(.plain)
         // The tile's own layer stays inside the button, so the button carries it into the grid.
         .zIndex(DPCalendarTileRing.zIndex(
-            ring: DPCalendarTileRing(isToday: isToday, hasHighlight: isSelected),
+            ring: DPCalendarTileRing(hasHighlight: isSelected),
             ribbonColumn: ribbonColumn
         ))
         .accessibilityLabel(Text(verbatim: "\(day.year)-\(day.month)-\(day.day)"))

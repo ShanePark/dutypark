@@ -228,19 +228,70 @@ struct CalendarFlatDesignTests {
     func aTileThatDrawsARibbonSitsAboveTheTilesItCrosses() {
         #expect(DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: nil) == 0)
         #expect(DPCalendarTileRing.zIndex(ring: .highlight, ribbonColumn: nil) == 1)
-        #expect(DPCalendarTileRing.zIndex(ring: .today, ribbonColumn: nil) == 2)
         let monday = DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: 1)
         let tuesday = DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: 2)
         #expect(monday > tuesday, "An earlier ribbon stays above a later tile that draws its own")
-        #expect(DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: 6) > 2, "A ribbon tile is above today's ring")
+        #expect(DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: 6) > 1, "A ribbon tile is above a selection ring")
     }
 
+    /// Today is marked by its red header strip, so the only ring a tile draws is a selection.
     @Test
-    func aSelectionRingWinsOverTodaysRing() {
-        #expect(DPCalendarTileRing(isToday: true, hasHighlight: true) == .highlight)
-        #expect(DPCalendarTileRing(isToday: true, hasHighlight: false) == .today)
-        #expect(DPCalendarTileRing(isToday: false, hasHighlight: true) == .highlight)
-        #expect(DPCalendarTileRing(isToday: false, hasHighlight: false) == .none)
+    func todayDrawsNoRingAndOnlyASelectionDrawsOne() throws {
+        #expect(DPCalendarTileRing(hasHighlight: true) == .highlight)
+        #expect(DPCalendarTileRing(hasHighlight: false) == .none)
+        let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
+        #expect(!style.contains("DPCalendarTodayRing"), "Today's ring is gone")
+        #expect(!style.contains("Circle().fill(DPCalendarCellStyle.todayColor)"), "Today's numeral has no red circle")
+        let tile = try declaration(
+            named: "nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View",
+            in: style
+        )
+        // The selection stroke is the tile's overlay, so it is drawn over today's strip.
+        let strip = try #require(tile.range(of: "DPCalendarTodayStrip.Band()"))
+        let stroke = try #require(tile.range(of: "strokeBorder(highlight"))
+        #expect(strip.lowerBound < stroke.lowerBound)
+    }
+
+    /// E2: today's date row is a full-width red strip, the same red in light and dark, with a
+    /// white numeral and a faint dark hairline beneath it.
+    @Test
+    func todaysHeaderIsAWhiteOnRedStrip() {
+        #expect(DPCalendarTodayStrip.background == DPCalendarCellStyle.todayColor)
+        #expect(DPCalendarTodayStrip.ink == Color.white)
+        #expect(DPCalendarTodayStrip.hairlineWidth == 1)
+        #expect(DPCalendarTodayStrip.hairlineOpacity == 0.2)
+        // The strip reaches the tile's top, left and right edges.
+        #expect(DPCalendarTodayStrip.bleed == EdgeInsets(
+            top: DPCalendarCellStyle.cellTopPadding,
+            leading: DPCalendarCellStyle.cellHorizontalPadding,
+            bottom: 0,
+            trailing: DPCalendarCellStyle.cellHorizontalPadding
+        ))
+    }
+
+    /// The strip carries only the numeral (and a pinned D-Day label): no visible today word.
+    @Test
+    func todaysStripShowsNoTodayWord() throws {
+        let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
+        let tile = try declaration(
+            named: "nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View",
+            in: style
+        )
+        let number = try declaration(named: "nonisolated struct DPCalendarDayNumber: View", in: style)
+        for part in [tile, number] {
+            #expect(!part.contains("calendar.today"))
+            #expect(!part.contains("오늘"))
+        }
+    }
+
+    /// Today's pinned D-Day label is white inside the strip.
+    @Test
+    func todaysPinnedDDayLabelIsWhiteInsideTheStrip() throws {
+        let cell = try declaration(
+            named: "private struct CalendarDayCell: View",
+            in: source("Dutypark/Features/Calendar/CalendarView.swift")
+        )
+        #expect(cell.contains("DPCalendarTodayStrip.ink"))
     }
 
     @Test

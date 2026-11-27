@@ -26,9 +26,9 @@ nonisolated enum DPCalendarCellStyle {
     static let gutterWidth: CGFloat = 1
     static let cornerRadius: CGFloat = 8
     static let cellMinimumHeight: CGFloat = 64
+    static let cellTopPadding: CGFloat = 4
     /// Narrow enough that a full "HH:MM~HH:MM" time fits one line at the 375pt width.
     static let cellHorizontalPadding: CGFloat = 1.5
-    static let todayCircleDiameter: CGFloat = 20
     static let outsideDutyWeight = 0.6
 
     static let gutterColor = DPColor.borderPrimary
@@ -231,33 +231,19 @@ nonisolated struct DPCalendarDayNumber: View {
     }
 
     var body: some View {
-        if isToday {
-            Text(verbatim: String(day))
-                .font(DPFont.bold(size: 12, relativeTo: .caption))
-                .monospacedDigit()
-                .foregroundStyle(Color.white)
-                .frame(
-                    width: DPCalendarCellStyle.todayCircleDiameter,
-                    height: DPCalendarCellStyle.todayCircleDiameter
-                )
-                .background(Circle().fill(DPCalendarCellStyle.todayColor))
-                .padding(.leading, -1)
-                // The circle overhangs the header by a point each way, so today's header is
-                // as tall as every other and ribbon lanes stay level across the row.
-                .padding(.vertical, -1)
-        } else {
-            Text(verbatim: String(day))
-                .font(DPFont.bold(size: DPCalendarCellStyle.dayNumberFontSize, relativeTo: .caption))
-                .monospacedDigit()
-                .foregroundStyle(
-                    DPCalendarCellStyle.dayNumberColor(
+        Text(verbatim: String(day))
+            .font(DPFont.bold(size: DPCalendarCellStyle.dayNumberFontSize, relativeTo: .caption))
+            .monospacedDigit()
+            .foregroundStyle(
+                isToday
+                    ? DPCalendarTodayStrip.ink
+                    : DPCalendarCellStyle.dayNumberColor(
                         dutyColor: dutyColor,
                         isCurrentMonth: isCurrentMonth,
                         weekdayIndex: weekdayIndex,
                         hasHoliday: hasHoliday
                     )
-                )
-        }
+            )
     }
 }
 
@@ -290,7 +276,7 @@ nonisolated struct DPCalendarWeekdayRow: View {
 }
 
 /// One day tile of a flat month grid: the fill, the date number with its accessory,
-/// the day's content, and the today ring that is drawn over the surrounding gutter.
+/// and the day's content. Today's date row is a red strip across the tile's top.
 nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
     let day: Int
     let weekdayIndex: Int
@@ -298,8 +284,7 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
     let isCurrentMonth: Bool
     let isToday: Bool
     var hasHoliday = false
-    /// A border for a selected, highlighted or focused day. It wins over today's ring;
-    /// today stays recognisable by the red date circle.
+    /// A border for a selected, highlighted or focused day, drawn over today's strip.
     var highlight: Color?
     /// The tile's column when it draws a ribbon that reaches over the next tiles of its row.
     var ribbonColumn: Int?
@@ -321,7 +306,16 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
                 accessory()
             }
             .frame(minHeight: 18)
+            .padding(.horizontal, isToday ? DPCalendarTodayStrip.textInset : 0)
             .padding(.bottom, 2)
+            .background {
+                if isToday {
+                    DPCalendarTodayStrip.Band()
+                        .padding(.top, -DPCalendarTodayStrip.bleed.top)
+                        .padding(.leading, -DPCalendarTodayStrip.bleed.leading)
+                        .padding(.trailing, -DPCalendarTodayStrip.bleed.trailing)
+                }
+            }
             // The tallest tile of a row is placed at exactly its measured height, and the
             // stack could then propose less than two lines to the first of several wrapping
             // titles, which collapses it to one truncated line. Content keeps its full height.
@@ -329,74 +323,75 @@ nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View {
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
-        .padding(.top, 4)
+        .padding(.top, DPCalendarCellStyle.cellTopPadding)
         .padding(.horizontal, DPCalendarCellStyle.cellHorizontalPadding)
         .padding(.bottom, 5)
         .frame(maxWidth: .infinity, minHeight: DPCalendarCellStyle.cellMinimumHeight, alignment: .topLeading)
         .background(DPCalendarCellStyle.cellBackground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth))
         .overlay {
-            switch ring {
-            case .highlight:
-                if let highlight {
-                    Rectangle().strokeBorder(highlight, lineWidth: DPCalendarTileRing.highlightWidth)
-                        .allowsHitTesting(false)
-                }
-            case .today:
-                DPCalendarTodayRing()
-            case .none:
-                EmptyView()
+            if ring == .highlight, let highlight {
+                Rectangle().strokeBorder(highlight, lineWidth: DPCalendarTileRing.highlightWidth)
+                    .allowsHitTesting(false)
             }
         }
         .zIndex(DPCalendarTileRing.zIndex(ring: ring, ribbonColumn: ribbonColumn))
     }
 
     private var ring: DPCalendarTileRing {
-        DPCalendarTileRing(isToday: isToday, hasHighlight: highlight != nil)
+        DPCalendarTileRing(hasHighlight: highlight != nil)
     }
 }
 
-/// The one ring a tile draws. A selection border wins over today's ring, so a selected
-/// today still reads as selected; the red date circle keeps marking today.
+/// The one ring a tile draws: a selection border. Today is marked by its strip instead.
 nonisolated enum DPCalendarTileRing: Equatable {
     case none
-    case today
     case highlight
 
-    /// Matches today's ring beside the 1pt gutters.
+    /// Light beside the 1pt gutters.
     static let highlightWidth: CGFloat = 1.5
 
-    init(isToday: Bool, hasHighlight: Bool) {
-        self = hasHighlight ? .highlight : isToday ? .today : .none
+    init(hasHighlight: Bool) {
+        self = hasHighlight ? .highlight : .none
     }
 
-    /// Today's ring reaches over the gutter, so it sits above its neighbours. A tile that
-    /// draws a ribbon over the following tiles sits above all of them, the earlier column
-    /// higher, so each ribbon stays on top of the tiles it crosses.
+    /// A selected tile sits above its neighbours. A tile that draws a ribbon over the
+    /// following tiles sits above all of them, the earlier column higher, so each ribbon
+    /// stays on top of the tiles it crosses.
     static func zIndex(ring: DPCalendarTileRing, ribbonColumn: Int?) -> Double {
         if let ribbonColumn { return 3 + Double(6 - ribbonColumn) }
-        return ring == .today ? 2 : ring == .highlight ? 1 : 0
+        return ring == .highlight ? 1 : 0
     }
 }
 
-/// Today's marker on an unselected tile: a red ring over the gutter with a thin
-/// white inner line that keeps it legible on any fill.
-nonisolated struct DPCalendarTodayRing: View {
-    /// Light enough not to outweigh the 1pt gutters it covers.
-    static let strokeWidth: CGFloat = 1.5
-    static let innerLineWidth: CGFloat = 1
-    static let outset = DPCalendarCellStyle.gutterWidth
+/// Today's date row (web `E2`): a red strip from the tile's top, left and right edges,
+/// the same red in light and dark, carrying a white numeral and any pinned D-Day label,
+/// with a faint dark hairline beneath it.
+nonisolated enum DPCalendarTodayStrip {
+    static let background = DPCalendarCellStyle.todayColor
+    static let ink = Color.white
+    static let hairlineWidth: CGFloat = 1
+    static let hairlineOpacity = 0.2
+    /// The text sits a little in from the strip's edges.
+    static let textInset: CGFloat = 2
+    /// How far the strip reaches past the date row to the tile's edges.
+    static let bleed = EdgeInsets(
+        top: DPCalendarCellStyle.cellTopPadding,
+        leading: DPCalendarCellStyle.cellHorizontalPadding,
+        bottom: 0,
+        trailing: DPCalendarCellStyle.cellHorizontalPadding
+    )
 
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 3)
-                .strokeBorder(DPCalendarCellStyle.todayColor, lineWidth: Self.strokeWidth)
-            RoundedRectangle(cornerRadius: 1.5)
-                .strokeBorder(Color.white, lineWidth: Self.innerLineWidth)
-                .padding(Self.strokeWidth)
+    /// The hairline is the strip's last point, so the date row keeps its height.
+    nonisolated struct Band: View {
+        var body: some View {
+            DPCalendarTodayStrip.background
+                .overlay(alignment: .bottom) {
+                    Color.black.opacity(DPCalendarTodayStrip.hairlineOpacity)
+                        .frame(height: DPCalendarTodayStrip.hairlineWidth)
+                }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
-        .padding(-Self.outset)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }
 

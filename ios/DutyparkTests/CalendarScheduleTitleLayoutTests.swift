@@ -93,15 +93,63 @@ struct CalendarScheduleTitleLayoutTests {
         #expect(abs(rowWidth - expected) < 0.01, "Row is \(rowWidth)pt")
     }
 
-    /// The rings stay lighter than a 2pt line beside the 1pt gutters, and today's ring still
-    /// spans exactly the gutter around its tile.
+    /// The selection ring stays lighter than a 2pt line beside the 1pt gutters, and today's
+    /// strip hairline is no heavier than a gutter.
     @Test
     func tileRingsStayLightBesideOnePointGutters() {
         #expect(DPCalendarCellStyle.gutterWidth == 1)
-        #expect(DPCalendarTodayRing.strokeWidth == 1.5)
-        #expect(DPCalendarTodayRing.innerLineWidth == 1)
-        #expect(DPCalendarTodayRing.outset == DPCalendarCellStyle.gutterWidth)
         #expect(DPCalendarTileRing.highlightWidth == 1.5)
+        #expect(DPCalendarTodayStrip.hairlineWidth == DPCalendarCellStyle.gutterWidth)
+    }
+
+    /// Today's strip, with or without a pinned D-Day label, keeps the date row as tall as
+    /// every other tile's, so content starts level across the week.
+    @Test
+    func todaysStripKeepsTheDateRowHeight() {
+        let tops = TitleHeights()
+        let grid = CalendarMonthCellGrid(items: (0..<7).map { TileID(id: $0) }) { index, _ in
+            DPCalendarDayTile(
+                day: 20 + index,
+                weekdayIndex: index,
+                dutyColor: index == 2 ? "#9DDBDE" : nil,
+                isCurrentMonth: true,
+                isToday: index >= 1 && index <= 3
+            ) {
+                if index == 2 || index == 4 {
+                    Text(verbatim: "D-3").font(DPFont.light(size: CalendarTypography.cellMicro, relativeTo: .caption2))
+                }
+            } content: {
+                Color.clear
+                    .frame(height: 10)
+                    .background {
+                        GeometryReader { proxy in
+                            Color.clear
+                                .onAppear { tops.values[index] = proxy.frame(in: .global).minY }
+                                .onChange(of: proxy.frame(in: .global).minY) { _, top in tops.values[index] = top }
+                        }
+                    }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, DPSpacing.small)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .environment(\.dynamicTypeSize, .large)
+
+        let host = UIHostingController(rootView: grid)
+        host.view.frame = CGRect(x: 0, y: 0, width: 375, height: 812)
+        let window = UIWindow(frame: host.view.frame)
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+        host.view.layoutIfNeeded()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        host.view.layoutIfNeeded()
+
+        #expect(tops.values.count == 7)
+        let plain = tops.values[0]
+        for index in 1..<7 {
+            #expect(tops.values[index] == plain, "Tile \(index) content starts at \(String(describing: tops.values[index]))")
+        }
     }
 
     /// Index -1 holds the width a tile gives its item row; the others hold each time's height.
