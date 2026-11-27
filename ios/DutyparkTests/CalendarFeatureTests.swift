@@ -591,8 +591,16 @@ final class CalendarFeatureTests: XCTestCase {
             "Quick duty editing keeps its own selection indicator without the today strip"
         )
         XCTAssertTrue(
-            dayCell.contains("return hidesDetails ? DPColor.accent : DPColor.warning"),
-            "Quick duty focus keeps the accent border while a search result is marked in warning"
+            dayCell.contains("highlighted && hidesDetails ? DPColor.accent : nil"),
+            "Only quick duty focus keeps a persistent border, in accent"
+        )
+        XCTAssertFalse(
+            dayCell.contains("hidesDetails ? DPColor.accent : DPColor.warning"),
+            "A jumped-to date is no longer left with a persistent warning border"
+        )
+        XCTAssertTrue(
+            dayCell.contains(".anchorPreference(key: CalendarDateSpotlightTargetKey.self, value: .bounds)"),
+            "A jumped-to date reports its frame so the grid can dim around it"
         )
         XCTAssertFalse(dayCell.contains("opacity(0.45)"), "Out-of-month days are faded by colour, not opacity")
         XCTAssertTrue(
@@ -605,6 +613,52 @@ final class CalendarFeatureTests: XCTestCase {
         )
         XCTAssertTrue(tile.contains("DPCalendarTodayStrip.Band()"), "Today is marked by the red date strip")
         XCTAssertFalse(tile.contains("DPCalendarTodayRing"), "Today no longer draws a ring")
+    }
+
+    func testAJumpedToDateIsSpotlitByDimmingTheRestOfTheGrid() throws {
+        let source = try Self.calendarViewSource()
+        let grid = try Self.declaration(named: "private var calendarGrid: some View", in: source)
+        let spotlight = try Self.declaration(named: "private struct CalendarDateSpotlight: View", in: source)
+        let content = try Self.declaration(named: "private var calendarContent: some View", in: source)
+
+        XCTAssertFalse(source.contains("CalendarDateFlashRing"), "The amber flash ring is gone")
+        XCTAssertFalse(source.contains("DPColor.warning.opacity(0.18)"), "No warning wash remains")
+        XCTAssertTrue(
+            grid.contains(".overlayPreferenceValue(CalendarDateSpotlightTargetKey.self)"),
+            "One dim layer covers the whole grid, weekday strip included"
+        )
+        XCTAssertTrue(grid.contains("CalendarDateSpotlight(target:"), "The grid dims around the flashed day")
+        XCTAssertTrue(grid.contains(".id(flash.id)"), "Each new flash restarts the spotlight, even on the same date")
+        XCTAssertTrue(spotlight.contains("FillStyle(eoFill: true)"), "The flashed day is cut out of the dim layer")
+        XCTAssertTrue(spotlight.contains("Color.black"), "The rest of the grid is darkened, not tinted")
+        XCTAssertTrue(spotlight.contains(".allowsHitTesting(false)"), "Taps reach the days under the dim layer")
+        XCTAssertFalse(spotlight.contains("blur"), "Spotlight B only darkens")
+        XCTAssertFalse(spotlight.contains("scaleEffect"), "Spotlight B does not lift the day")
+        XCTAssertFalse(
+            spotlight.contains("accessibilityReduceMotion"),
+            "A fading dim is not motion, so Reduce Motion keeps the same timeline"
+        )
+        XCTAssertTrue(content.contains("ScrollViewReader"), "The month body can be scrolled to a day")
+        XCTAssertTrue(
+            source.contains(".onChange(of: isDateSpotlightRevealable, initial: true)"),
+            "The view tells the model when the grid is visible and uncovered"
+        )
+        XCTAssertTrue(
+            source.contains("hasFinishedAppearing && !showsSearch"),
+            "A spotlight waits for a push to finish and for the search to close"
+        )
+        XCTAssertTrue(
+            source.contains("override func viewDidAppear"),
+            "Appearance is settled only once UIKit reports the transition finished, not at onAppear"
+        )
+        XCTAssertTrue(
+            content.contains(".onChange(of: model.dateFlash?.id)"),
+            "Only a new flash brings its day into view, not ordinary navigation"
+        )
+        XCTAssertTrue(
+            content.contains("anchor: nil"),
+            "The scroll moves only as far as needed to show the whole day, and not at all when it is visible"
+        )
     }
 
     func testAMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() throws {
@@ -2272,16 +2326,17 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(haptics.event?.kind, .selection)
     }
 
-    func testSelectingDayOnManagedCalendarPreservesExistingHighlight() async throws {
+    func testSelectingDayOnManagedCalendarPreservesTheDeepLinkFlash() async throws {
         let haptics = DPHapticCenter()
-        let highlightedDate = DateOnly(rawValue: "2026-08-12")
+        let flashedDate = DateOnly(rawValue: "2026-08-12")
         let model = CalendarViewModel(
             repository: CalendarRepositoryMock(canManage: true),
             now: date(2026, 8, 12),
             memberID: 9,
-            date: highlightedDate,
+            date: flashedDate,
             hapticCenter: haptics
         )
+        model.setDateSpotlightRevealable(true)
         await model.load()
         let day = try XCTUnwrap(model.days.first { $0.cell.date.rawValue == "2026-08-13" })
 
@@ -2289,7 +2344,8 @@ final class CalendarFeatureTests: XCTestCase {
 
         XCTAssertTrue(model.canManage)
         XCTAssertEqual(model.selectedDay?.cell.date, day.cell.date)
-        XCTAssertEqual(model.highlightedDate, highlightedDate)
+        XCTAssertEqual(model.dateFlash?.date, flashedDate)
+        XCTAssertNil(model.highlightedDate)
         XCTAssertEqual(haptics.event?.kind, .selection)
     }
 
@@ -2460,7 +2516,7 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(json?["aiTimeParsingRequested"] as? Bool, false)
     }
 
-    func testDeepLinkInitializesTargetMemberAndHighlightedMonth() async {
+    func testDeepLinkInitializesTargetMemberAndFlashesTheDateAfterLoading() async {
         let repository = CalendarRepositoryMock()
         let model = CalendarViewModel(
             repository: repository,
@@ -2472,7 +2528,13 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(model.selectedMemberID, 9)
         XCTAssertEqual(model.year, 2027)
         XCTAssertEqual(model.month, 3)
-        XCTAssertEqual(model.highlightedDate?.rawValue, "2027-03-15")
+        XCTAssertNil(model.highlightedDate)
+
+        model.setDateSpotlightRevealable(true)
+        await model.load()
+
+        XCTAssertEqual(model.dateFlash?.date.rawValue, "2027-03-15")
+        XCTAssertNil(model.highlightedDate)
     }
 
     func testTaggedScheduleRouteKeepsAuthenticatedCalendarTargetWhileLoadingScheduleDate() async {
@@ -2490,13 +2552,15 @@ final class CalendarFeatureTests: XCTestCase {
             scheduleID: scheduleID
         )
 
+        model.setDateSpotlightRevealable(true)
         await model.load()
 
         XCTAssertEqual(model.selectedMemberID, 1)
         XCTAssertTrue(model.isMyCalendar)
         XCTAssertEqual(model.year, 2026)
         XCTAssertEqual(model.month, 8)
-        XCTAssertEqual(model.highlightedDate?.rawValue, "2026-08-12")
+        XCTAssertEqual(model.dateFlash?.date.rawValue, "2026-08-12")
+        XCTAssertNil(model.highlightedDate)
         let requestedPreviewMemberID = await repository.requestedPreviewMemberID
         let requestedScheduleMemberID = await repository.requestedScheduleMemberID
         let requestedDDayMemberID = await repository.requestedDDayMemberID
@@ -3595,4 +3659,258 @@ private final class CalendarURLProtocolStub: URLProtocol, @unchecked Sendable {
     }
 
     override func stopLoading() {}
+}
+
+/// A jump to a specific date spotlights it for a moment and then leaves nothing highlighted;
+/// only quick duty editing keeps a persistent selection.
+@MainActor
+final class CalendarDateFlashTests: XCTestCase {
+    func testGoingToTodayNeitherHighlightsNorFlashesToday() async throws {
+        let clock = CalendarDateFlashClock()
+        let haptics = DPHapticCenter()
+        let model = makeModel(clock: clock, haptics: haptics)
+        await model.load()
+        await model.showSearchResult(searchResult(on: "2030-01-15"))
+        XCTAssertNotNil(model.dateFlash)
+
+        await model.goToToday()
+
+        XCTAssertNil(model.highlightedDate)
+        XCTAssertNil(model.dateFlash, "Going to the current month clears a running flash and adds none")
+        XCTAssertEqual(haptics.event?.kind, .routine)
+        let navigationEventID = haptics.event?.id
+
+        await model.goToToday()
+
+        XCTAssertNil(model.highlightedDate)
+        XCTAssertNil(model.dateFlash)
+        XCTAssertEqual(haptics.event?.id, navigationEventID, "Going to the month already shown stays silent")
+    }
+
+    func testSearchResultFlashesItsDateThenLeavesNothingHighlighted() async throws {
+        let clock = CalendarDateFlashClock()
+        let model = makeModel(clock: clock)
+        await model.load()
+
+        await model.showSearchResult(searchResult(on: "2026-09-03"))
+
+        XCTAssertEqual(model.year, 2026)
+        XCTAssertEqual(model.month, 9)
+        XCTAssertEqual(model.dateFlash?.date.rawValue, "2026-09-03")
+        XCTAssertNil(model.highlightedDate, "A search result is not a persistent selection")
+        await waitUntil { await clock.pendingCount == 1 }
+        let requested = await clock.requested
+        XCTAssertEqual(requested, [CalendarDateFlash.duration])
+
+        await clock.advanceOldest()
+        await waitUntil { model.dateFlash == nil }
+
+        XCTAssertNil(model.dateFlash)
+        XCTAssertNil(model.highlightedDate)
+    }
+
+    func testFlashingTheSameDateAgainReplaysTheFlash() async throws {
+        let clock = CalendarDateFlashClock()
+        let model = makeModel(clock: clock)
+        await model.load()
+        let result = searchResult(on: "2026-08-20")
+
+        await model.showSearchResult(result)
+        let first = try XCTUnwrap(model.dateFlash)
+        await model.showSearchResult(result)
+        let replay = try XCTUnwrap(model.dateFlash)
+
+        XCTAssertEqual(replay.date, first.date)
+        XCTAssertNotEqual(replay.id, first.id, "A new flash identity restarts the animation")
+
+        await waitUntil { await clock.pendingCount == 2 }
+        await clock.advanceOldest()
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(model.dateFlash, replay, "The earlier flash's timer must not cut the replay short")
+
+        await clock.advanceOldest()
+        await waitUntil { model.dateFlash == nil }
+        XCTAssertNil(model.dateFlash)
+    }
+
+    func testDeepLinkDateFlashesOnceTheMonthIsShownWithoutSelectingIt() async throws {
+        let clock = CalendarDateFlashClock()
+        let model = makeModel(clock: clock, date: DateOnly(rawValue: "2026-08-20"))
+
+        XCTAssertNil(model.highlightedDate)
+        XCTAssertNil(model.dateFlash, "The spotlight waits until the month's days are on screen")
+
+        await model.load()
+
+        XCTAssertEqual(model.dateFlash?.date.rawValue, "2026-08-20")
+        XCTAssertNil(model.highlightedDate)
+    }
+
+    func testQuickDutySelectionStaysPersistentThroughAFlash() async throws {
+        let clock = CalendarDateFlashClock()
+        let model = makeModel(clock: clock, repository: CalendarRepositoryMock(teamID: 7))
+        await model.load()
+        model.setQuickDutyEditing(true, emitFeedback: false)
+        let focused = try XCTUnwrap(model.days.first { $0.cell.date.rawValue == "2026-08-12" })
+
+        model.focusQuickDuty(on: focused, emitFeedback: false)
+
+        XCTAssertEqual(model.highlightedDate, focused.cell.date)
+        XCTAssertNil(model.dateFlash, "Focusing a quick duty day is a selection, not a flash")
+
+        await model.showSearchResult(searchResult(on: "2026-08-20"))
+        await waitUntil { await clock.pendingCount == 1 }
+        await clock.advanceOldest()
+        await waitUntil { model.dateFlash == nil }
+
+        XCTAssertEqual(model.highlightedDate, focused.cell.date)
+        XCTAssertEqual(model.quickDutyDay?.cell.date, focused.cell.date)
+    }
+
+    func testSearchResultIsSpotlitOnlyOnceTheSearchHasClosed() async throws {
+        let clock = CalendarDateFlashClock()
+        let model = makeModel(clock: clock)
+        await model.load()
+        model.setDateSpotlightRevealable(false)
+
+        await model.showSearchResult(searchResult(on: "2026-09-03"))
+
+        XCTAssertEqual(model.month, 9, "The month changes behind the closing search")
+        XCTAssertNil(model.dateFlash, "The dim must not fade in under the closing search")
+        let requestedWhileCovered = await clock.requested
+        XCTAssertTrue(requestedWhileCovered.isEmpty)
+
+        model.setDateSpotlightRevealable(true)
+
+        XCTAssertEqual(model.dateFlash?.date.rawValue, "2026-09-03")
+        await waitUntil { await clock.pendingCount == 1 }
+        let requested = await clock.requested
+        XCTAssertEqual(requested, [CalendarDateFlash.duration])
+    }
+
+    func testDeepLinkDateWaitsForTheScreenToFinishAppearing() async throws {
+        let clock = CalendarDateFlashClock()
+        let model = makeModel(clock: clock, date: DateOnly(rawValue: "2026-08-20"), revealable: false)
+
+        await model.load()
+
+        XCTAssertNil(model.dateFlash, "A push still sliding in would hide the dim arriving")
+
+        model.setDateSpotlightRevealable(true)
+
+        XCTAssertEqual(model.dateFlash?.date.rawValue, "2026-08-20")
+    }
+
+    func testScreenThatSettlesBeforeItsMonthLoadsSpotlightsOnceTheDaysAreShown() async throws {
+        let clock = CalendarDateFlashClock()
+        let model = makeModel(clock: clock, date: DateOnly(rawValue: "2026-08-20"), revealable: false)
+
+        model.setDateSpotlightRevealable(true)
+
+        XCTAssertNil(model.dateFlash, "There is no tile to light before the month loads")
+
+        await model.load()
+
+        XCTAssertEqual(model.dateFlash?.date.rawValue, "2026-08-20")
+    }
+
+    func testSettlingAgainDoesNotReplayASpotlightAlreadyShown() async throws {
+        let clock = CalendarDateFlashClock()
+        let model = makeModel(clock: clock, date: DateOnly(rawValue: "2026-08-20"))
+        await model.load()
+        let shown = try XCTUnwrap(model.dateFlash)
+        await waitUntil { await clock.pendingCount == 1 }
+        await clock.advanceOldest()
+        await waitUntil { model.dateFlash == nil }
+
+        model.setDateSpotlightRevealable(false)
+        model.setDateSpotlightRevealable(true)
+
+        XCTAssertNil(model.dateFlash, "Returning to the screen does not spotlight \(shown.date.rawValue) again")
+    }
+
+    func testSpotlightTimelineEasesInHoldsAndEasesOutLikeTheWeb() {
+        let steps = CalendarDateFlash.steps
+
+        XCTAssertEqual(CalendarDateFlash.duration, 1.95, accuracy: 0.001)
+        XCTAssertEqual(steps.map(\.duration).reduce(0, +), CalendarDateFlash.duration, accuracy: 0.001)
+        XCTAssertEqual(steps.map(\.dim), [0.4, 0.4, 0], "One peak at 40% dim, then nothing remains")
+        XCTAssertEqual(steps.map(\.curve), [.easeIn, .linear, .easeOut])
+        XCTAssertEqual(steps[0].duration, 0.25, accuracy: 0.001, "Eases in over 0.25s")
+        XCTAssertEqual(steps[0].duration + steps[1].duration, 1.05, accuracy: 0.001, "Holds until 1.05s")
+        XCTAssertEqual(steps[2].duration, 0.9, accuracy: 0.001, "Eases out over 0.9s")
+    }
+
+    func testStartingAFlashScrollsItsDayIntoViewAndEndingItScrollsNothing() async throws {
+        let clock = CalendarDateFlashClock()
+        let model = makeModel(clock: clock)
+        await model.load()
+
+        await model.showSearchResult(searchResult(on: "2026-09-03"))
+
+        let target = try XCTUnwrap(CalendarDateFlash.scrollTarget(for: model.dateFlash))
+        XCTAssertEqual(target, model.days.first { $0.cell.date.rawValue == "2026-09-03" }?.id)
+
+        await model.goToToday()
+
+        XCTAssertNil(CalendarDateFlash.scrollTarget(for: model.dateFlash), "Going to this month scrolls nothing")
+    }
+
+    private func makeModel(
+        clock: CalendarDateFlashClock,
+        haptics: DPHapticCenter = DPHapticCenter(),
+        repository: CalendarRepositoryMock = CalendarRepositoryMock(),
+        date: DateOnly? = nil,
+        revealable: Bool = true
+    ) -> CalendarViewModel {
+        let model = CalendarViewModel(
+            repository: repository,
+            now: Self.date(2026, 8, 12),
+            date: date,
+            hapticCenter: haptics,
+            dateFlashSleeper: { duration in await clock.sleep(duration) }
+        )
+        model.setDateSpotlightRevealable(revealable)
+        return model
+    }
+
+    private func searchResult(on date: String) -> ScheduleSearchResultDTO {
+        ScheduleSearchResultDTO(
+            content: "Search result",
+            startDateTime: LocalDateTimeValue(rawValue: "\(date)T09:00:00"),
+            endDateTime: LocalDateTimeValue(rawValue: "\(date)T10:00:00"),
+            visibility: .privateAccess,
+            isTagged: false,
+            author: "Tester"
+        )
+    }
+
+    private func waitUntil(_ condition: @MainActor () async -> Bool) async {
+        for _ in 0..<200 {
+            if await condition() { return }
+            await Task.yield()
+        }
+    }
+
+    private static func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        CalendarDateSupport.calendar.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+}
+
+/// Holds each flash timer until the test lets the oldest one run out.
+private actor CalendarDateFlashClock {
+    private(set) var requested: [TimeInterval] = []
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    var pendingCount: Int { waiters.count }
+
+    func sleep(_ duration: TimeInterval) async {
+        requested.append(duration)
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func advanceOldest() {
+        guard !waiters.isEmpty else { return }
+        waiters.removeFirst().resume()
+    }
 }

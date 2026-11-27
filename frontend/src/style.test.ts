@@ -14,8 +14,8 @@ describe('SweetAlert2 container styles', () => {
 })
 
 describe('Calendar search highlight styles', () => {
-  it('keeps the pulse animation on the cell while its border is rendered in the grid', () => {
-    expect(styles).toMatch(/\.highlight-pulse-glow \{[\s\S]*animation: highlight-pulse-glow-anim/)
+  it('leaves the highlight flash to the calendar grid instead of a global cell glow', () => {
+    expect(styles).not.toContain('highlight-pulse-glow')
     expect(styles).not.toContain('outline: 1px solid var(--dp-warning)')
     expect(styles).not.toContain('outline-offset: -1px')
     expect(styles).not.toContain('z-index: 10')

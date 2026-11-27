@@ -21,6 +21,39 @@ nonisolated struct ComparedDuty: Equatable, Sendable {
     let duty: DutyDTO
 }
 
+/// A date spotlit for a moment after the calendar jumps to it: the rest of the month
+/// grid dims, then nothing is left highlighted. A new `id` replays it for the same date.
+nonisolated struct CalendarDateFlash: Equatable, Sendable {
+    struct Step: Equatable, Sendable {
+        enum Curve: Equatable, Sendable {
+            case easeIn, linear, easeOut
+        }
+
+        /// The opacity of the black layer over the rest of the grid at the step's end.
+        let dim: Double
+        let duration: TimeInterval
+        let curve: Curve
+    }
+
+    let date: DateOnly
+    let id: Int
+
+    /// Matches the web: ease in to 40% over 0.25s, hold until 1.05s, ease out over 0.9s.
+    /// A fading dim is not motion, so Reduce Motion keeps the same timeline.
+    static let steps = [
+        Step(dim: 0.4, duration: 0.25, curve: .easeIn),
+        Step(dim: 0.4, duration: 0.8, curve: .linear),
+        Step(dim: 0, duration: 0.9, curve: .easeOut),
+    ]
+
+    static let duration: TimeInterval = 1.95
+
+    /// The id of the day cell to bring into view when a flash starts; none once it ends.
+    static func scrollTarget(for flash: CalendarDateFlash?) -> String? {
+        flash?.date.rawValue
+    }
+}
+
 /// Semantic feedback decisions owned by the calendar state boundary.
 ///
 /// The calendar has several ways to reach the same month (buttons, a swipe and the picker),
@@ -143,6 +176,14 @@ final class CalendarViewModel: ObservableObject {
     private var serverRecoveryNeedsIdentity = false
     private var serverRecoveryAttemptInProgress = false
     private let serverRecoverySleeper: @Sendable (TimeInterval) async throws -> Void
+    private let dateFlashSleeper: @Sendable (TimeInterval) async throws -> Void
+    private var dateFlashTask: Task<Void, Never>?
+    private var dateFlashCount = 0
+    /// A date waiting to be spotlit until its day is on screen and nothing hides it.
+    private var pendingFlashDate: DateOnly?
+    /// Whether the screen has finished appearing with nothing covering the month grid,
+    /// so the dim is seen arriving rather than fading in under a push or closing modal.
+    private var isDateSpotlightRevealable = false
     private let requestOfflineSync: @MainActor @Sendable (MemberID) async -> Void
     @Published private(set) var me: MemberDTO?
     @Published private(set) var targetMember: MemberPreviewDTO?
@@ -163,7 +204,10 @@ final class CalendarViewModel: ObservableObject {
     @Published var selectedDay: CalendarDayContent?
     @Published var searchQuery = ""
     @Published var isSearching = false
+    /// The focused day of quick duty editing, a persistent selection.
     @Published var highlightedDate: DateOnly?
+    /// A date picked out for a moment after jumping to it, such as a search result.
+    @Published private(set) var dateFlash: CalendarDateFlash?
     @Published var comparedMemberIDs: Set<MemberID> = []
     @Published var isQuickDutyEditing = false
     @Published private(set) var quickDutyDay: CalendarDayContent?
@@ -199,6 +243,9 @@ final class CalendarViewModel: ObservableObject {
                 accountID: accountID,
                 networkStatus: .satisfied
             )
+        },
+        dateFlashSleeper: @escaping @Sendable (TimeInterval) async throws -> Void = { delay in
+            try await Task.sleep(for: .seconds(delay))
         }
     ) {
         self.repository = repository
@@ -210,6 +257,7 @@ final class CalendarViewModel: ObservableObject {
         self.contentFilter = contentFilter
         self.hapticCenter = hapticCenter
         self.serverRecoverySleeper = serverRecoverySleeper
+        self.dateFlashSleeper = dateFlashSleeper
         self.requestOfflineSync = requestOfflineSync
         initialScheduleID = scheduleID
         let initialDate = date.flatMap(CalendarDateSupport.date(from:)) ?? now
@@ -217,10 +265,11 @@ final class CalendarViewModel: ObservableObject {
         year = parts.year ?? 2026
         month = parts.month ?? 1
         selectedMemberID = memberID
-        highlightedDate = date
+        pendingFlashDate = date
     }
 
     deinit {
+        dateFlashTask?.cancel()
         prefetchTask?.cancel()
         serverRecoveryTask?.cancel()
         memberPreviewTasks.values.forEach { $0.cancel() }
@@ -450,6 +499,7 @@ final class CalendarViewModel: ObservableObject {
                 }
             }
             try await loadMonth()
+            startPendingDateFlashIfReady()
             if isOfflineMode {
                 scheduleServerRecovery()
             }
@@ -531,7 +581,7 @@ final class CalendarViewModel: ObservableObject {
                 let parts = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: date)
                 year = parts.year ?? year
                 month = parts.month ?? month
-                highlightedDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", year, month, parts.day ?? 1))
+                pendingFlashDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", year, month, parts.day ?? 1))
             }
         }
         if selectedMemberID == nil { selectedMemberID = member.id }
@@ -1596,22 +1646,21 @@ final class CalendarViewModel: ObservableObject {
         return true
     }
 
+    /// Shows the current month. Today keeps its own strip, so nothing is highlighted.
     func goToToday(emitFeedback: Bool = true) async {
-        let components = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: Date())
+        let components = CalendarDateSupport.calendar.dateComponents([.year, .month], from: Date())
         let nextYear = components.year ?? year
         let nextMonth = components.month ?? month
-        let nextDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", nextYear, nextMonth, components.day ?? 1))
         let monthChanged = CalendarHapticPolicy.monthNavigation(
             fromYear: year,
             fromMonth: month,
             toYear: nextYear,
             toMonth: nextMonth
         ) != nil
-        let dateChanged = CalendarHapticPolicy.selectionChanged(from: highlightedDate, to: nextDate) != nil
         year = nextYear
         month = nextMonth
-        highlightedDate = nextDate
-        if emitFeedback, monthChanged || dateChanged { emit(.routine) }
+        endDateFlash()
+        if emitFeedback, monthChanged { emit(.routine) }
         await reloadMonth()
     }
 
@@ -2105,8 +2154,46 @@ final class CalendarViewModel: ObservableObject {
         let nextDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", nextYear, nextMonth, parts.day ?? 1))
         year = nextYear
         month = nextMonth
-        highlightedDate = nextDate
         await reloadMonth()
+        pendingFlashDate = nextDate
+        startPendingDateFlashIfReady()
+    }
+
+    /// Called by the view as its month grid becomes visible and uncovered, or hidden.
+    func setDateSpotlightRevealable(_ revealable: Bool) {
+        isDateSpotlightRevealable = revealable
+        startPendingDateFlashIfReady()
+    }
+
+    private func startPendingDateFlashIfReady() {
+        guard isDateSpotlightRevealable,
+              let date = pendingFlashDate,
+              days.contains(where: { $0.cell.date == date })
+        else { return }
+        pendingFlashDate = nil
+        flash(date)
+    }
+
+    /// Starts a new flash, which replays even for the date already flashing, and ends it
+    /// once its animation has run.
+    private func flash(_ date: DateOnly) {
+        dateFlashTask?.cancel()
+        dateFlashCount &+= 1
+        let flash = CalendarDateFlash(date: date, id: dateFlashCount)
+        dateFlash = flash
+        let sleeper = dateFlashSleeper
+        dateFlashTask = Task { [weak self] in
+            do { try await sleeper(CalendarDateFlash.duration) } catch { return }
+            guard !Task.isCancelled, let self, self.dateFlash == flash else { return }
+            self.dateFlash = nil
+        }
+    }
+
+    private func endDateFlash() {
+        pendingFlashDate = nil
+        dateFlashTask?.cancel()
+        dateFlashTask = nil
+        dateFlash = nil
     }
 
     func saveDDay(existing: DDayDTO?, title: String, date: Date, isPrivate: Bool) async -> Bool {

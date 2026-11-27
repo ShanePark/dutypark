@@ -31,13 +31,35 @@ describe('calendar cell clickability', () => {
       /v-if="hasTodaySelectionBorder\(day\)"[\s\S]*class="calendar-day-selection-border"/
     )
     expect(calendarGrid).toMatch(
-      /v-if="!focusedDay && isHighlighted\(day\)"[\s\S]*class="calendar-day-highlight-border"/
+      /v-if="hasSpotlight"\s*:key="flashKey"\s*class="calendar-grid-spotlight"[\s\S]*@animationstart="startSpotlight"[\s\S]*@animationend="endFlash"/
     )
+    expect(calendarGrid).not.toContain('calendar-day-highlight-flash')
     expect(calendarGrid).toContain(":aria-current=\"isToday(day) ? 'date' : undefined\"")
     expect(calendarGrid).toContain("'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isHighlighted(day)")
     expect(calendarGrid).toContain('@media (hover: hover) and (pointer: fine)')
     expect(calendarGrid).toContain('.calendar-day-hoverable:hover::before')
-    expect(calendarGrid).toContain('border: 2px solid var(--dp-warning)')
+    expect(calendarGrid).not.toContain('--dp-warning')
+  })
+
+  // Same timing as iOS: 0.25s ease-in to 40% black, hold until 1.05s, then a
+  // 0.9s ease-out, 1.95s in all. Dimming is not motion, so reduced motion keeps it.
+  it('dims the grid to 40% black and back over 1.95s, resting invisible', () => {
+    const overlayRule = calendarGrid.match(/\.calendar-grid-spotlight \{[^}]*\}/)?.[0] ?? ''
+    expect(overlayRule).toContain('position: absolute;')
+    expect(overlayRule).toContain('inset: 0;')
+    expect(overlayRule).toContain('background: rgb(0 0 0 / 40%);')
+    expect(overlayRule).toContain('opacity: 0;')
+    expect(overlayRule).toContain('pointer-events: none;')
+    expect(overlayRule).toContain('animation: calendar-grid-spotlight 1.95s ease-in;')
+    expect(overlayRule).not.toMatch(/forwards|infinite|filter|blur|scale/)
+    const keyframes = calendarGrid.match(/@keyframes calendar-grid-spotlight \{([\s\S]*?)\n\}/)?.[1] ?? ''
+    expect(keyframes).toMatch(/0% \{ opacity: 0; \}\s*12\.8205% \{ opacity: 1; \}\s*53\.8462% \{ opacity: 1; animation-timing-function: ease-out; \}\s*100% \{ opacity: 0; \}/)
+    // The overlay dims the multi-day bands (z-index 2) too; the lit day is a hole
+    // cut in it, not a raised tile, so a band crossing that day stays visible there.
+    expect(calendarGrid).toMatch(/\.calendar-grid-spotlight \{[^}]*z-index: 3;/)
+    expect(calendarGrid).not.toMatch(/\.calendar-day--highlighted \{[^}]*z-index/)
+    expect(calendarGrid).not.toContain('prefers-reduced-motion')
+    expect(calendarGrid).not.toContain('backdrop-filter')
   })
 
   it('asks the caller about each day, for the cursor and for the click alike', () => {

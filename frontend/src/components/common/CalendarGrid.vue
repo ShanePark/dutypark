@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="TSpan">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { getTimeChipColors, isLightColor } from '@/utils/color'
@@ -83,14 +83,94 @@ function isToday(day: CalendarDay): boolean {
   )
 }
 
+// The lit day is a hole cut in the dim overlay rather than a raised tile, so
+// a multi-day band crossing it stays visible and lit there. The hole follows the
+// day while the grid or the day resizes.
+const spotlightHole = ref<{ left: number; top: number; right: number; bottom: number } | null>(null)
+let spotlightTracking: { grid: HTMLElement; cell: HTMLElement; observer: ResizeObserver } | null = null
+
+const spotlightStyle = computed(() => {
+  const hole = spotlightHole.value
+  if (!hole) return undefined
+  const { left: l, top: t, right: r, bottom: b } = hole
+  return {
+    clipPath: `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${l}px ${t}px, ${l}px ${b}px, ${r}px ${b}px, ${r}px ${t}px, ${l}px ${t}px)`,
+  }
+})
+
+// In the overlay's own coordinates: the grid's padding box, inside its border.
+function measureSpotlightHole() {
+  if (!spotlightTracking) return
+  const { grid, cell } = spotlightTracking
+  const gridRect = grid.getBoundingClientRect()
+  const cellRect = cell.getBoundingClientRect()
+  const originX = gridRect.left + grid.clientLeft
+  const originY = gridRect.top + grid.clientTop
+  spotlightHole.value = {
+    left: cellRect.left - originX,
+    top: cellRect.top - originY,
+    right: cellRect.right - originX,
+    bottom: cellRect.bottom - originY,
+  }
+}
+
+function stopSpotlightTracking() {
+  spotlightTracking?.observer.disconnect()
+  spotlightTracking = null
+  spotlightHole.value = null
+}
+
+function startSpotlight(event: AnimationEvent) {
+  const grid = (event.currentTarget as HTMLElement).parentElement
+  const cell = grid?.querySelector<HTMLElement>('.calendar-day--highlighted')
+  if (!grid || !cell) return
+  stopSpotlightTracking()
+  const observer = new ResizeObserver(measureSpotlightHole)
+  spotlightTracking = { grid, cell, observer }
+  measureSpotlightHole()
+  observer.observe(grid)
+  observer.observe(cell)
+  revealSpotlightCell(cell)
+}
+
+// The lit day may sit below the fold (on a phone); bring it on screen as the dim starts.
+function revealSpotlightCell(cell: HTMLElement) {
+  const { top, bottom } = cell.getBoundingClientRect()
+  if (top >= 0 && bottom <= window.innerHeight) return
+  cell.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+onBeforeUnmount(stopSpotlightTracking)
+
+// A highlight is a one-off spotlight: every new highlightDay value, even the
+// same date again, replays it, and it clears itself when the animation ends.
+const flashDay = ref<Props['highlightDay']>(null)
+const flashKey = ref(0)
+
+watch(() => props.highlightDay, day => {
+  stopSpotlightTracking()
+  flashDay.value = day
+  flashKey.value += 1
+}, { immediate: true })
+
+function endFlash() {
+  stopSpotlightTracking()
+  flashDay.value = null
+}
+
 function isHighlighted(day: CalendarDay): boolean {
-  if (!props.highlightDay) return false
+  if (!flashDay.value) return false
   return (
-    day.year === props.highlightDay.year &&
-    day.month === props.highlightDay.month &&
-    day.day === props.highlightDay.day
+    day.year === flashDay.value.year &&
+    day.month === flashDay.value.month &&
+    day.day === flashDay.value.day
   )
 }
+
+const hasSpotlight = computed(() => !props.focusedDay && visibleDays.value.some(isHighlighted))
+watch(hasSpotlight, shown => {
+  if (!shown) stopSpotlightTracking()
+})
 
 function isSelected(day: CalendarDay): boolean {
   if (!props.selectedDay) return false
@@ -280,7 +360,6 @@ function handleDayClick(day: CalendarDay, index: number) {
           'calendar-day--outside': !isCurrentMonth(day),
           'calendar-day--today': isToday(day),
           'calendar-day--highlighted': !focusedDay && isHighlighted(day),
-          'highlight-pulse-glow': !focusedDay && isHighlighted(day),
           'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isHighlighted(day),
           'duty-day-focused': isFocused(day),
         }
@@ -290,11 +369,6 @@ function handleDayClick(day: CalendarDay, index: number) {
       <span
         v-if="hasTodaySelectionBorder(day)"
         class="calendar-day-selection-border"
-        aria-hidden="true"
-      />
-      <span
-        v-if="!focusedDay && isHighlighted(day)"
-        class="calendar-day-highlight-border"
         aria-hidden="true"
       />
       <div class="calendar-day-head">
@@ -354,6 +428,16 @@ function handleDayClick(day: CalendarDay, index: number) {
         <slot name="day-content" :day="day" :index="getSourceIndex(idx)" />
       </div>
     </div>
+
+    <span
+      v-if="hasSpotlight"
+      :key="flashKey"
+      class="calendar-grid-spotlight"
+      :style="spotlightStyle"
+      aria-hidden="true"
+      @animationstart="startSpotlight"
+      @animationend="endFlash"
+    />
   </div>
 </template>
 
@@ -457,8 +541,7 @@ function handleDayClick(day: CalendarDay, index: number) {
   --calendar-ink-muted: color-mix(in srgb, var(--dp-text-on-light) 58%, transparent);
 }
 
-.calendar-day--today,
-.calendar-day--highlighted {
+.calendar-day--today {
   z-index: 1;
 }
 
@@ -509,12 +592,27 @@ function handleDayClick(day: CalendarDay, index: number) {
   z-index: 1;
 }
 
-.calendar-day-highlight-border {
+/* Spotlight: one overlay dims the whole grid, multi-day bands (z-index 2)
+   included, except the lit day clipped out of it (spotlightStyle), for 0.25s
+   in, a hold until 1.05s and 0.9s out, as on iOS. The grid's overflow keeps it
+   inside the rounded corners. It rests invisible, so nothing lingers even
+   before animationend removes it. Dimming is not motion, so reduced motion
+   keeps it. */
+.calendar-grid-spotlight {
   position: absolute;
   inset: 0;
-  border: 2px solid var(--dp-warning);
+  z-index: 3;
+  background: rgb(0 0 0 / 40%);
+  opacity: 0;
   pointer-events: none;
-  z-index: 1;
+  animation: calendar-grid-spotlight 1.95s ease-in;
+}
+
+@keyframes calendar-grid-spotlight {
+  0% { opacity: 0; }
+  12.8205% { opacity: 1; }
+  53.8462% { opacity: 1; animation-timing-function: ease-out; }
+  100% { opacity: 0; }
 }
 
 .calendar-day-holiday {

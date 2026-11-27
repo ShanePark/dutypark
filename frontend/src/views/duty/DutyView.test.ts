@@ -216,7 +216,17 @@ vi.mock('@/components/duty/DayDetailModal.vue', () => ({
   }),
 }))
 vi.mock('@/components/duty/TodoDetailModal.vue', () => emptyStub)
-vi.mock('@/components/duty/SearchResultModal.vue', () => emptyStub)
+vi.mock('@/components/duty/SearchResultModal.vue', () => ({
+  default: defineComponent({
+    emits: ['go-to-date'],
+    setup(_props, { emit }) {
+      return () => h('button', {
+        'data-test': 'search-go-to-date',
+        onClick: () => emit('go-to-date', { startDateTime: '2026-03-14T09:00' }),
+      })
+    },
+  }),
+}))
 vi.mock('@/components/duty/OtherDutiesModal.vue', () => ({
   default: defineComponent({
     emits: ['toggle', 'clear'],
@@ -231,7 +241,7 @@ vi.mock('@/components/duty/OtherDutiesModal.vue', () => ({
 vi.mock('@/components/duty/DutyHeaderControls.vue', () => ({
   default: defineComponent({
     props: { currentYear: Number, currentMonth: Number, memberName: String },
-    emits: ['open-year-month-picker', 'next-month', 'prev-month'],
+    emits: ['open-year-month-picker', 'next-month', 'prev-month', 'go-to-this-month'],
     setup(props, { emit }) {
       return () => h('div', [
         h('span', { 'data-test': 'calendar-member-name' }, props.memberName),
@@ -244,6 +254,7 @@ vi.mock('@/components/duty/DutyHeaderControls.vue', () => ({
           onClick: () => emit('next-month'),
         }, 'next month'),
         h('button', { 'data-test': 'prev-month', onClick: () => emit('prev-month') }, 'previous month'),
+        h('button', { 'data-test': 'go-to-this-month', onClick: () => emit('go-to-this-month') }, 'this month'),
       ])
     },
   }),
@@ -295,6 +306,7 @@ vi.mock('@/components/duty/DutyCalendarContent.vue', () => ({
       duties: Array,
       holidays: Array,
       otherDuties: Array,
+      highlightDay: Object,
     },
     emits: ['day-click', 'batch-duty-change'],
     setup(props, { slots, emit }) {
@@ -309,6 +321,7 @@ vi.mock('@/components/duty/DutyCalendarContent.vue', () => ({
         'data-duties': JSON.stringify(props.duties),
         'data-holidays': JSON.stringify(props.holidays),
         'data-comparison': JSON.stringify(props.otherDuties),
+        'data-highlight-day': JSON.stringify(props.highlightDay ?? null),
       }, [
         h('button', { 'data-test': 'open-calendar-day', onClick: () => {
           const day = (props.days as Array<{ year: number; month: number; day: number }>)
@@ -581,6 +594,44 @@ describe('DutyView D-Day saves', () => {
     resolveRequest({ data: makeDDay({ id: 11, title: '중복 방지' }) })
     await flush()
     expect(findHostNode(mounted.root, node => node.type === 'input' && node.props.type === 'text')).toBeNull()
+    closeMounted(mounted)
+  })
+})
+
+describe('DutyView date highlight', () => {
+  function highlightDay(root: HostNode) {
+    return JSON.parse(String(nodeByDataTest(root, 'duty-calendar-content').props['data-highlight-day']))
+  }
+
+  function windowListener(event: string) {
+    const calls = vi.mocked(window.addEventListener).mock.calls
+    return calls.find(([name]) => name === event)![1] as unknown as (event: Event) => void
+  }
+
+  it('highlights a search result date and keeps going to this month a pure navigation', async () => {
+    const mounted = await mountDutyView()
+    expect(highlightDay(mounted.root)).toBeNull()
+
+    triggerHost(nodeByDataTest(mounted.root, 'search-go-to-date'), 'onClick')
+    await flush()
+    expect(highlightDay(mounted.root)).toEqual({ year: 2026, month: 3, day: 14 })
+
+    triggerHost(nodeByDataTest(mounted.root, 'go-to-this-month'), 'onClick')
+    await flush()
+    const today = new Date()
+    expect(nodeByDataTest(mounted.root, 'duty-calendar-content').props['data-current-month'])
+      .toBe(`${today.getFullYear()}-${today.getMonth() + 1}`)
+    expect(highlightDay(mounted.root)).toBeNull()
+    closeMounted(mounted)
+  })
+
+  it('does not highlight today when the footer jumps to this month', async () => {
+    const mounted = await mountDutyView()
+    triggerHost(nodeByDataTest(mounted.root, 'search-go-to-date'), 'onClick')
+    await flush()
+    windowListener('duty-go-to-today')(new Event('duty-go-to-today'))
+    await flush()
+    expect(highlightDay(mounted.root)).toBeNull()
     closeMounted(mounted)
   })
 })
