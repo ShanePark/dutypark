@@ -419,12 +419,15 @@ const isCalendarMonthLoaded = computed(() =>
 )
 
 const searchResults = ref<any[]>([])
-const searchPageInfo = ref({
+const emptySearchPageInfo = () => ({
   pageNumber: 0,
   pageSize: 10,
   totalPages: 0,
   totalElements: 0,
 })
+const searchPageInfo = ref(emptySearchPageInfo())
+// Bumped when the search closes, so an answer to a search from before then is dropped.
+let searchGeneration = 0
 
 // Load calendar structure from backend API (cached)
 async function loadCalendar(): Promise<boolean> {
@@ -1213,6 +1216,7 @@ function openSearchModal() {
 async function handleSearch(page: number = 0) {
   if (!searchQuery.value.trim() || !memberId.value) return
 
+  const generation = searchGeneration
   isSearching.value = true
   try {
     const response = await scheduleApi.searchSchedules(
@@ -1221,6 +1225,7 @@ async function handleSearch(page: number = 0) {
       page,
       searchPageInfo.value.pageSize
     )
+    if (generation !== searchGeneration) return
     searchResults.value = response.content.map((result) => ({
       id: result.id,
       content: result.content,
@@ -1237,11 +1242,22 @@ async function handleSearch(page: number = 0) {
     }
     isSearchResultModalOpen.value = true
   } catch (error) {
+    if (generation !== searchGeneration) return
     console.error('Failed to search schedules:', error)
     showError(t('duty.search.failed'))
   } finally {
-    isSearching.value = false
+    if (generation === searchGeneration) isSearching.value = false
   }
+}
+
+// Every way out of the search, including picking a result, starts the next one empty.
+function closeSearchModal() {
+  searchGeneration += 1
+  isSearchResultModalOpen.value = false
+  isSearching.value = false
+  searchQuery.value = ''
+  searchResults.value = []
+  searchPageInfo.value = emptySearchPageInfo()
 }
 
 function handleSearchPageChange(page: number) {
@@ -1263,7 +1279,7 @@ function handleSearchGoToDate(result: any) {
     month: date.getMonth() + 1,
     day: date.getDate(),
   }
-  isSearchResultModalOpen.value = false
+  closeSearchModal()
 }
 
 async function handleFriendToggle(friendId: number) {
@@ -1850,7 +1866,7 @@ async function showExcelUploadModal() {
       :results="searchResults"
       :page-info="searchPageInfo"
       :is-searching="isSearching"
-      @close="isSearchResultModalOpen = false"
+      @close="closeSearchModal"
       @go-to-date="handleSearchGoToDate"
       @change-page="handleSearchPageChange"
       @search="handleSearchFromModal"

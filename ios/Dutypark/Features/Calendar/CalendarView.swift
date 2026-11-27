@@ -429,6 +429,11 @@ struct CalendarView: View {
                 }
             }
         }
+        // Clears the search only after its cover has finished closing, whichever way it
+        // closed, so a picked result has already jumped and queued its spotlight.
+        .onChange(of: isSearchCoverOnScreen) { _, isOnScreen in
+            if !isOnScreen { model.resetSearch() }
+        }
         .fullScreenCover(isPresented: $showsSearch, onDismiss: { isSearchCoverOnScreen = false }) {
             DPModalOverlay(
                 onDismiss: {

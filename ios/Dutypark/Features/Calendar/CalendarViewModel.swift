@@ -221,6 +221,8 @@ final class CalendarViewModel: ObservableObject {
     @Published private(set) var pendingScheduleCount = 0
     @Published var dutyBatchMessage: String?
     private var searchPage = 0
+    /// Bumped when the search closes, so an answer to a search from before then is dropped.
+    private var searchGeneration = 0
     private let initialScheduleID: ScheduleID?
     private let contentFilter: ContentFilterStore
     private let hapticCenter: DPHapticCenter
@@ -2093,16 +2095,19 @@ final class CalendarViewModel: ObservableObject {
             searchedQuery = nil
             return
         }
+        let generation = searchGeneration
         isSearching = true
         defer { isSearching = false }
         do {
             let response = try await repository.searchSchedules(memberID: memberID, query: query, page: 0)
+            guard generation == searchGeneration else { return }
             searchResults = response.content
             searchedQuery = query
             searchPage = 0
             canLoadMoreSearchResults = !response.last
         }
         catch {
+            guard generation == searchGeneration else { return }
             if isRecoverableOfflineError(error), isMyCalendar,
                let accountID = cacheAccountID,
                await useCachedSearch(query: query, accountID: accountID) {
@@ -2116,17 +2121,30 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
+    /// Every way out of the search, including picking a result, starts the next one empty.
+    func resetSearch() {
+        searchGeneration &+= 1
+        searchQuery = ""
+        searchedQuery = nil
+        searchResults = []
+        searchPage = 0
+        canLoadMoreSearchResults = false
+    }
+
     func loadMoreSearchResults() async {
         guard canEdit, let memberID = targetMemberID, let query = searchedQuery, canLoadMoreSearchResults, !isSearching else { return }
+        let generation = searchGeneration
         isSearching = true
         defer { isSearching = false }
         do {
             let nextPage = searchPage + 1
             let response = try await repository.searchSchedules(memberID: memberID, query: query, page: nextPage)
+            guard generation == searchGeneration else { return }
             searchResults.append(contentsOf: response.content)
             searchPage = nextPage
             canLoadMoreSearchResults = !response.last
         } catch {
+            guard generation == searchGeneration else { return }
             if isRecoverableOfflineError(error), isMyCalendar,
                let accountID = cacheAccountID,
                await useCachedSearch(query: query, accountID: accountID) {

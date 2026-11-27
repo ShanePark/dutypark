@@ -218,12 +218,26 @@ vi.mock('@/components/duty/DayDetailModal.vue', () => ({
 vi.mock('@/components/duty/TodoDetailModal.vue', () => emptyStub)
 vi.mock('@/components/duty/SearchResultModal.vue', () => ({
   default: defineComponent({
-    emits: ['go-to-date'],
-    setup(_props, { emit }) {
-      return () => h('button', {
-        'data-test': 'search-go-to-date',
-        onClick: () => emit('go-to-date', { startDateTime: '2026-03-14T09:00' }),
-      })
+    props: { isOpen: Boolean, query: String, results: Array, pageInfo: Object },
+    emits: ['go-to-date', 'close', 'change-page', 'search'],
+    setup(props, { emit }) {
+      return () => h('div', {
+        'data-test': 'search-modal',
+        'data-state': JSON.stringify({
+          isOpen: props.isOpen,
+          query: props.query,
+          results: props.results?.length ?? 0,
+          pageInfo: props.pageInfo,
+        }),
+      }, [
+        h('button', {
+          'data-test': 'search-go-to-date',
+          onClick: () => emit('go-to-date', { startDateTime: '2026-03-14T09:00' }),
+        }),
+        h('button', { 'data-test': 'search-submit', onClick: () => emit('search', 'dd') }),
+        h('button', { 'data-test': 'search-next-page', onClick: () => emit('change-page', 1) }),
+        h('button', { 'data-test': 'search-close', onClick: () => emit('close') }),
+      ])
     },
   }),
 }))
@@ -632,6 +646,73 @@ describe('DutyView date highlight', () => {
     windowListener('duty-go-to-today')(new Event('duty-go-to-today'))
     await flush()
     expect(highlightDay(mounted.root)).toBeNull()
+    closeMounted(mounted)
+  })
+})
+
+describe('DutyView schedule search', () => {
+  const closedSearch = {
+    isOpen: false,
+    query: '',
+    results: 0,
+    pageInfo: { pageNumber: 0, pageSize: 10, totalPages: 0, totalElements: 0 },
+  }
+
+  function searchState(root: HostNode) {
+    return JSON.parse(String(nodeByDataTest(root, 'search-modal').props['data-state']))
+  }
+
+  function searchPage(page: number) {
+    return {
+      content: [{ id: `s${page}`, content: `dd ${page}`, startDateTime: '2026-03-14T09:00', endDateTime: '2026-03-14T10:00' }],
+      number: page,
+      size: 10,
+      totalPages: 2,
+      totalElements: 11,
+    }
+  }
+
+  async function search(root: HostNode) {
+    triggerHost(nodeByDataTest(root, 'search-submit'), 'onClick')
+    await flush()
+    expect(searchState(root)).toMatchObject({ isOpen: true, query: 'dd', results: 1 })
+  }
+
+  it('starts the next search empty however the search closed', async () => {
+    mocks.scheduleApi.searchSchedules.mockImplementation((_id: number, _query: string, page: number) =>
+      Promise.resolve(searchPage(page)))
+    const mounted = await mountDutyView()
+
+    await search(mounted.root)
+    triggerHost(nodeByDataTest(mounted.root, 'search-close'), 'onClick')
+    await flush()
+    expect(searchState(mounted.root)).toEqual(closedSearch)
+
+    await search(mounted.root)
+    triggerHost(nodeByDataTest(mounted.root, 'search-go-to-date'), 'onClick')
+    await flush()
+    expect(searchState(mounted.root)).toEqual(closedSearch)
+    expect(JSON.parse(String(nodeByDataTest(mounted.root, 'duty-calendar-content').props['data-highlight-day'])))
+      .toEqual({ year: 2026, month: 3, day: 14 })
+    closeMounted(mounted)
+  })
+
+  it('keeps a search closed when its answer arrives after closing', async () => {
+    let answerLatePage: (value: ReturnType<typeof searchPage>) => void = () => {}
+    mocks.scheduleApi.searchSchedules
+      .mockResolvedValueOnce(searchPage(0))
+      .mockReturnValueOnce(new Promise(resolve => { answerLatePage = resolve }))
+    const mounted = await mountDutyView()
+
+    await search(mounted.root)
+    triggerHost(nodeByDataTest(mounted.root, 'search-next-page'), 'onClick')
+    await flush()
+    triggerHost(nodeByDataTest(mounted.root, 'search-close'), 'onClick')
+    await flush()
+    answerLatePage(searchPage(1))
+    await flush()
+
+    expect(searchState(mounted.root)).toEqual(closedSearch)
     closeMounted(mounted)
   })
 })

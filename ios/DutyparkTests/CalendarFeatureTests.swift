@@ -3241,6 +3241,54 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    /// Every way out of the search, including picking a result, starts the next one empty.
+    func testClosingTheSearchStartsTheNextOneEmpty() async throws {
+        let repository = CalendarRepositoryMock(canManage: true, searchPages: 2)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)
+        await model.load()
+        model.searchQuery = "dd"
+        await model.search()
+        XCTAssertTrue(model.canLoadMoreSearchResults)
+
+        model.resetSearch()
+        XCTAssertEqual(model.searchQuery, "")
+        XCTAssertNil(model.searchedQuery)
+        XCTAssertTrue(model.searchResults.isEmpty)
+        XCTAssertFalse(model.canLoadMoreSearchResults)
+        await model.loadMoreSearchResults()
+        XCTAssertTrue(model.searchResults.isEmpty, "Paging does not resume the closed search")
+
+        model.searchQuery = "dd"
+        await model.search()
+        let requests = await repository.searchRequests
+        XCTAssertEqual(requests, ["dd#0", "dd#0"], "The next search starts again from the first page")
+
+        let source = try Self.calendarViewSource()
+        XCTAssertTrue(
+            source.contains(".onChange(of: isSearchCoverOnScreen) { _, isOnScreen in\n            if !isOnScreen { model.resetSearch() }\n        }"),
+            "The search resets once its cover has finished closing, whichever way it closed"
+        )
+    }
+
+    func testASearchAnsweredAfterTheSearchClosedStaysCleared() async {
+        let gate = CalendarTabRefreshGate()
+        let repository = CalendarRepositoryMock(canManage: true, searchPages: 2, searchGate: gate)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)
+        await model.load()
+        model.searchQuery = "dd"
+        let search = Task { await model.search() }
+        await gate.waitForRequest()
+
+        model.resetSearch()
+        await gate.release()
+        await search.value
+
+        XCTAssertNil(model.searchedQuery)
+        XCTAssertTrue(model.searchResults.isEmpty)
+        XCTAssertFalse(model.canLoadMoreSearchResults)
+        XCTAssertNil(model.errorMessage)
+    }
+
     func testReadOnlyFriendCalendarDoesNotOfferScheduleSearch() async {
         let readOnly = CalendarViewModel(
             repository: CalendarRepositoryMock(canManage: false),
@@ -3377,6 +3425,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var searchRequests: [String] = []
     /// Pages of one result each answered for any query; zero answers an empty page.
     let searchPages: Int
+    let searchGate: CalendarTabRefreshGate?
     let canManageValue: Bool
     let cancelMemberLoad: Bool
     let friendValues: [FriendDTO]
@@ -3411,9 +3460,11 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         scheduleCreated: Bool = true,
         duties: [DutyDTO] = [],
         dutyTypes: [DutyTypeDTO] = [],
-        searchPages: Int = 0
+        searchPages: Int = 0,
+        searchGate: CalendarTabRefreshGate? = nil
     ) {
         self.searchPages = searchPages
+        self.searchGate = searchGate
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
         friendValues = friends
@@ -3526,6 +3577,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     }
     func searchSchedules(memberID: MemberID, query: String, page: Int) async throws -> PageResponse<ScheduleSearchResultDTO> {
         searchRequests.append("\(query)#\(page)")
+        if let searchGate { await searchGate.wait() }
         guard searchPages > 0 else {
             return try JSONDecoder().decode(PageResponse<ScheduleSearchResultDTO>.self, from: Data(#"{"content":[],"totalPages":0,"totalElements":0,"last":true,"first":true,"size":10,"number":0,"numberOfElements":0,"empty":true}"#.utf8))
         }
