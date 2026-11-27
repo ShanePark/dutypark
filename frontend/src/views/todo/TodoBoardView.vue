@@ -828,6 +828,15 @@ onBeforeUnmount(() => {
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
             </div>
             <button
+              v-if="todoList.length > 0"
+              type="button"
+              class="kanban-empty-state kanban-empty-state-clickable kanban-empty-state--compact"
+              @click="openAddModal('TODO')"
+            >
+              <Plus class="kanban-empty-icon" />
+              <span>{{ t('todoBoard.actions.clickToAdd') }}</span>
+            </button>
+            <button
               v-if="todoList.length === 0"
               class="kanban-empty-state kanban-empty-state-clickable"
               @click="openAddModal('TODO')"
@@ -856,6 +865,15 @@ onBeforeUnmount(() => {
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
             </div>
+            <button
+              v-if="inProgressList.length > 0"
+              type="button"
+              class="kanban-empty-state kanban-empty-state-clickable kanban-empty-state--compact"
+              @click="openAddModal('IN_PROGRESS')"
+            >
+              <Plus class="kanban-empty-icon" />
+              <span>{{ t('todoBoard.actions.clickToAdd') }}</span>
+            </button>
             <button
               v-if="inProgressList.length === 0"
               class="kanban-empty-state kanban-empty-state-clickable"
@@ -899,6 +917,15 @@ onBeforeUnmount(() => {
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
             </div>
+            <button
+              v-if="doneList.length > 0"
+              type="button"
+              class="kanban-empty-state kanban-empty-state-clickable kanban-empty-state--compact"
+              @click="openAddModal('DONE')"
+            >
+              <Plus class="kanban-empty-icon" />
+              <span>{{ t('todoBoard.actions.clickToAdd') }}</span>
+            </button>
             <button
               v-if="doneList.length === 0"
               class="kanban-empty-state kanban-empty-state-clickable"
@@ -1241,6 +1268,21 @@ onBeforeUnmount(() => {
 
 .kanban-empty-state-clickable:hover .kanban-empty-icon {
   opacity: 1;
+}
+
+/* The add row after the last card. Sortable only drags `.kanban-card-wrapper`
+   and inserts dropped cards after the last wrapper, so this row stays last. */
+.kanban-empty-state--compact {
+  flex-direction: row;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0.625rem 1rem;
+}
+
+.kanban-empty-state--compact .kanban-empty-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 </style>

@@ -1308,23 +1308,7 @@ private struct TodoKanbanColumn: View {
             ScrollView(.vertical) {
                 LazyVStack(spacing: DPSpacing.small) {
                     if todos.isEmpty {
-                        Button(action: add) {
-                            VStack(spacing: DPSpacing.small) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 18, weight: .bold))
-                                Text(todoLocalized("todo.action.add"))
-                                    .font(DPTypography.caption)
-                            }
-                            .foregroundStyle(DPColor.accent)
-                            .frame(maxWidth: .infinity, minHeight: 112)
-                            .background(DPColor.backgroundCard.opacity(0.6))
-                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DPRadius.large)
-                                    .stroke(DPColor.accent.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [5]))
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        TodoColumnAddCard(isCompact: false, action: add)
                     } else {
                         ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
                             TodoCard(
@@ -1355,6 +1339,13 @@ private struct TodoKanbanColumn: View {
                                 tint: status.color,
                                 cornerRadius: TodoBoardLayout.cardRadius
                             )
+                        }
+
+                        // Hidden mid-drag so the end-of-column drop indicator stays
+                        // right below the last card.
+                        if draggedTodoID == nil {
+                            TodoColumnAddCard(isCompact: true, action: add)
+                                .accessibilityIdentifier("todo.addRow.\(status.rawValue)")
                         }
                     }
 
@@ -1656,6 +1647,47 @@ enum TodoCardDragActivation {
 private enum TodoDropEdge: Equatable {
     case before
     case after
+}
+
+/// The dashed add card: full height in an empty column, and a compact inline
+/// row after the last card of a non-empty one.
+private struct TodoColumnAddCard: View {
+    let isCompact: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            label
+                .foregroundStyle(DPColor.accent)
+                .frame(maxWidth: .infinity, minHeight: isCompact ? DPSize.minimumTouchTarget : 112)
+                .background(DPColor.backgroundCard.opacity(0.6))
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+                .overlay(
+                    RoundedRectangle(cornerRadius: DPRadius.large)
+                        .stroke(DPColor.accent.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [5]))
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        if isCompact {
+            HStack(spacing: 6) {
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .bold))
+                Text(todoLocalized("todo.action.add"))
+                    .font(DPTypography.caption)
+            }
+        } else {
+            VStack(spacing: DPSpacing.small) {
+                Image(systemName: "plus")
+                    .font(.system(size: 18, weight: .bold))
+                Text(todoLocalized("todo.action.add"))
+                    .font(DPTypography.caption)
+            }
+        }
+    }
 }
 
 private struct TodoColumnDropZone: View {

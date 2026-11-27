@@ -498,6 +498,45 @@ struct TodoViewModelTests {
     }
 
     @Test
+    func nonEmptyColumnsOfferACompactDashedAddCardAfterTheLastCard() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Todo/TodoView.swift"),
+            encoding: .utf8
+        )
+        let columnStart = try #require(source.range(of: "private struct TodoKanbanColumn: View"))
+        let cardStart = try #require(source.range(of: "private struct TodoCard: View", range: columnStart.upperBound..<source.endIndex))
+        let column = String(source[columnStart.lowerBound..<cardStart.lowerBound])
+        let emptyCard = try #require(column.range(of: "TodoColumnAddCard(isCompact: false, action: add)"))
+        let cards = try #require(column.range(of: "ForEach(Array(todos.enumerated())"))
+        let row = try #require(column.range(of: "TodoColumnAddCard(isCompact: true, action: add)"))
+        let rowID = try #require(column.range(of: #".accessibilityIdentifier("todo.addRow.\(status.rawValue)")"#))
+        let dropZone = try #require(column.range(of: "TodoColumnDropZone("))
+
+        // The empty column keeps the full card; the compact row follows the cards.
+        #expect(emptyCard.lowerBound < cards.lowerBound)
+        #expect(cards.lowerBound < row.lowerBound)
+        #expect(row.upperBound < rowID.lowerBound)
+        #expect(rowID.lowerBound < dropZone.lowerBound)
+        // Hidden mid-drag so the end-of-column drop indicator keeps its place.
+        #expect(String(column[cards.upperBound..<row.lowerBound]).contains("if draggedTodoID == nil"))
+
+        let viewStart = try #require(source.range(of: "private struct TodoColumnAddCard: View"))
+        let viewEnd = try #require(source.range(of: "private struct TodoColumnDropZone: View", range: viewStart.upperBound..<source.endIndex))
+        let addCard = String(source[viewStart.lowerBound..<viewEnd.lowerBound])
+        #expect(addCard.contains(".frame(maxWidth: .infinity, minHeight: isCompact ? DPSize.minimumTouchTarget : 112)"))
+        #expect(addCard.contains("DPColor.backgroundCard.opacity(0.6)"))
+        #expect(addCard.contains("DPColor.accent.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [5])"))
+        #expect(addCard.contains("RoundedRectangle(cornerRadius: DPRadius.large)"))
+        #expect(addCard.contains("HStack(spacing: 6)"))
+        #expect(addCard.components(separatedBy: #"todoLocalized("todo.action.add")"#).count == 3)
+        // The shared `add` closure owns the routine haptic, so the card adds none.
+        #expect(!addCard.contains("emitHaptic"))
+    }
+
+    @Test
     func completedCleanupSymbolIsAvailableOnSupportedIOS() {
         #expect(
             UIImage(systemName: "paintbrush.fill") != nil,
