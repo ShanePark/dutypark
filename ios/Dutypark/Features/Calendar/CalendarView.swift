@@ -292,6 +292,7 @@ struct CalendarView: View {
     @State private var isSlidingMonth = false
     @State private var isSwipingMonth = false
     @State private var isCalendarZoomActive = false
+    @State private var isCalendarScrollLocked = false
     @State private var leavesAfterBlock = false
     @State private var refreshesAfterReportedBlock = false
     @StateObject private var blockModel = MemberBlockViewModel()
@@ -609,6 +610,7 @@ struct CalendarView: View {
                         value: visibleCalendarDays.count
                     )
                 }
+                .scrollDisabled(isCalendarScrollLocked)
                 // A spotlit day off screen or under the tab bar is brought into view; one
                 // already visible stays put, and ordinary navigation never scrolls here.
                 .onChange(of: model.dateFlash?.id) { _, _ in
@@ -1426,7 +1428,8 @@ struct CalendarView: View {
     private var swipeableCalendarGrid: some View {
         DPCalendarZoom(
             resetID: AnyHashable("\(model.targetMemberID?.description ?? "self")-\(displayedMonthKey.year)-\(displayedMonthKey.month)-\(model.isQuickDutyEditing)"),
-            isActive: $isCalendarZoomActive
+            isActive: $isCalendarZoomActive,
+            isScrollLocked: $isCalendarScrollLocked
         ) {
             calendarGrid
         }

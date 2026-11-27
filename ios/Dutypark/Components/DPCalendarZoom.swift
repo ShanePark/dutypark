@@ -42,6 +42,10 @@ nonisolated enum DPCalendarZoomPolicy {
 struct DPCalendarZoom<Content: View>: View {
     let resetID: AnyHashable
     @Binding var isActive: Bool
+    /// True while a pinch or zoom pan owns the touches. The host applies it as
+    /// `.scrollDisabled` on the enclosing ScrollView, because SwiftUI re-applies its own
+    /// scroll setting in later updates and would otherwise re-enable the outer pan.
+    @Binding var isScrollLocked: Bool
     @ViewBuilder let content: () -> Content
     @State private var scale: CGFloat = 1
     @State private var offset = CGSize.zero
@@ -71,6 +75,7 @@ struct DPCalendarZoom<Content: View>: View {
                 isZoomed: { scale > 1 },
                 onPinch: handlePinch,
                 onPan: handlePan,
+                onScrollLockChange: updateScrollLock,
                 onViewportChange: updateViewport
             ))
             .overlay(alignment: .topTrailing) {
@@ -100,6 +105,11 @@ struct DPCalendarZoom<Content: View>: View {
         offset = .zero
         isPinching = false
         isActive = false
+        updateScrollLock(false)
+    }
+
+    private func updateScrollLock(_ locked: Bool) {
+        if isScrollLocked != locked { isScrollLocked = locked }
     }
 
     private func updateSize(_ next: CGSize) {
@@ -154,6 +164,7 @@ private struct DPCalendarZoomBridge: UIViewRepresentable {
     let isZoomed: () -> Bool
     let onPinch: (UIGestureRecognizer.State, CGFloat, CGPoint, CGRect) -> Void
     let onPan: (UIGestureRecognizer.State, CGPoint, CGRect) -> Void
+    let onScrollLockChange: (Bool) -> Void
     let onViewportChange: (CGRect) -> Void
 
     func makeUIView(context: Context) -> DPCalendarZoomAnchor {
@@ -167,6 +178,7 @@ private struct DPCalendarZoomBridge: UIViewRepresentable {
         context.coordinator.isZoomed = isZoomed
         context.coordinator.onPinch = onPinch
         context.coordinator.onPan = onPan
+        context.coordinator.onScrollLockChange = onScrollLockChange
         context.coordinator.onViewportChange = onViewportChange
         context.coordinator.resetIfNeeded(for: resetID)
         uiView.attach()
@@ -217,6 +229,7 @@ final class DPCalendarZoomCoordinator: NSObject, UIGestureRecognizerDelegate {
     var isZoomed: () -> Bool = { false }
     var onPinch: (UIGestureRecognizer.State, CGFloat, CGPoint, CGRect) -> Void = { _, _, _, _ in }
     var onPan: (UIGestureRecognizer.State, CGPoint, CGRect) -> Void = { _, _, _ in }
+    var onScrollLockChange: (Bool) -> Void = { _ in }
     var onViewportChange: (CGRect) -> Void = { _ in }
 
     lazy var pinch: UIPinchGestureRecognizer = {
@@ -292,6 +305,7 @@ final class DPCalendarZoomCoordinator: NSObject, UIGestureRecognizerDelegate {
             isPinching = false
             restoreScrollPan()
         }
+        onScrollLockChange(isPinching || isPanning)
     }
 
     @objc private func panned(_ gesture: UIPanGestureRecognizer) {
@@ -309,8 +323,11 @@ final class DPCalendarZoomCoordinator: NSObject, UIGestureRecognizerDelegate {
             isPanning = false
             restoreScrollPan()
         }
+        onScrollLockChange(isPinching || isPanning)
     }
 
+    // SwiftUI applies `.scrollDisabled` only on its next update, so the outer pan is
+    // also switched off here to stop a scroll that began in this same touch sequence.
     private func suppressScrollPan() {
         guard let scrollView, scrollView.panGestureRecognizer.isEnabled else { return }
         restoresScrollPan = true

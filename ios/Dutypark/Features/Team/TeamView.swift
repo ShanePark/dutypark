@@ -47,6 +47,7 @@ struct TeamView: View {
     @State private var isSwipingMonth = false
     @State private var isSlidingMonth = false
     @State private var isCalendarZoomActive = false
+    @State private var isCalendarScrollLocked = false
     @State private var monthSlideTask: Task<Void, Never>?
     private let onOpenCalendar: (MemberID) -> Void
 
@@ -330,7 +331,8 @@ struct TeamView: View {
                 VStack(spacing: DPSpacing.compact) {
                     DPCalendarZoom(
                         resetID: AnyHashable("\(team.id)-\(viewModel.calendarMonth.year)-\(viewModel.calendarMonth.month)"),
-                        isActive: $isCalendarZoomActive
+                        isActive: $isCalendarZoomActive,
+                        isScrollLocked: $isCalendarScrollLocked
                     ) {
                         calendar
                     }
@@ -344,6 +346,7 @@ struct TeamView: View {
                 .padding(.top, DPSpacing.medium + Self.thisMonthCalloutClearance)
                 .padding(.bottom, DPSpacing.medium)
             }
+            .scrollDisabled(isCalendarScrollLocked)
 
             thisMonthCalloutLayer
                 .offset(y: DPThisMonthCallout.verticalOffset)

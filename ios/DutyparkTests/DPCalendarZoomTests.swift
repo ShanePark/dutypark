@@ -173,6 +173,52 @@ final class DPCalendarZoomTests: XCTestCase {
     }
 
     @MainActor
+    func testHostedZoomKeepsOuterScrollingOffWhenSwiftUIReappliesScrollSettings() throws {
+        let state = CalendarZoomHostState()
+        let host = UIHostingController(rootView: CalendarZoomHostFixture(state: state))
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 375, height: 600))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+
+        func render() {
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+            host.view.layoutIfNeeded()
+        }
+
+        func recognizers(in view: UIView) -> [UIGestureRecognizer] {
+            (view.gestureRecognizers ?? []) + view.subviews.flatMap { recognizers(in: $0) }
+        }
+
+        render()
+        let pinch = try XCTUnwrap(recognizers(in: host.view).first { $0.delegate is DPCalendarZoomCoordinator && $0 is UIPinchGestureRecognizer })
+        let zoom = try XCTUnwrap(pinch.delegate as? DPCalendarZoomCoordinator)
+        let outerScroll = try XCTUnwrap(pinch.view as? UIScrollView)
+
+        // SwiftUI may re-apply its scroll settings in any update, which re-enables
+        // UIScrollView's own pan unless SwiftUI itself knows scrolling is off.
+        zoom.handlePinch(state: .began, scale: 1, location: CGPoint(x: 100, y: 100))
+        zoom.handlePinch(state: .changed, scale: 2, location: CGPoint(x: 100, y: 100))
+        outerScroll.isScrollEnabled = true
+        render()
+        XCTAssertFalse(outerScroll.panGestureRecognizer.isEnabled, "A pinch must keep the outer scroll still")
+        zoom.handlePinch(state: .ended, scale: 2, location: CGPoint(x: 100, y: 100))
+        render()
+        XCTAssertTrue(zoom.isZoomed())
+        XCTAssertTrue(outerScroll.panGestureRecognizer.isEnabled)
+
+        zoom.handlePan(state: .began, translation: .zero)
+        outerScroll.isScrollEnabled = true
+        render()
+        XCTAssertFalse(outerScroll.panGestureRecognizer.isEnabled, "A zoom pan must keep the outer scroll still")
+        zoom.handlePan(state: .ended, translation: .zero)
+        render()
+        XCTAssertTrue(outerScroll.panGestureRecognizer.isEnabled)
+    }
+
+    @MainActor
     func testHostedZoomPreservesMagnificationDuringEdgePansAndGeometryChanges() throws {
         let state = CalendarZoomHostState()
         let host = UIHostingController(rootView: CalendarZoomHostFixture(state: state))
@@ -225,10 +271,11 @@ private final class CalendarZoomHostState: ObservableObject {
 private struct CalendarZoomHostFixture: View {
     @ObservedObject var state: CalendarZoomHostState
     @State private var isActive = false
+    @State private var isScrollLocked = false
 
     var body: some View {
         ScrollView {
-            DPCalendarZoom(resetID: AnyHashable(state.resetID), isActive: $isActive) {
+            DPCalendarZoom(resetID: AnyHashable(state.resetID), isActive: $isActive, isScrollLocked: $isScrollLocked) {
                 Color.red
                     .frame(height: state.height)
                     .dpHorizontalPan(
@@ -237,5 +284,6 @@ private struct CalendarZoomHostFixture: View {
                     )
             }
         }
+        .scrollDisabled(isScrollLocked)
     }
 }
