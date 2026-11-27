@@ -594,7 +594,9 @@ onMounted(() => {
     </template>
 
     <template v-else-if="team">
-      <div class="flex items-center justify-between gap-1 mb-1">
+      <!-- The calendar starts right below the header, so keep room for the "this month"
+           bubble that hangs under the month capsule; it stays open so nothing jumps. -->
+      <div class="flex items-center justify-between gap-1 mb-7">
         <div class="w-20 sm:w-24 flex-shrink-0 flex items-center justify-start">
           <div class="flex items-center gap-1.5 px-2 py-1 rounded-full border bg-dp-bg-tertiary border-dp-border-secondary">
             <Building2 class="w-3.5 h-3.5 flex-shrink-0 text-dp-text-secondary" />
