@@ -40,6 +40,19 @@
         }
       },
       "entries": {
+        "pr-445": {
+          "title": "검색 날짜 강조와 더 안정적인 iOS 달력 확대",
+          "summary": "검색 결과로 이동한 날짜가 잠시 강조되고, iOS 달력을 핀치로 확대·축소할 때 화면이 흔들리거나 날짜가 잘못 열리지 않습니다.",
+          "changes": [
+            "검색 결과에서 날짜로 이동하면 나머지 날짜를 잠시 흐리게 해 이동한 날짜가 눈에 띄도록 했습니다.",
+            "일정 검색 창을 닫았다가 다시 열면 이전 검색어와 결과 없이 비어 있는 상태로 시작합니다.",
+            "친구 검색 결과의 다음 페이지가 입력란의 현재 글자가 아니라 실제로 검색한 단어 기준으로 불러와집니다.",
+            "iOS 달력을 핀치로 확대·축소하는 동안 화면이 위아래로 스크롤되지 않고, 손가락을 뗄 때 날짜가 열리지 않습니다.",
+            "오늘 날짜를 빨간 날짜 띠로 표시하고, 시간 표시를 오른쪽에 맞추는 등 달력 모양을 다듬었습니다.",
+            "할 일 보드에서 항목이 있는 모든 열 끝에 바로 추가할 수 있는 줄을 두었습니다.",
+            "더보기 화면의 정책 링크를 작은 테두리 버튼으로 바꾸고, 멤버 태그에 은은한 광택을 더했습니다."
+          ]
+        },
         "pr-444": {
           "title": "함께 보기 정렬과 달력 일정 구분선 개선",
           "summary": "함께 보기에서 친구 근무가 한 주 내내 같은 높이에 보이고, PC 달력에서도 하루의 일정 사이에 얇은 구분선이 보입니다.",
@@ -2480,6 +2493,19 @@
         }
       },
       "entries": {
+        "pr-445": {
+          "title": "Search date spotlight and steadier iOS calendar zoom",
+          "summary": "Jumping to a searched date briefly highlights it, and pinching an iOS calendar no longer shakes the page or opens the wrong day.",
+          "changes": [
+            "Jumping to a date from search briefly dims the rest of the month so the date stands out.",
+            "Closing and reopening schedule search now starts empty, without the last query or results.",
+            "Friend search loads more results for the keyword you searched, not what is currently typed in the field.",
+            "Pinching an iOS calendar no longer scrolls the page, and lifting your fingers no longer opens a day.",
+            "Today is marked with a red date strip, time chips are right-aligned, and other calendar details are polished.",
+            "Every non-empty to-do board column ends with a row for adding a new item.",
+            "Policy links on the More page are small outlined buttons, and member tags have a subtle gloss."
+          ]
+        },
         "pr-444": {
           "title": "Steadier together view and clearer calendar items",
           "summary": "Friends' duties in together view now stay at the same height across each week, and desktop calendars separate a day's schedules with a thin line.",
@@ -4883,6 +4909,21 @@
     }
   },
   "items": [
+    {
+      "id": "pr-445",
+      "version": "2026.11.28",
+      "date": "2026-11-28",
+      "pr": 445,
+      "url": "https://github.com/ShanePark/dutypark/pull/445",
+      "category": "feature",
+      "areas": [
+        "calendar",
+        "friends",
+        "schedule",
+        "todo",
+        "ui"
+      ]
+    },
     {
       "id": "pr-444",
       "version": "2026.11.24.02",
