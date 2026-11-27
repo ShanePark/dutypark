@@ -44,13 +44,63 @@ struct CalendarMonthCellGrid<Item: Identifiable, Cell: View>: View {
     @ViewBuilder let content: (Int, Item) -> Cell
 
     var body: some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: DPCalendarCellStyle.gutterWidth), count: 7),
-            spacing: DPCalendarCellStyle.gutterWidth
-        ) {
+        // Not a LazyVGrid: a lazy grid keeps the row heights it estimated for the
+        // month it showed before, so a month body measured taller (or shorter) than
+        // its own rows, and the swipe viewport and D-Day cards jumped on commit.
+        CalendarMonthRowsLayout(spacing: DPCalendarCellStyle.gutterWidth) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 content(index, item)
             }
+        }
+    }
+}
+
+/// Seven equal columns, each row as tall as its tallest tile, every tile measured.
+private struct CalendarMonthRowsLayout: Layout {
+    let spacing: CGFloat
+    private let columns = 7
+
+    init(spacing: CGFloat) {
+        self.spacing = spacing
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
+        let width = proposal.width ?? idealWidth(subviews)
+        let heights = rowHeights(subviews, columnWidth: columnWidth(width))
+        return CGSize(width: width, height: heights.reduce(0, +) + spacing * CGFloat(max(heights.count - 1, 0)))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
+        let columnWidth = columnWidth(bounds.width)
+        var y = bounds.minY
+        for (row, height) in rowHeights(subviews, columnWidth: columnWidth).enumerated() {
+            for column in 0..<columns {
+                let index = row * columns + column
+                guard index < subviews.count else { break }
+                subviews[index].place(
+                    at: CGPoint(x: bounds.minX + CGFloat(column) * (columnWidth + spacing), y: y),
+                    anchor: .topLeading,
+                    proposal: ProposedViewSize(width: columnWidth, height: height)
+                )
+            }
+            y += height + spacing
+        }
+    }
+
+    private func columnWidth(_ width: CGFloat) -> CGFloat {
+        max((width - spacing * CGFloat(columns - 1)) / CGFloat(columns), 0)
+    }
+
+    private func idealWidth(_ subviews: Subviews) -> CGFloat {
+        let widest = subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
+        return widest * CGFloat(columns) + spacing * CGFloat(columns - 1)
+    }
+
+    private func rowHeights(_ subviews: Subviews, columnWidth: CGFloat) -> [CGFloat] {
+        stride(from: 0, to: subviews.count, by: columns).map { start in
+            subviews[start..<min(start + columns, subviews.count)]
+                .map { $0.sizeThatFits(ProposedViewSize(width: columnWidth, height: nil)).height }
+                .max() ?? 0
         }
     }
 }
@@ -212,6 +262,11 @@ struct CalendarView: View {
     @StateObject private var model: CalendarViewModel
     @StateObject private var todoDetailModel = TodoViewModel()
     @State private var showsSearch = false
+    /// Set once UIKit reports the screen fully on, after any push or tab transition.
+    @State private var hasFinishedAppearing = false
+    /// Stays true until UIKit has finished sliding the search cover away, which is
+    /// after `showsSearch` turns false.
+    @State private var isSearchCoverOnScreen = false
     @State private var dDayModalSelection: DDayModalSelection?
     @State private var showsMonthPicker = false
     @State private var showsDutyComparison = false
@@ -237,6 +292,8 @@ struct CalendarView: View {
     @State private var isSlidingMonth = false
     @State private var isSwipingMonth = false
     @State private var isCalendarZoomActive = false
+    @State private var isCalendarScrollLocked = false
+    @State private var isCalendarTapIgnored = false
     @State private var leavesAfterBlock = false
     @State private var refreshesAfterReportedBlock = false
     @StateObject private var blockModel = MemberBlockViewModel()
@@ -285,6 +342,10 @@ struct CalendarView: View {
         // restores UIKit's edge pop itself; at the calendar tab root there is nothing to
         // pop and the gesture policy declines it.
         .dpInteractivePopGestureEnabled()
+        .background(CalendarAppearanceReporter { hasFinishedAppearing = $0 })
+        .onChange(of: isDateSpotlightRevealable, initial: true) { _, revealable in
+            model.setDateSpotlightRevealable(revealable)
+        }
         .toolbar { calendarToolbar }
         .task {
             configureFromSession()
@@ -368,7 +429,12 @@ struct CalendarView: View {
                 }
             }
         }
-        .fullScreenCover(isPresented: $showsSearch) {
+        // Clears the search only after its cover has finished closing, whichever way it
+        // closed, so a picked result has already jumped and queued its spotlight.
+        .onChange(of: isSearchCoverOnScreen) { _, isOnScreen in
+            if !isOnScreen { model.resetSearch() }
+        }
+        .fullScreenCover(isPresented: $showsSearch, onDismiss: { isSearchCoverOnScreen = false }) {
             DPModalOverlay(
                 onDismiss: {
                     showsSearch = false
@@ -517,31 +583,48 @@ struct CalendarView: View {
         )) { Button(CalendarLocalization.text("calendar.ok"), role: .cancel) { model.dutyBatchMessage = nil } } message: { Text(model.dutyBatchMessage ?? "") }
     }
 
+    /// A spotlight waits until the dim can be seen arriving: the screen has finished
+    /// sliding or switching in, and the search that picked the date has fully closed.
+    private var isDateSpotlightRevealable: Bool {
+        hasFinishedAppearing && !isSearchCoverOnScreen
+    }
+
     private var calendarContent: some View {
         ZStack(alignment: .top) {
-            ScrollView {
-                LazyVStack(spacing: DPSpacing.small) {
-                    if model.isShowingCachedData || model.pendingScheduleCount > 0 {
-                        offlineStateBanner
+            ScrollViewReader { scroll in
+                ScrollView {
+                    LazyVStack(spacing: DPSpacing.small) {
+                        if model.isShowingCachedData || model.pendingScheduleCount > 0 {
+                            offlineStateBanner
+                        }
+                        if model.isMyCalendar, model.me != nil, model.me?.teamId == nil {
+                            noTeamDutyBanner
+                        }
+                        if showsDutyToolbar {
+                            dutyToolbar
+                        }
+                        swipeableCalendarGrid
+                        if !model.isQuickDutyEditing {
+                            monthDDayPager
+                        }
                     }
-                    if model.isMyCalendar, model.me != nil, model.me?.teamId == nil {
-                        noTeamDutyBanner
-                    }
-                    if showsDutyToolbar {
-                        dutyToolbar
-                    }
-                    swipeableCalendarGrid
-                    if !model.isQuickDutyEditing {
-                        monthDDayPager
+                    .padding(.horizontal, DPSpacing.small)
+                    .padding(.top, DPSpacing.extraSmall)
+                    .padding(.bottom, DPSpacing.large)
+                    .animation(
+                        reduceMotion ? nil : .easeInOut(duration: CalendarMonthSwipe.slideInDuration),
+                        value: visibleCalendarDays.count
+                    )
+                }
+                .scrollDisabled(isCalendarScrollLocked)
+                // A spotlit day off screen or under the tab bar is brought into view; one
+                // already visible stays put, and ordinary navigation never scrolls here.
+                .onChange(of: model.dateFlash?.id) { _, _ in
+                    guard let target = CalendarDateFlash.scrollTarget(for: model.dateFlash) else { return }
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) {
+                        scroll.scrollTo(target, anchor: nil)
                     }
                 }
-                .padding(.horizontal, DPSpacing.small)
-                .padding(.top, DPSpacing.extraSmall)
-                .padding(.bottom, DPSpacing.large)
-                .animation(
-                    reduceMotion ? nil : .easeInOut(duration: CalendarMonthSwipe.slideInDuration),
-                    value: visibleCalendarDays.count
-                )
             }
 
             thisMonthCalloutLayer
@@ -893,7 +976,10 @@ struct CalendarView: View {
     private func performSearch() {
         guard model.canSearchSchedules else { return }
         DPHapticCenter.shared.emit(.routine)
-        withoutPresentationAnimation { showsSearch = true }
+        withoutPresentationAnimation {
+            isSearchCoverOnScreen = true
+            showsSearch = true
+        }
         if !model.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Task { await model.search() }
         }
@@ -1165,6 +1251,13 @@ struct CalendarView: View {
             monthBodyPager
         }
         .background(DPCalendarCellStyle.gutterColor)
+        .overlayPreferenceValue(CalendarDateSpotlightTargetKey.self) { target in
+            if let target, let flash = model.dateFlash {
+                GeometryReader { proxy in
+                    CalendarDateSpotlight(target: proxy[target]).id(flash.id)
+                }
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: DPCalendarCellStyle.cornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: DPCalendarCellStyle.cornerRadius)
@@ -1185,12 +1278,16 @@ struct CalendarView: View {
                 ) { page, index in
                     calendarMonthBody(page: page, isInteractive: index == 1 && !isSlidingMonth)
                 }
+                // The track and the resting month show the same page in the same place
+                // when a swipe commits; a fade would dissolve the grid through the gutter.
+                .transition(.identity)
             } else {
                 calendarMonthBody(
                     page: CalendarMonthPage(key: displayedMonthKey, days: model.days),
                     isInteractive: true
                 )
                 .fixedSize(horizontal: false, vertical: true)
+                .transition(.identity)
             }
         }
         .onPreferenceChange(CalendarMonthBodyHeightsPreferenceKey.self) { heights in
@@ -1230,7 +1327,9 @@ struct CalendarView: View {
         let range = CalendarDateSupport.displayedCellRange(in: cells)
         let days = Array(page.days[range])
 
-        let openDDay: ((DDayDTO) -> Void)? = isInteractive ? { openDDayDetail($0) } : nil
+        let openDDay: ((DDayDTO) -> Void)? = isInteractive
+            ? { item in if !isCalendarTapIgnored { openDDayDetail(item) } }
+            : nil
         let spanLanes = DPCalendarSpanLanes.layout(
             days.map(\.schedules),
             id: \.id,
@@ -1252,12 +1351,13 @@ struct CalendarView: View {
                     spanLanes: spanLanes[index],
                     weekDays: DPCalendarSpanRibbonDay.week(containing: index, in: ribbonDays),
                     highlighted: model.highlightedDate == day.cell.date,
+                    isSpotlit: model.dateFlash?.date == day.cell.date,
                     pinnedDDay: model.pinnedDDay,
                     hidesDetails: model.isQuickDutyEditing,
                     calendarMemberID: model.targetMemberID,
                     isMyCalendar: model.isMyCalendar,
                     opensDetail: opensDetail,
-                    openTodo: openTodo,
+                    openTodo: { todo in if !isCalendarTapIgnored { openTodo(todo) } },
                     openDDay: openDDay
                 )
                 if opensDetail {
@@ -1265,6 +1365,8 @@ struct CalendarView: View {
                         // A finger that pulled the grid sideways was swiping, not
                         // tapping, even when it gave up short of the next month.
                         guard !isSwipingMonth, !isSlidingMonth else { return }
+                        // The finger lifted last after a pinch was zooming, not tapping.
+                        guard !isCalendarTapIgnored else { return }
                         if model.isQuickDutyEditing { model.focusQuickDuty(on: day) }
                         else {
                             withoutPresentationAnimation { model.selectDay(day) }
@@ -1287,8 +1389,8 @@ struct CalendarView: View {
         .accessibilityHidden(!isInteractive)
     }
 
-    /// Starts a swipe on another member's already-fetched neighbouring month when
-    /// it is ready; otherwise date-only cells keep the neutral no-duty surface.
+    /// Starts a swipe on the already-fetched neighbouring month when it is ready;
+    /// otherwise date-only cells keep the neutral no-duty surface.
     private func placeholderMonthPage(for key: OfflineMonthKey) -> CalendarMonthPage {
         if let days = model.readyMonthPreview(year: key.year, month: key.month) {
             return CalendarMonthPage(key: key, days: days)
@@ -1336,7 +1438,9 @@ struct CalendarView: View {
     private var swipeableCalendarGrid: some View {
         DPCalendarZoom(
             resetID: AnyHashable("\(model.targetMemberID?.description ?? "self")-\(displayedMonthKey.year)-\(displayedMonthKey.month)-\(model.isQuickDutyEditing)"),
-            isActive: $isCalendarZoomActive
+            isActive: $isCalendarZoomActive,
+            isScrollLocked: $isCalendarScrollLocked,
+            ignoresTaps: $isCalendarTapIgnored
         ) {
             calendarGrid
         }
@@ -1502,8 +1606,10 @@ struct CalendarView: View {
                         .allowsHitTesting(index == 1 && !isSwipingMonth && !isSlidingMonth)
                         .accessibilityHidden(index != 1)
                 }
+                .transition(.identity)
             } else {
                 dDaySection
+                    .transition(.identity)
             }
         }
     }
@@ -2034,6 +2140,93 @@ private struct CalendarMemberAvatar: View {
     }
 }
 
+/// Reports when the screen has finished appearing or begins to leave. SwiftUI's `onAppear`
+/// fires as a push starts sliding in; UIKit's `viewDidAppear` waits for it to land.
+private struct CalendarAppearanceReporter: UIViewControllerRepresentable {
+    let onChange: (Bool) -> Void
+
+    func makeUIViewController(context: Context) -> Controller {
+        Controller(onChange: onChange)
+    }
+
+    func updateUIViewController(_ controller: Controller, context: Context) {
+        controller.onChange = onChange
+    }
+
+    final class Controller: UIViewController {
+        var onChange: (Bool) -> Void
+
+        init(onChange: @escaping (Bool) -> Void) {
+            self.onChange = onChange
+            super.init(nibName: nil, bundle: nil)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) is not supported")
+        }
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            onChange(true)
+        }
+
+        override func viewWillDisappear(_ animated: Bool) {
+            super.viewWillDisappear(animated)
+            onChange(false)
+        }
+    }
+}
+
+/// The frame of the spotlit day, reported up to the month grid.
+private struct CalendarDateSpotlightTargetKey: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
+    }
+}
+
+/// One black layer over the month grid with the jumped-to day cut out, so everything
+/// else dims while the day keeps its full brightness, then fades away. Each new flash
+/// gets a fresh view, so the timeline replays from the start.
+private struct CalendarDateSpotlight: View {
+    let target: CGRect
+    @State private var dim = 0.0
+
+    var body: some View {
+        Cutout(hole: target)
+            .fill(Color.black, style: FillStyle(eoFill: true))
+            .opacity(dim)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .task {
+                for step in CalendarDateFlash.steps {
+                    withAnimation(Self.animation(for: step)) { dim = step.dim }
+                    do { try await Task.sleep(for: .seconds(step.duration)) } catch { return }
+                }
+            }
+    }
+
+    private static func animation(for step: CalendarDateFlash.Step) -> Animation {
+        switch step.curve {
+        case .easeIn: .easeIn(duration: step.duration)
+        case .linear: .linear(duration: step.duration)
+        case .easeOut: .easeOut(duration: step.duration)
+        }
+    }
+
+    private struct Cutout: Shape {
+        let hole: CGRect
+
+        nonisolated func path(in rect: CGRect) -> Path {
+            var path = Path(rect)
+            path.addRect(hole)
+            return path
+        }
+    }
+}
+
 private struct CalendarDayCell: View {
     let day: CalendarDayContent
     let weekday: Int
@@ -2042,6 +2235,8 @@ private struct CalendarDayCell: View {
     let spanLanes: [DPCalendarSpanLanes.Placement<ScheduleDTO>?]
     let weekDays: [DPCalendarSpanRibbonDay]
     let highlighted: Bool
+    /// Whether the grid is spotlighting this day after the calendar jumped to it.
+    let isSpotlit: Bool
     let pinnedDDay: DDayDTO?
     let hidesDetails: Bool
     let calendarMemberID: MemberID?
@@ -2056,12 +2251,12 @@ private struct CalendarDayCell: View {
             weekdayIndex: weekday,
             dutyColor: dutyColor,
             isCurrentMonth: isCurrentMonth,
-            isToday: isToday && !hidesDetails,
+            isToday: showsToday,
             hasHoliday: !hidesDetails && !day.holidays.isEmpty,
             highlight: highlightBorder,
             ribbonColumn: !hidesDetails && DPCalendarSpanLanes.startsRibbon(spanLanes, column: weekday) ? weekday : nil
         ) {
-            if let pinnedDDay, !hidesDetails, let label = relativeLabel(pinnedDDay) {
+            if let label = pinLabel {
                 Text(verbatim: label)
                     .font(label == "D-Day"
                         ? DPFont.bold(size: CalendarTypography.cellMicro, relativeTo: .caption2)
@@ -2069,12 +2264,17 @@ private struct CalendarDayCell: View {
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                    .foregroundStyle(label == "D-Day" ? primaryForeground : secondaryForeground)
+                    .foregroundStyle(showsToday
+                        ? DPCalendarTodayStrip.ink.opacity(label == "D-Day" ? 1 : 0.95)
+                        : label == "D-Day" ? primaryForeground : secondaryForeground)
             }
         } content: {
             if !hidesDetails {
                 details
             }
+        }
+        .anchorPreference(key: CalendarDateSpotlightTargetKey.self, value: .bounds) {
+            isSpotlit && !hidesDetails ? $0 : nil
         }
         .contentShape(Rectangle())
         // The day gesture belongs to the whole cell. Without an explicit accessibility
@@ -2179,15 +2379,22 @@ private struct CalendarDayCell: View {
         DPCalendarCellStyle.ruleColor(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)
     }
 
-    /// Search results are marked in warning; quick duty editing keeps its accent focus.
+    /// Quick duty editing keeps its accent focus; a jumped-to date is only spotlit.
     private var highlightBorder: Color? {
-        guard highlighted else { return nil }
-        return hidesDetails ? DPColor.accent : DPColor.warning
+        highlighted && hidesDetails ? DPColor.accent : nil
     }
 
     private var isToday: Bool {
         let today = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: Date())
         return day.cell.year == today.year && day.cell.month == today.month && day.cell.day == today.day
+    }
+
+    /// Quick duty editing keeps its own selection indicator without the today strip.
+    private var showsToday: Bool { isToday && !hidesDetails }
+
+    private var pinLabel: String? {
+        guard let pinnedDDay, !hidesDetails else { return nil }
+        return relativeLabel(pinnedDDay)
     }
 
     @ViewBuilder
@@ -4208,10 +4415,10 @@ private struct ScheduleSearchView: View {
             .padding(.bottom, DPSpacing.small)
 
             HStack {
-                if trimmedQuery.isEmpty {
-                    Text(CalendarLocalization.text("calendar.search.hint"))
+                if let searchedQuery = model.searchedQuery {
+                    Text(CalendarLocalization.format("calendar.search.summary", searchedQuery, model.searchResults.count))
                 } else {
-                    Text(CalendarLocalization.format("calendar.search.summary", trimmedQuery, model.searchResults.count))
+                    Text(CalendarLocalization.text("calendar.search.hint"))
                 }
                 Spacer(minLength: 0)
             }
@@ -4225,7 +4432,7 @@ private struct ScheduleSearchView: View {
     private var results: some View {
         LazyVStack(spacing: DPSpacing.small) {
             if model.searchResults.isEmpty {
-                Text(CalendarLocalization.text(trimmedQuery.isEmpty ? "calendar.search.hint" : "calendar.search.empty"))
+                Text(CalendarLocalization.text(model.searchedQuery == nil ? "calendar.search.hint" : "calendar.search.empty"))
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .multilineTextAlignment(.center)

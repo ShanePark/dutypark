@@ -93,6 +93,10 @@ const monthSwipe = useCalendarMonthSwipe({
   getWidth: () => swipeContainer.value?.clientWidth ?? 0,
 })
 
+// The previous grid stays up while a jumped-to month loads, and its outside cells
+// may repeat the target date; start the spotlight only on the month's own grid.
+const spotlightDay = computed(() => props.isCalendarMonthLoaded ? props.highlightDay : null)
+
 const focusedCalendarDay = computed(() => {
   if (!props.batchEditMode || !props.focusedDay || !props.isCalendarMonthLoaded) return null
   return { year: props.currentYear, month: props.currentMonth, day: props.focusedDay }
@@ -277,7 +281,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
         :current-month="calendarDataMonth"
         :holidays="displayHolidays"
         :get-duty-color="getDutyColorForDay"
-        :highlight-day="highlightDay"
+        :highlight-day="spotlightDay"
         :focused-day="focusedCalendarDay"
         :clickable="isCalendarMonthLoaded && (!batchEditMode || canEdit)"
         :is-day-clickable="isDayClickable"
@@ -401,7 +405,11 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                 />{{ schedule.contentWithoutTime || schedule.content }}<MessageSquareText
                   v-if="hasScheduleDetails(schedule)"
                   class="calendar-schedule-detail-icon"
-                /></span> <span v-if="formatScheduleTime(schedule)" class="calendar-item__time"><template
+                /></span><span
+                  v-if="formatScheduleTime(schedule)"
+                  class="calendar-item__time"
+                  :class="{ 'calendar-item__time--single': getScheduleTimeParts(schedule).length === 1 }"
+                ><template
                   v-for="(part, partIndex) in getScheduleTimeParts(schedule)"
                   :key="partIndex"
                 ><wbr v-if="partIndex > 0"><span class="calendar-item__time-part">{{ part }}</span></template></span>
@@ -505,6 +513,14 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 
 .calendar-month-swipe__grid {
   display: flow-root;
+}
+
+/* iOS strokes the grid rim over its 8px inset, while the web border takes layout
+   width; on phones the grid reaches 1px into the inset so day columns match iOS. */
+@media (max-width: 639.98px) {
+  .calendar-month-swipe__grid {
+    margin-inline: -1px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -702,8 +718,9 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 .schedule-tag {
   padding: 0;
   border-radius: 9999px;
-  box-shadow: none;
-  background: var(--dp-bg-primary);
+  box-shadow: inset 0 0.5px 0 var(--dp-tag-chip-highlight), var(--dp-tag-chip-drop-mini);
+  background-color: var(--dp-bg-primary);
+  background-image: var(--dp-tag-chip-sheen);
   border-color: var(--dp-border-primary);
   color: var(--dp-text-secondary);
 }
@@ -763,7 +780,10 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
    The ancestor tile class comes from CalendarGrid, hence the unscoped prefix. */
 .calendar-day--on-light .schedule-tag,
 .calendar-day--on-dark .schedule-tag {
-  background: rgba(255, 255, 255, 0.72);
+  /* White glass whose gradient averages the former flat 0.72 white. */
+  background-color: transparent;
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.84) 0%, rgb(255 255 255 / 0.62) 100%);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.95), 0 0.5px 1px rgb(15 23 42 / 0.14);
   border-color: rgba(31, 41, 55, 0.14);
   color: #374151;
 }

@@ -28,3 +28,21 @@ describe('duty calendar in-cell styling', () => {
     expect(body).not.toContain('var(--dp-')
   })
 })
+
+describe('in-cell tag chip gloss', () => {
+  it('glosses chips on empty tiles with the theme tokens, scaled down', () => {
+    const chip = ruleBody('.schedule-tag {')
+    expect(chip).toContain('background-color: var(--dp-bg-primary);')
+    expect(chip).toContain('background-image: var(--dp-tag-chip-sheen);')
+    expect(chip).toContain('box-shadow: inset 0 0.5px 0 var(--dp-tag-chip-highlight), var(--dp-tag-chip-drop-mini);')
+  })
+
+  // White glass over any duty fill: the gradient averages the former 0.72 white.
+  it('glosses chips on duty fills with fixed white glass', () => {
+    const chip = ruleBody('.calendar-day--on-light .schedule-tag')
+    expect(chip).toContain('background-color: transparent;')
+    expect(chip).toContain('background-image: linear-gradient(180deg, rgb(255 255 255 / 0.84) 0%, rgb(255 255 255 / 0.62) 100%);')
+    expect(chip).toContain('box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.95), 0 0.5px 1px rgb(15 23 42 / 0.14);')
+    expect(style).not.toContain('backdrop-filter')
+  })
+})

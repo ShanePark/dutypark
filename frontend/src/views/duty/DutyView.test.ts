@@ -216,7 +216,31 @@ vi.mock('@/components/duty/DayDetailModal.vue', () => ({
   }),
 }))
 vi.mock('@/components/duty/TodoDetailModal.vue', () => emptyStub)
-vi.mock('@/components/duty/SearchResultModal.vue', () => emptyStub)
+vi.mock('@/components/duty/SearchResultModal.vue', () => ({
+  default: defineComponent({
+    props: { isOpen: Boolean, query: String, results: Array, pageInfo: Object },
+    emits: ['go-to-date', 'close', 'change-page', 'search'],
+    setup(props, { emit }) {
+      return () => h('div', {
+        'data-test': 'search-modal',
+        'data-state': JSON.stringify({
+          isOpen: props.isOpen,
+          query: props.query,
+          results: props.results?.length ?? 0,
+          pageInfo: props.pageInfo,
+        }),
+      }, [
+        h('button', {
+          'data-test': 'search-go-to-date',
+          onClick: () => emit('go-to-date', { startDateTime: '2026-03-14T09:00' }),
+        }),
+        h('button', { 'data-test': 'search-submit', onClick: () => emit('search', 'dd') }),
+        h('button', { 'data-test': 'search-next-page', onClick: () => emit('change-page', 1) }),
+        h('button', { 'data-test': 'search-close', onClick: () => emit('close') }),
+      ])
+    },
+  }),
+}))
 vi.mock('@/components/duty/OtherDutiesModal.vue', () => ({
   default: defineComponent({
     emits: ['toggle', 'clear'],
@@ -231,7 +255,7 @@ vi.mock('@/components/duty/OtherDutiesModal.vue', () => ({
 vi.mock('@/components/duty/DutyHeaderControls.vue', () => ({
   default: defineComponent({
     props: { currentYear: Number, currentMonth: Number, memberName: String },
-    emits: ['open-year-month-picker', 'next-month', 'prev-month'],
+    emits: ['open-year-month-picker', 'next-month', 'prev-month', 'go-to-this-month'],
     setup(props, { emit }) {
       return () => h('div', [
         h('span', { 'data-test': 'calendar-member-name' }, props.memberName),
@@ -244,6 +268,7 @@ vi.mock('@/components/duty/DutyHeaderControls.vue', () => ({
           onClick: () => emit('next-month'),
         }, 'next month'),
         h('button', { 'data-test': 'prev-month', onClick: () => emit('prev-month') }, 'previous month'),
+        h('button', { 'data-test': 'go-to-this-month', onClick: () => emit('go-to-this-month') }, 'this month'),
       ])
     },
   }),
@@ -295,6 +320,7 @@ vi.mock('@/components/duty/DutyCalendarContent.vue', () => ({
       duties: Array,
       holidays: Array,
       otherDuties: Array,
+      highlightDay: Object,
     },
     emits: ['day-click', 'batch-duty-change'],
     setup(props, { slots, emit }) {
@@ -309,6 +335,7 @@ vi.mock('@/components/duty/DutyCalendarContent.vue', () => ({
         'data-duties': JSON.stringify(props.duties),
         'data-holidays': JSON.stringify(props.holidays),
         'data-comparison': JSON.stringify(props.otherDuties),
+        'data-highlight-day': JSON.stringify(props.highlightDay ?? null),
       }, [
         h('button', { 'data-test': 'open-calendar-day', onClick: () => {
           const day = (props.days as Array<{ year: number; month: number; day: number }>)
@@ -581,6 +608,111 @@ describe('DutyView D-Day saves', () => {
     resolveRequest({ data: makeDDay({ id: 11, title: '중복 방지' }) })
     await flush()
     expect(findHostNode(mounted.root, node => node.type === 'input' && node.props.type === 'text')).toBeNull()
+    closeMounted(mounted)
+  })
+})
+
+describe('DutyView date highlight', () => {
+  function highlightDay(root: HostNode) {
+    return JSON.parse(String(nodeByDataTest(root, 'duty-calendar-content').props['data-highlight-day']))
+  }
+
+  function windowListener(event: string) {
+    const calls = vi.mocked(window.addEventListener).mock.calls
+    return calls.find(([name]) => name === event)![1] as unknown as (event: Event) => void
+  }
+
+  it('highlights a search result date and keeps going to this month a pure navigation', async () => {
+    const mounted = await mountDutyView()
+    expect(highlightDay(mounted.root)).toBeNull()
+
+    triggerHost(nodeByDataTest(mounted.root, 'search-go-to-date'), 'onClick')
+    await flush()
+    expect(highlightDay(mounted.root)).toEqual({ year: 2026, month: 3, day: 14 })
+
+    triggerHost(nodeByDataTest(mounted.root, 'go-to-this-month'), 'onClick')
+    await flush()
+    const today = new Date()
+    expect(nodeByDataTest(mounted.root, 'duty-calendar-content').props['data-current-month'])
+      .toBe(`${today.getFullYear()}-${today.getMonth() + 1}`)
+    expect(highlightDay(mounted.root)).toBeNull()
+    closeMounted(mounted)
+  })
+
+  it('does not highlight today when the footer jumps to this month', async () => {
+    const mounted = await mountDutyView()
+    triggerHost(nodeByDataTest(mounted.root, 'search-go-to-date'), 'onClick')
+    await flush()
+    windowListener('duty-go-to-today')(new Event('duty-go-to-today'))
+    await flush()
+    expect(highlightDay(mounted.root)).toBeNull()
+    closeMounted(mounted)
+  })
+})
+
+describe('DutyView schedule search', () => {
+  const closedSearch = {
+    isOpen: false,
+    query: '',
+    results: 0,
+    pageInfo: { pageNumber: 0, pageSize: 10, totalPages: 0, totalElements: 0 },
+  }
+
+  function searchState(root: HostNode) {
+    return JSON.parse(String(nodeByDataTest(root, 'search-modal').props['data-state']))
+  }
+
+  function searchPage(page: number) {
+    return {
+      content: [{ id: `s${page}`, content: `dd ${page}`, startDateTime: '2026-03-14T09:00', endDateTime: '2026-03-14T10:00' }],
+      number: page,
+      size: 10,
+      totalPages: 2,
+      totalElements: 11,
+    }
+  }
+
+  async function search(root: HostNode) {
+    triggerHost(nodeByDataTest(root, 'search-submit'), 'onClick')
+    await flush()
+    expect(searchState(root)).toMatchObject({ isOpen: true, query: 'dd', results: 1 })
+  }
+
+  it('starts the next search empty however the search closed', async () => {
+    mocks.scheduleApi.searchSchedules.mockImplementation((_id: number, _query: string, page: number) =>
+      Promise.resolve(searchPage(page)))
+    const mounted = await mountDutyView()
+
+    await search(mounted.root)
+    triggerHost(nodeByDataTest(mounted.root, 'search-close'), 'onClick')
+    await flush()
+    expect(searchState(mounted.root)).toEqual(closedSearch)
+
+    await search(mounted.root)
+    triggerHost(nodeByDataTest(mounted.root, 'search-go-to-date'), 'onClick')
+    await flush()
+    expect(searchState(mounted.root)).toEqual(closedSearch)
+    expect(JSON.parse(String(nodeByDataTest(mounted.root, 'duty-calendar-content').props['data-highlight-day'])))
+      .toEqual({ year: 2026, month: 3, day: 14 })
+    closeMounted(mounted)
+  })
+
+  it('keeps a search closed when its answer arrives after closing', async () => {
+    let answerLatePage: (value: ReturnType<typeof searchPage>) => void = () => {}
+    mocks.scheduleApi.searchSchedules
+      .mockResolvedValueOnce(searchPage(0))
+      .mockReturnValueOnce(new Promise(resolve => { answerLatePage = resolve }))
+    const mounted = await mountDutyView()
+
+    await search(mounted.root)
+    triggerHost(nodeByDataTest(mounted.root, 'search-next-page'), 'onClick')
+    await flush()
+    triggerHost(nodeByDataTest(mounted.root, 'search-close'), 'onClick')
+    await flush()
+    answerLatePage(searchPage(1))
+    await flush()
+
+    expect(searchState(mounted.root)).toEqual(closedSearch)
     closeMounted(mounted)
   })
 })

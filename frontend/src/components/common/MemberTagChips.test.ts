@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { createHostWrapper, findHostNodes, hostText, mountHost } from '@/test/hostRenderer'
 import MemberTagChips from './MemberTagChips.vue'
+import memberTagChipsSource from './MemberTagChips.vue?raw'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: () => '작성자' }) }))
 vi.mock('@/components/common/ProfileAvatar.vue', () => ({ default: defineComponent({ setup: () => () => h('span') }) }))
@@ -36,5 +37,40 @@ describe('member tag owner treatment', () => {
     expect(findHostNodes(mounted.root, node => node.props['aria-label'] === 'Friend, 작성자')).toHaveLength(0)
     expect(hostText(mounted.root)).toBe('OwnerFriend')
     mounted.app.unmount()
+  })
+})
+
+describe('member tag chip gloss', () => {
+  const style = memberTagChipsSource.slice(memberTagChipsSource.indexOf('<style scoped>'))
+
+  function ruleFor(selector: string) {
+    const start = style.indexOf(`${selector} {`)
+    expect(start, `${selector} rule`).toBeGreaterThan(-1)
+    return style.slice(style.indexOf('{', start) + 1, style.indexOf('}', start))
+  }
+
+  it('gives every chip the sheen, an inner top highlight and a faint shadow', () => {
+    const chip = ruleFor('.member-tag-chip')
+    expect(chip).toContain('background-image: var(--dp-tag-chip-sheen);')
+    expect(chip).toContain('box-shadow: inset 0 1px 0 var(--dp-tag-chip-highlight), var(--dp-tag-chip-drop);')
+    expect(style).not.toContain('backdrop-filter')
+  })
+
+  it('fills accent chips with the defined accent background', () => {
+    expect(style).not.toContain('--dp-accent-soft')
+    expect(ruleFor('.member-tag-chip--accent')).toContain('background-color: var(--dp-accent-bg);')
+  })
+
+  it('keeps hover visible under the sheen by changing only the background colour', () => {
+    expect(ruleFor('.member-tag-chip--interactive:hover')).toContain('background-color: var(--dp-accent-bg-hover);')
+    expect(ruleFor('.member-tag-chip--neutral.member-tag-chip--interactive:hover')).toContain('background-color: var(--dp-bg-hover);')
+    expect(style).not.toMatch(/background:\s/)
+    expect(style).not.toContain('background-image: none')
+  })
+
+  it('keeps the inner highlight under the focus ring', () => {
+    expect(ruleFor('.member-tag-chip--interactive:focus-visible')).toContain(
+      'box-shadow: inset 0 1px 0 var(--dp-tag-chip-highlight), 0 0 0 3px var(--dp-accent-ring);',
+    )
   })
 })

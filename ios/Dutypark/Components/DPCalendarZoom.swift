@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UIKit.UIGestureRecognizerSubclass
 
 nonisolated enum DPCalendarZoomPolicy {
     static let maximumScale: CGFloat = 3
@@ -42,6 +43,14 @@ nonisolated enum DPCalendarZoomPolicy {
 struct DPCalendarZoom<Content: View>: View {
     let resetID: AnyHashable
     @Binding var isActive: Bool
+    /// True while a pinch or zoom pan owns the touches. The host applies it as
+    /// `.scrollDisabled` on the enclosing ScrollView, because SwiftUI re-applies its own
+    /// scroll setting in later updates and would otherwise re-enable the outer pan.
+    @Binding var isScrollLocked: Bool
+    /// True from a pinch's start until the next touch sequence begins. Hosts ignore day
+    /// taps while it is set, because the finger lifted last after a pinch can still
+    /// complete SwiftUI's tap.
+    @Binding var ignoresTaps: Bool
     @ViewBuilder let content: () -> Content
     @State private var scale: CGFloat = 1
     @State private var offset = CGSize.zero
@@ -71,6 +80,8 @@ struct DPCalendarZoom<Content: View>: View {
                 isZoomed: { scale > 1 },
                 onPinch: handlePinch,
                 onPan: handlePan,
+                onScrollLockChange: updateScrollLock,
+                onTapSuppressionChange: updateTapSuppression,
                 onViewportChange: updateViewport
             ))
             .overlay(alignment: .topTrailing) {
@@ -100,6 +111,15 @@ struct DPCalendarZoom<Content: View>: View {
         offset = .zero
         isPinching = false
         isActive = false
+        updateScrollLock(false)
+    }
+
+    private func updateScrollLock(_ locked: Bool) {
+        if isScrollLocked != locked { isScrollLocked = locked }
+    }
+
+    private func updateTapSuppression(_ ignored: Bool) {
+        if ignoresTaps != ignored { ignoresTaps = ignored }
     }
 
     private func updateSize(_ next: CGSize) {
@@ -154,6 +174,8 @@ private struct DPCalendarZoomBridge: UIViewRepresentable {
     let isZoomed: () -> Bool
     let onPinch: (UIGestureRecognizer.State, CGFloat, CGPoint, CGRect) -> Void
     let onPan: (UIGestureRecognizer.State, CGPoint, CGRect) -> Void
+    let onScrollLockChange: (Bool) -> Void
+    let onTapSuppressionChange: (Bool) -> Void
     let onViewportChange: (CGRect) -> Void
 
     func makeUIView(context: Context) -> DPCalendarZoomAnchor {
@@ -167,6 +189,8 @@ private struct DPCalendarZoomBridge: UIViewRepresentable {
         context.coordinator.isZoomed = isZoomed
         context.coordinator.onPinch = onPinch
         context.coordinator.onPan = onPan
+        context.coordinator.onScrollLockChange = onScrollLockChange
+        context.coordinator.onTapSuppressionChange = onTapSuppressionChange
         context.coordinator.onViewportChange = onViewportChange
         context.coordinator.resetIfNeeded(for: resetID)
         uiView.attach()
@@ -217,6 +241,8 @@ final class DPCalendarZoomCoordinator: NSObject, UIGestureRecognizerDelegate {
     var isZoomed: () -> Bool = { false }
     var onPinch: (UIGestureRecognizer.State, CGFloat, CGPoint, CGRect) -> Void = { _, _, _, _ in }
     var onPan: (UIGestureRecognizer.State, CGPoint, CGRect) -> Void = { _, _, _ in }
+    var onScrollLockChange: (Bool) -> Void = { _ in }
+    var onTapSuppressionChange: (Bool) -> Void = { _ in }
     var onViewportChange: (CGRect) -> Void = { _ in }
 
     lazy var pinch: UIPinchGestureRecognizer = {
@@ -232,12 +258,15 @@ final class DPCalendarZoomCoordinator: NSObject, UIGestureRecognizerDelegate {
         return gesture
     }()
 
+    lazy var touchSequence = DPTouchSequenceObserver { [weak self] in self?.touchSequenceBegan() }
+
     func attach(to scrollView: UIScrollView) {
         guard self.scrollView !== scrollView else { return }
         detach()
         self.scrollView = scrollView
         scrollView.addGestureRecognizer(pinch)
         scrollView.addGestureRecognizer(pan)
+        scrollView.addGestureRecognizer(touchSequence)
         scrollView.panGestureRecognizer.require(toFail: pan)
         scrollObservation = scrollView.observe(\.contentOffset) { [weak self] _, _ in
             DispatchQueue.main.async {
@@ -254,6 +283,7 @@ final class DPCalendarZoomCoordinator: NSObject, UIGestureRecognizerDelegate {
         scrollObservation = nil
         pinch.view?.removeGestureRecognizer(pinch)
         pan.view?.removeGestureRecognizer(pan)
+        touchSequence.view?.removeGestureRecognizer(touchSequence)
         scrollView = nil
     }
 
@@ -286,12 +316,18 @@ final class DPCalendarZoomCoordinator: NSObject, UIGestureRecognizerDelegate {
         if state == .began {
             isPinching = true
             suppressScrollPan()
+            onTapSuppressionChange(true)
         }
         onPinch(state, scale, location, viewport)
         if state == .ended || state == .cancelled || state == .failed {
             isPinching = false
             restoreScrollPan()
         }
+        onScrollLockChange(isPinching || isPanning)
+    }
+
+    func touchSequenceBegan() {
+        onTapSuppressionChange(false)
     }
 
     @objc private func panned(_ gesture: UIPanGestureRecognizer) {
@@ -309,8 +345,11 @@ final class DPCalendarZoomCoordinator: NSObject, UIGestureRecognizerDelegate {
             isPanning = false
             restoreScrollPan()
         }
+        onScrollLockChange(isPinching || isPanning)
     }
 
+    // SwiftUI applies `.scrollDisabled` only on its next update, so the outer pan is
+    // also switched off here to stop a scroll that began in this same touch sequence.
     private func suppressScrollPan() {
         guard let scrollView, scrollView.panGestureRecognizer.isEnabled else { return }
         restoresScrollPan = true
@@ -332,5 +371,41 @@ final class DPCalendarZoomCoordinator: NSObject, UIGestureRecognizerDelegate {
         // SwiftUI buttons and the enclosing scroll view may claim their touches
         // before the two-finger pinch begins. The pinch takes over scrolling in .began.
         gestureRecognizer === pinch || otherGestureRecognizer === pinch
+    }
+}
+
+/// Reports the first touch of each new touch sequence without ever recognizing, so it
+/// never delays, cancels or excludes the scroll view's own gestures and SwiftUI taps.
+final class DPTouchSequenceObserver: UIGestureRecognizer {
+    private let onSequenceBegan: () -> Void
+
+    init(onSequenceBegan: @escaping () -> Void) {
+        self.onSequenceBegan = onSequenceBegan
+        super.init(target: nil, action: nil)
+        cancelsTouchesInView = false
+        delaysTouchesEnded = false
+    }
+
+    override func canPrevent(_ preventedGestureRecognizer: UIGestureRecognizer) -> Bool { false }
+    override func canBePrevented(by preventingGestureRecognizer: UIGestureRecognizer) -> Bool { false }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        if (event.allTouches ?? touches).allSatisfy({ $0.phase == .began }) { onSequenceBegan() }
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+        failWhenAllTouchesLift(event)
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+        failWhenAllTouchesLift(event)
+    }
+
+    private func failWhenAllTouchesLift(_ event: UIEvent) {
+        let lifted = (event.allTouches ?? []).allSatisfy { $0.phase == .ended || $0.phase == .cancelled }
+        if lifted { state = .failed }
     }
 }

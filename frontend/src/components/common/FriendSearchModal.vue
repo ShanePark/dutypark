@@ -9,6 +9,8 @@ import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 const props = defineProps<{
   isOpen: boolean
   keyword: string
+  /** The keyword of the last search that ran, or null before any search. */
+  searchedKeyword: string | null
   results: MemberPreviewDto[]
   currentPage: number
   totalPages: number
@@ -149,7 +151,7 @@ function handleKeywordInput(event: Event) {
       <div v-else class="text-center py-12">
         <Search class="w-12 h-12 mx-auto mb-3 text-dp-border-secondary" />
         <p class="text-dp-text-secondary">
-          {{ keyword.trim() ? t('friendSearchModal.emptyWithKeyword') : t('friendSearchModal.emptyWithoutKeyword') }}
+          {{ searchedKeyword !== null ? t('friendSearchModal.emptyWithKeyword') : t('friendSearchModal.emptyWithoutKeyword') }}
         </p>
       </div>
     </div>

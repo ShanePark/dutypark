@@ -63,6 +63,9 @@ The source code, tests, and task-specific documentation are the source of truth 
 - Backend: run focused Gradle tests first, then expand by risk.
 - Web: run `npm run type-check` and `npm run build`, plus affected tests.
 - iOS: when affected, run the build and `DutyparkTests` unit tests documented in `ios/README.md` by default.
+  - While iterating, run only the affected test classes or methods with `-only-testing:DutyparkTests/<TestClass>`.
+  - Run the full `DutyparkTests` suite once, when the work is finished and before reporting completion or committing.
+  - When several agents work in parallel, the main agent owns that single full run. Subagents run focused tests only.
 - Do not run `DutyparkUITests` as part of default verification, including UI tests related to the changed area. Run specific or full iOS UI tests only when the user explicitly requests them; full iOS UI test runs are strictly opt-in.
 - After completing an iOS app change, install the latest successfully verified build on the simulator named exactly `iPhone 13 mini` so the user can inspect it immediately. This does not authorize starting a development server. If that simulator is unavailable or installation is blocked by CoreSimulator or another error, report the exact reason.
 - Also build and install the latest verified version on the user's connected physical iPhone after every iOS app change. If multiple physical iPhones are available and the user's device cannot be identified, ask which one to use. If the device is disconnected or signing, pairing, or installation is blocked, report the exact reason.
@@ -73,6 +76,18 @@ The source code, tests, and task-specific documentation are the source of truth 
 - Install the original build product directly on the simulator or device when possible. Avoid duplicate app copies such as `verified-simulator`; when re-signing requires a copy, use a task-owned temporary path.
 - When an isolated build is necessary, use a task-owned temporary path and remove the temporary products and unneeded DerivedData created by that task after testing and installation. Preserve active builds, other tasks' files, and pre-existing user artifacts.
 - Do not delete release `.xcarchive` bundles, dSYMs, IPAs, or release records without an explicit request.
+
+### iOS Simulator Resources
+
+Each booted simulator uses a lot of memory. The shared `Dutypark` scheme runs both test targets serially (`parallelizable = "NO"`), so `xcodebuild test` uses only its destination simulator. Keep it that way; parallel clones caused severe memory pressure.
+
+- Check before booting a simulator or starting `xcodebuild test`:
+  - memory pressure: `sysctl -n kern.memorystatus_vm_pressure_level`, where 1 is normal, 2 is warn and 4 is critical;
+  - booted simulators: `xcrun simctl list devices booted`;
+  - booted test clones: `xcrun simctl --set testing list devices | grep Booted`.
+- Do not start a run while pressure is above normal or another iOS test run is active. Wait for it to finish, or report the reason.
+- Never run more than one `xcodebuild test` at a time, including across agents.
+- After testing, shut down the simulators you booted. Never shut down or erase `iPhone 13 mini` or other simulators you did not boot.
 
 ### iOS Interaction Feedback
 

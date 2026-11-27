@@ -369,6 +369,39 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(repository.actions, ["accept:11", "cancel:22"])
     }
 
+    /// Search runs only on submit, so paging continues the last search that ran,
+    /// not whatever is in the keyword field now.
+    func testSearchPagingFollowsTheSubmittedKeywordNotTheField() async throws {
+        let repository = SocialRepositorySpy(searchPages: 3)
+        let viewModel = SocialViewModel(repository: repository)
+
+        XCTAssertNil(viewModel.searchedKeyword, "Nothing is searched before the first submit")
+        await viewModel.showSearchPage(1)
+        XCTAssertEqual(repository.searchRequests, [], "Paging without a search does nothing")
+
+        await viewModel.search(keyword: " kim ")
+        XCTAssertEqual(viewModel.searchedKeyword, "kim")
+        XCTAssertEqual(viewModel.searchResults.map(\.name), ["kim 0"])
+
+        await viewModel.showSearchPage(1)
+        XCTAssertEqual(viewModel.searchResults.map(\.name), ["kim 1"], "Paging continues the submitted search")
+        XCTAssertEqual(viewModel.searchPage, 1)
+
+        await viewModel.search(keyword: "kimx")
+        XCTAssertEqual(viewModel.searchedKeyword, "kimx")
+        XCTAssertEqual(viewModel.searchPage, 0)
+        XCTAssertEqual(repository.searchRequests, ["kim#0", "kim#1", "kimx#0"])
+
+        viewModel.clearSearch()
+        XCTAssertNil(viewModel.searchedKeyword)
+
+        let modal = try Self.projectSource(at: "Dutypark/Features/Social/FriendSearchModalView.swift")
+        XCTAssertTrue(modal.contains("showPage(viewModel.searchPage - 1)"), "Previous page continues the submitted search")
+        XCTAssertTrue(modal.contains("showPage(viewModel.searchPage + 1)"), "Next page continues the submitted search")
+        XCTAssertTrue(modal.contains("await viewModel.showSearchPage(page)"))
+        XCTAssertFalse(modal.contains("search(page: viewModel.searchPage"), "Paging does not read the live field")
+    }
+
     func testInlineReorderSavesDropOnlyOnce() async {
         let repository = SocialRepositorySpy()
         let viewModel = SocialViewModel(repository: repository)
@@ -874,6 +907,10 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     private var didPerformMutation = false
     private var storedFriendInfoRequestCount = 0
     private var storedBlockedMemberIDs: [MemberID]
+    /// Pages of one result each answered for any keyword; zero fails the search.
+    private let searchPages: Int
+    /// Each search request as "keyword#page".
+    private var storedSearchRequests: [String] = []
 
     init(
         failFriendOrder: Bool = false,
@@ -882,8 +919,10 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
         friendOrderDelayMilliseconds: Int64 = 0,
         friendCount: Int? = nil,
         blockedMemberIDs: [MemberID] = [],
-        receivedRequestFromMemberID: MemberID = 11
+        receivedRequestFromMemberID: MemberID = 11,
+        searchPages: Int = 0
     ) {
+        self.searchPages = searchPages
         self.failFriendOrder = failFriendOrder
         self.failReloadAfterMutation = failReloadAfterMutation
         self.failingAction = failingAction
@@ -895,6 +934,10 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
 
     var actions: [String] {
         lock.withLock { storedActions }
+    }
+
+    var searchRequests: [String] {
+        lock.withLock { storedSearchRequests }
     }
 
     var friendInfoRequestCount: Int {
@@ -930,7 +973,27 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     }
 
     func search(keyword: String, page: Int, size: Int) async throws -> PageResponse<MemberPreviewDTO> {
-        throw APIError.transport
+        lock.withLock { storedSearchRequests.append("\(keyword)#\(page)") }
+        guard searchPages > 0 else { throw APIError.transport }
+        let result = MemberPreviewDTO(
+            id: MemberID(100 + page),
+            name: "\(keyword) \(page)",
+            teamId: nil,
+            team: nil,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        )
+        return PageResponse(
+            content: [result],
+            totalPages: searchPages,
+            totalElements: Int64(searchPages),
+            last: page >= searchPages - 1,
+            first: page == 0,
+            size: 1,
+            number: page,
+            numberOfElements: 1,
+            empty: false
+        )
     }
 
     func sendFriendRequest(to memberID: MemberID) async throws { try perform("send:\(memberID)") }

@@ -127,23 +127,22 @@ struct MoreView: View {
     /// Service documents and the build stay reachable without competing with the menu.
     private var footer: some View {
         VStack(spacing: 0) {
-            HStack(spacing: DPSpacing.extraSmall) {
+            HStack(spacing: DPSpacing.small) {
                 footerLink("guest.policy.terms", identifier: "more.terms") {
                     GuestPolicyView(type: .terms)
                 }
-                Text(verbatim: "·")
-                    .accessibilityHidden(true)
                 footerLink("guest.policy.privacy", identifier: "more.privacy") {
                     GuestPolicyView(type: .privacy)
                 }
             }
             if let versionText = MoreAppVersion.displayText {
                 Text(verbatim: versionText)
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+                    .padding(.top, DPSpacing.small)
                     .accessibilityIdentifier("more.appVersion")
             }
         }
-        .font(DPTypography.caption)
-        .foregroundStyle(DPColor.textMuted)
         .frame(maxWidth: .infinity)
         .padding(.top, DPSpacing.small)
     }
@@ -154,12 +153,15 @@ struct MoreView: View {
         @ViewBuilder destination: () -> Destination
     ) -> some View {
         NavigationLink(destination: destination) {
-            Text(GuestLocalization.text(titleKey))
-                .padding(.horizontal, DPSpacing.small)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .contentShape(Rectangle())
+            HStack(spacing: DPSpacing.extraSmall) {
+                Text(GuestLocalization.text(titleKey))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(DPColor.textMuted)
+                    .accessibilityHidden(true)
+            }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MoreFooterLinkStyle())
         .simultaneousGesture(TapGesture().onEnded {
             DPHapticCenter.shared.emit(.routine)
         })
@@ -262,5 +264,29 @@ private struct MoreMenuRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(item.accessibilityIdentifier)
+    }
+}
+
+/// A small outlined capsule drawn inside the 44pt hit area. The link already emits its
+/// routine tap haptic, so this style only adds the pressed tint.
+private struct MoreFooterLinkStyle: ButtonStyle {
+    private static let pillHeight: CGFloat = 34
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(DPFont.light(size: 12.5, relativeTo: .caption))
+            .foregroundStyle(configuration.isPressed ? DPColor.textPrimary : DPColor.textSecondary)
+            .padding(.leading, 14)
+            .padding(.trailing, 10)
+            .frame(minHeight: Self.pillHeight)
+            .background(
+                Capsule()
+                    .fill(configuration.isPressed ? DPColor.backgroundHover : DPColor.backgroundCard)
+                    .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
+            )
+            .overlay(Capsule().stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth))
+            .frame(minHeight: DPSize.minimumTouchTarget)
+            .contentShape(Rectangle())
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }

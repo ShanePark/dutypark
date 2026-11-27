@@ -59,6 +59,32 @@ struct InformationArchitectureTests {
         #expect(!MoreMenuItem.allCases.map(\.rawValue).contains("terms"))
     }
 
+    @Test("More policy links are small outlined capsules with a 44pt hit area")
+    func morePolicyLinksAreCapsuleButtons() throws {
+        let more = try source("Dutypark/Features/More/MoreView.swift")
+        let start = try #require(more.range(of: "private var footer"))
+        let end = try #require(more.range(of: "private func section("))
+        let footer = String(more[start.lowerBound..<end.lowerBound])
+        let styleStart = try #require(more.range(of: "private struct MoreFooterLinkStyle"))
+        let style = String(more[styleStart.lowerBound...])
+
+        #expect(!footer.contains("\"·\""), "the pills replace the dot separator")
+        #expect(footer.contains("\"more.terms\""))
+        #expect(footer.contains("\"more.privacy\""))
+        #expect(footer.contains("NavigationLink(destination: destination)"))
+        #expect(footer.contains("Image(systemName: \"chevron.right\")"))
+        #expect(footer.contains(".buttonStyle(MoreFooterLinkStyle())"))
+        #expect(style.contains("Capsule()"))
+        #expect(style.contains("DPChrome.borderWidth"))
+        #expect(style.contains("DPColor.borderPrimary"))
+        #expect(style.contains("configuration.isPressed"))
+        #expect(style.contains("minHeight: DPSize.minimumTouchTarget"))
+        #expect(style.contains(".contentShape(Rectangle())"))
+        // The link keeps its single routine tap; the style must not add a second haptic.
+        #expect(footer.components(separatedBy: "emit(.routine)").count == 2)
+        #expect(!style.contains("sensoryFeedback"))
+    }
+
     @Test("The guide carries the release notes as a second segment for every visitor")
     func guideCarriesReleaseNotesSegment() throws {
         let content = try source("Dutypark/Features/Settings/PublicContentViews.swift")

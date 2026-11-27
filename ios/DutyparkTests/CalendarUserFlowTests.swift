@@ -322,12 +322,14 @@ final class CalendarUserFlowTests: XCTestCase {
             scheduleID: scheduleID
         )
 
+        model.setDateSpotlightRevealable(true)
         await model.load()
         let baseline = await repository.fetchCounts
 
         XCTAssertTrue(model.isMyCalendar)
-        XCTAssertEqual(model.highlightedDate?.rawValue, "2026-08-12")
-        model.selectedDay = try XCTUnwrap(model.days.first { $0.cell.date == model.highlightedDate })
+        XCTAssertEqual(model.dateFlash?.date.rawValue, "2026-08-12")
+        XCTAssertNil(model.highlightedDate)
+        model.selectedDay = try XCTUnwrap(model.days.first { $0.cell.date == model.dateFlash?.date })
         let linkedSchedule = try XCTUnwrap(model.selectedDay?.schedules.first)
         XCTAssertTrue(linkedSchedule.isTagged)
 

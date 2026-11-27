@@ -104,4 +104,32 @@ describe('more page footer', () => {
     expect(footer).toContain("t('policy.privacy.title')")
     expect(moreView.indexOf('<footer')).toBeGreaterThan(moreView.indexOf("t('member.logout')"))
   })
+
+  it('renders each policy link as a small outlined pill with a chevron', () => {
+    const footer = moreView.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? ''
+    const links = footer.match(/<router-link\b[\s\S]*?<\/router-link>/g) ?? []
+
+    expect(footer).not.toContain('·')
+    expect(links).toHaveLength(2)
+    for (const link of links) {
+      const opening = link.match(/<router-link\b[^>]*>/)?.[0] ?? ''
+      const pill = link.match(/<span\b[^>]*more-footer-pill[^>]*>/)?.[0] ?? ''
+
+      // The visible pill is shorter than the 44px hit area that wraps it.
+      expect(opening).toContain('more-footer-link')
+      expect(opening).toContain('min-h-11')
+      expect(pill).toContain('rounded-full')
+      expect(pill).toContain('border-dp-border-primary')
+      expect(pill).toContain('bg-dp-bg-card')
+      expect(pill).toContain('text-dp-text-secondary')
+      expect(pill).toContain('h-[34px]')
+      expect(link).toMatch(/<ChevronRight\b[^>]*text-dp-text-muted/)
+    }
+  })
+
+  it('gives the pills hover, pressed and keyboard focus states', () => {
+    expect(moreView).toContain('.more-footer-link:hover .more-footer-pill')
+    expect(moreView).toContain('.more-footer-link:active .more-footer-pill')
+    expect(moreView).toContain('.more-footer-link:focus-visible .more-footer-pill')
+  })
 })

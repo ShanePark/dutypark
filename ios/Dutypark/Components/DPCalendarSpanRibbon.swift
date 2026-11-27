@@ -788,7 +788,7 @@ private struct DPCalendarSpanTagCluster: View {
         .padding(.leading, 1.5)
         .padding(.trailing, 4)
         .frame(height: Self.height)
-        .background(ink.opacity(0.09), in: Capsule())
+        .sheen(tint: ink.opacity(0.09))
         .fixedSize()
     }
 
@@ -850,7 +850,7 @@ private struct DPCalendarSpanTagCluster: View {
         .padding(.leading, 2)
         .padding(.trailing, more > 0 ? 3 : 2)
         .frame(height: Self.height)
-        .background(ink.opacity(0.10), in: Capsule())
+        .sheen(tint: ink.opacity(0.10))
         .fixedSize()
     }
 
@@ -865,8 +865,43 @@ private struct DPCalendarSpanTagCluster: View {
             .lineLimit(1)
             .padding(.horizontal, 3)
             .frame(height: Self.height)
-            .background(ink.opacity(0.10), in: Capsule())
+            .sheen(tint: ink.opacity(0.10))
             .fixedSize()
+    }
+}
+
+/// The web's mini "A" gloss on a ribbon tag: the ink tint stays underneath, a white sheen
+/// fades out toward the bottom and a hairline highlight runs along the top. Ribbon tags
+/// sit on the band, so they cast no shadow.
+nonisolated enum DPCalendarSpanTagSheen {
+    static let top = Color(white: 1, opacity: 0.30)
+    static let fadeEnd: CGFloat = 0.85
+    static let highlight = Color(white: 1, opacity: 0.70)
+}
+
+private extension View {
+    func sheen(tint: Color) -> some View {
+        background {
+            Capsule().fill(tint)
+            Capsule().fill(LinearGradient(
+                stops: [
+                    .init(color: DPCalendarSpanTagSheen.top, location: 0),
+                    .init(color: DPCalendarSpanTagSheen.top.opacity(0), location: DPCalendarSpanTagSheen.fadeEnd),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            ))
+        }
+        .overlay {
+            Capsule().strokeBorder(
+                LinearGradient(
+                    colors: [DPCalendarSpanTagSheen.highlight, DPCalendarSpanTagSheen.highlight.opacity(0)],
+                    startPoint: .top,
+                    endPoint: .center
+                ),
+                lineWidth: 0.5
+            )
+        }
     }
 }
 

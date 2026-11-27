@@ -219,18 +219,82 @@ describe('responsive calendar day headers', () => {
     expect(style).not.toContain(':slotted(.calendar-item)::before')
   })
 
-  it('wraps the full D-Day header while keeping the date and today badge intact', () => {
+  it('wraps the full D-Day header while keeping the date intact', () => {
     expect(ruleBody(baseBlock, '.calendar-day-top')).toContain('flex-wrap: wrap')
-    expect(ruleBody(baseBlock, '.calendar-day-top')).toContain('container: calendar-day-header / inline-size')
     expect(ruleBody(baseBlock, '.calendar-day-number')).toContain('flex: none')
     expect(ruleBody(baseBlock, '.calendar-day-number')).toContain('white-space: nowrap')
-    expect(ruleBody(baseBlock, '.calendar-day-today-circle')).toContain('flex: none')
+  })
+})
+
+// Today's date row is a full-width red strip with white ink, replacing the old ring.
+describe('today date strip', () => {
+  it('bleeds the strip to the tile\'s top and sides with a hairline under it', () => {
+    const strip = ruleBody(baseBlock, '.calendar-day--today .calendar-day-top')
+    expect(strip).toContain('margin: -4px calc(-1 * var(--calendar-pad-x)) 2px')
+    expect(strip).toContain('padding: 4px calc(var(--calendar-pad-x) + 2px) 2px')
+    expect(strip).toContain('background: var(--calendar-today)')
+    expect(strip).toContain('box-shadow: 0 1px 0 rgb(0 0 0 / 20%)')
+    // The tile pads its top by 4px on phones and 7px on desktop; the strip cancels exactly that.
+    expect(ruleBody(desktopBlock, '.calendar-day--today .calendar-day-top'))
+      .toContain('margin: -7px calc(-1 * var(--calendar-pad-x)) 4px')
+    expect(style).not.toContain('.calendar-day-today-border')
+    expect(style).not.toContain('.calendar-day-today-circle')
+    expect(template).not.toContain('calendar-day-today-border')
   })
 
-  it('shows the optional today word only when the actual header has enough room', () => {
-    expect(ruleBody(baseBlock, '.calendar-day-today-label')).toContain('display: none')
-    expect(desktopBlock).not.toContain('.calendar-day-today-label')
-    expect(style).toContain('@container calendar-day-header (min-width: 6rem)')
-    expect(ruleBody(baseBlock, '.calendar-day-today-label')).toContain('white-space: nowrap')
+  it('writes the date and a pinned D-Day label in white, without a today word', () => {
+    const strip = ruleBody(baseBlock, '.calendar-day--today .calendar-day-top')
+    expect(strip).toContain('--calendar-ink: #fff')
+    expect(strip).toContain('--calendar-ink-muted: #fff')
+    const dutyStyle = dutyCalendarContent.slice(dutyCalendarContent.indexOf('<style scoped>'))
+    expect(ruleBody(dutyStyle, '.calendar-pin-label')).toContain('color: var(--calendar-ink-muted)')
+    expect(ruleBody(dutyStyle, '.calendar-pin-label--zero')).toContain('color: var(--calendar-ink)')
+    expect(dutyCalendarContent).toMatch(/#day-header[\s\S]*?class="calendar-pin-label"/)
+    // The strip carries no visible today word, so nothing styles or hides one.
+    expect(calendarGrid).not.toContain('calendar-day-today-label')
+    expect(calendarGrid).not.toContain(':has(')
+    expect(style).not.toContain('@container calendar-day-header')
+  })
+
+  it('redraws the selection ring above the strip', () => {
+    const border = ruleBody(baseBlock, '.calendar-day-selection-border')
+    expect(border).toContain('position: absolute')
+    expect(border).toContain('inset: 0')
+    expect(border).toContain('border: 2px solid var(--dp-accent)')
+    expect(border).toContain('pointer-events: none')
+  })
+})
+
+// The phone month grid matches the iOS geometry: day columns are
+// (viewport - 2 * 8 inset - 6 * 2 gutters) / 7 and each cell is padded by 1.5px.
+describe('mobile month grid geometry', () => {
+  it('pads phone cells by 1.5px and keeps the desktop padding', () => {
+    expect(ruleBody(baseBlock, '.calendar-grid')).toContain('--calendar-pad-x: 1.5px')
+    // Phones use the 1pt iOS gutter; desktop keeps its 2px gutter.
+    expect(ruleBody(baseBlock, '.calendar-grid')).toContain('--calendar-gap: 1px')
+    expect(ruleBody(desktopBlock, '.calendar-grid')).toContain('--calendar-gap: 2px')
+    expect(ruleBody(desktopBlock, '.calendar-grid')).toContain('--calendar-pad-x: 8px')
+    expect(ruleBody(baseBlock, '.calendar-day')).toContain('padding: 4px var(--calendar-pad-x) 5px')
+  })
+
+  it('lets the phone grid border reach into the page inset so columns match iOS', () => {
+    const dutyStyle = dutyCalendarContent.slice(dutyCalendarContent.indexOf('<style scoped>'))
+    const phone = dutyStyle.slice(dutyStyle.indexOf('@media (max-width: 639.98px)'))
+    expect(dutyStyle).toContain('@media (max-width: 639.98px)')
+    expect(ruleBody(phone, '.calendar-month-swipe__grid')).toContain('margin-inline: -1px')
+    expect(ruleBody(dutyStyle, '.calendar-month-swipe')).toContain('padding-inline: 8px')
+  })
+})
+
+describe('ribbon tag chip gloss', () => {
+  it.each([
+    { selector: '.span-tag-chip', tint: 'background: color-mix(in srgb, var(--calendar-ink) 9%, transparent);' },
+    { selector: '.span-tag-pill', tint: 'background: color-mix(in srgb, var(--calendar-ink) 10%, transparent);' },
+  ])('keeps the ink tint of $selector under a white sheen', ({ selector, tint }) => {
+    const body = ruleBody(spanTags, selector)
+    expect(body).toContain(tint)
+    expect(body.indexOf('background-image')).toBeGreaterThan(body.indexOf(tint))
+    expect(body).toContain('background-image: linear-gradient(180deg, rgb(255 255 255 / 0.3) 0%, rgb(255 255 255 / 0) 85%);')
+    expect(body).toContain('box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.7), 0 0.5px 1px rgb(15 23 42 / 0.12);')
   })
 })

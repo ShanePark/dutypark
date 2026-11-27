@@ -141,6 +141,48 @@ describe('todo board mobile drag navigation', () => {
     expect(style).toContain('border: 2px dashed var(--dp-accent-border);')
   })
 
+  it('offers a compact empty-state style add row after the last card of every non-empty column', () => {
+    const columns = [
+      { status: 'TODO', list: 'todoList' },
+      { status: 'IN_PROGRESS', list: 'inProgressList' },
+      { status: 'DONE', list: 'doneList' },
+    ]
+    const compactClass = 'class="kanban-empty-state kanban-empty-state-clickable kanban-empty-state--compact"'
+    for (const { status, list } of columns) {
+      const zoneStart = template.indexOf(`<div data-column="${status}" class="kanban-column-drop-zone">`)
+      const zone = template.slice(zoneStart, template.indexOf('</KanbanColumn>', zoneStart))
+      const buttons = zone.match(/<button\s[\s\S]*?<\/button>/g) ?? []
+      const addRow = buttons.find((button) => button.includes(compactClass)) ?? ''
+      const emptyState = buttons.find((button) => button.includes(`v-if="${list}.length === 0"`)) ?? ''
+
+      expect(zoneStart, `${status} drop zone`).toBeGreaterThan(-1)
+      expect(addRow, `${status} add row`).toContain(`v-if="${list}.length > 0"`)
+      expect(addRow).toContain('type="button"')
+      expect(addRow).toContain(`@click="openAddModal('${status}')"`)
+      expect(addRow).toContain('<Plus class="kanban-empty-icon" />')
+      expect(addRow).toContain("t('todoBoard.actions.clickToAdd')")
+      // The row sits after the cards and is never a Sortable item.
+      expect(zone.indexOf('class="kanban-card-wrapper"')).toBeLessThan(zone.indexOf(compactClass))
+      expect(addRow).not.toContain('kanban-card-wrapper')
+      // The empty column keeps its full-height card.
+      expect(emptyState).toContain('class="kanban-empty-state kanban-empty-state-clickable"')
+      expect(emptyState).not.toContain('kanban-empty-state--compact')
+      expect(emptyState).toContain(`@click="openAddModal('${status}')"`)
+    }
+    expect(script).toContain("draggable: '.kanban-card-wrapper'")
+  })
+
+  it('keeps the compact add row a low, inline, full-width touch target', () => {
+    const base = style.match(/\.kanban-empty-state \{[\s\S]*?\}/)?.[0] ?? ''
+    const compact = style.match(/\.kanban-empty-state--compact \{[\s\S]*?\}/)?.[0] ?? ''
+    expect(base).toContain('width: 100%')
+    expect(compact).toContain('flex-direction: row')
+    expect(compact).toContain('min-height: 44px')
+    // Only layout changes: border, colours and hover come from the empty state.
+    expect(compact).not.toMatch(/border|color|background/)
+    expect(style).toContain('.kanban-empty-state-clickable:hover {')
+  })
+
   it('keeps status changes in the detail modal instead of repeating them on list cards', () => {
     expect(template).toContain('<KanbanCard')
     expect(template).not.toContain('@status-change="handleStatusChange(todo, $event)"')

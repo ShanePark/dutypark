@@ -259,6 +259,8 @@ onUnmounted(() => {
   padding: 0 3px 0 0.04rem;
   border-radius: 9999px;
   background: color-mix(in srgb, var(--calendar-ink) 9%, transparent);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.3) 0%, rgb(255 255 255 / 0) 85%);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.7), 0 0.5px 1px rgb(15 23 42 / 0.12);
   color: color-mix(in srgb, var(--calendar-ink) 80%, transparent);
   font-size: 8.5px;
   line-height: 1;
@@ -316,6 +318,8 @@ onUnmounted(() => {
   padding: 0 3px;
   border-radius: 9999px;
   background: color-mix(in srgb, var(--calendar-ink) 10%, transparent);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.3) 0%, rgb(255 255 255 / 0) 85%);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.7), 0 0.5px 1px rgb(15 23 42 / 0.12);
   color: color-mix(in srgb, var(--calendar-ink) 76%, transparent);
   font-size: 8px;
   font-weight: 700;

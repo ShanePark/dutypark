@@ -120,3 +120,18 @@ describe('FriendTagSelector presentation modes (D9)', () => {
     expect(ruleFor('.friend-tag-selector--flat .friend-tag-selector__chips--empty')).toMatch(/min-height:\s*0\s*!important/)
   })
 })
+
+describe('FriendTagSelector selected chip gloss', () => {
+  it('glosses the selected chips like the other member tag chips', () => {
+    const chip = ruleFor('.friend-tag-selector__chip')
+    expect(chip).toContain('background-color: var(--dp-bg-card);')
+    expect(chip).toContain('background-image: var(--dp-tag-chip-sheen);')
+    expect(chip).toContain('box-shadow: inset 0 1px 0 var(--dp-tag-chip-highlight), var(--dp-tag-chip-drop);')
+  })
+
+  it('keeps the sheen on hover by changing only the background colour', () => {
+    const hover = ruleFor('.friend-tag-selector__chip:hover')
+    expect(hover).toContain('background-color: var(--dp-accent-bg-hover);')
+    expect(hover).not.toMatch(/background:\s/)
+  })
+})

@@ -83,6 +83,8 @@ async function loadFriendsDashboard() {
 
 const showSearchModal = ref(false)
 const searchKeyword = ref('')
+// The keyword of the last search that ran; `searchKeyword` is only the field being edited.
+const searchedKeyword = ref<string | null>(null)
 const searchResult = ref<MemberPreviewDto[]>([])
 const searchPage = ref(0)
 const searchTotalPage = ref(0)
@@ -313,6 +315,7 @@ function printScheduleTime(startDateTime: string) {
 function openSearchModal() {
   showSearchModal.value = true
   searchKeyword.value = ''
+  searchedKeyword.value = null
   searchPage.value = 0
   searchResult.value = []
   searchTotalPage.value = 0
@@ -323,8 +326,9 @@ function closeSearchModal() {
   showSearchModal.value = false
 }
 
-async function search() {
-  if (!searchKeyword.value.trim()) {
+async function search(keyword = searchKeyword.value, page = 0) {
+  if (!keyword.trim()) {
+    searchedKeyword.value = null
     searchResult.value = []
     searchTotalPage.value = 0
     searchTotalElements.value = 0
@@ -334,10 +338,12 @@ async function search() {
   searchLoading.value = true
   try {
     const response = await friendApi.searchPossibleFriends(
-      searchKeyword.value,
-      searchPage.value,
+      keyword,
+      page,
       searchPageSize
     )
+    searchedKeyword.value = keyword
+    searchPage.value = page
     searchResult.value = response.data.content
     searchTotalPage.value = response.data.totalPages
     searchTotalElements.value = response.data.totalElements
@@ -369,8 +375,8 @@ async function requestFriend(member: MemberPreviewDto) {
 }
 
 function goToPage(page: number) {
-  searchPage.value = page
-  search()
+  if (searchedKeyword.value === null) return
+  search(searchedKeyword.value, page)
 }
 
 onMounted(async () => {
@@ -615,6 +621,7 @@ watch(
     <FriendSearchModal
       :is-open="showSearchModal"
       :keyword="searchKeyword"
+      :searched-keyword="searchedKeyword"
       :results="searchResult"
       :current-page="searchPage"
       :total-pages="searchTotalPage"

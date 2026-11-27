@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
-import { h, nextTick } from 'vue'
-import { createHostWrapper, findHostNodes, hostText, mountHost, type HostNode } from '@/test/hostRenderer'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { h, nextTick, ref } from 'vue'
+import { createHostWrapper, findHostNodes, hostText, mountHost, triggerHost, type HostNode } from '@/test/hostRenderer'
 import type { HolidayDto } from '@/types'
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ locale: { value: 'ko' }, t: (key: string) => key }) }))
@@ -248,11 +248,31 @@ describe('CalendarGrid multi-day ribbons', () => {
 })
 
 describe('CalendarGrid day states', () => {
-  function todayBorders(cell: HostNode) {
-    return findHostNodes(cell, node => node.type === 'span' && hasClass(node, 'calendar-day-today-border'))
+  function cellsWithBorder(cell: HostNode, className: string) {
+    return findHostNodes(cell, node => node.type === 'span' && hasClass(node, className))
   }
 
-  it('draws the selection border instead of the today border when today is selected', async () => {
+  // Today is marked by a red date strip, not a ring: only a plain white numeral
+  // sits in the date row, whatever the weekday ink would be. Screen readers get
+  // today from aria-current instead of a visible word.
+  it('marks today with the date strip instead of a ring or a date circle', async () => {
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
+    })))
+    await nextTick()
+    const today = dayCells(mounted.root)[0]!
+    expect(hasClass(today, 'calendar-day--today')).toBe(true)
+    expect(today.props['aria-current']).toBe('date')
+    expect(cellsWithBorder(today, 'calendar-day-today-border')).toHaveLength(0)
+    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-today-circle'))).toHaveLength(0)
+    const number = findHostNodes(today, node => hasClass(node, 'calendar-day-number'))[0]!
+    // Sunday ink would vanish on the red strip, so today's numeral takes the strip's ink.
+    expect(number.props.style).toMatchObject({ color: 'var(--calendar-ink)' })
+    expect(hostText(number)).toBe('1')
+    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-today-label'))).toHaveLength(0)
+  })
+
+  it('redraws the selection border above the strip when today is selected', async () => {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
       days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
       selectedDay: { year: 2026, month: 11, day: 1 },
@@ -260,33 +280,227 @@ describe('CalendarGrid day states', () => {
     await nextTick()
     const today = dayCells(mounted.root)[0]!
     expect(hasClass(today, 'ring-dp-accent')).toBe(true)
-    expect(todayBorders(today)).toHaveLength(0)
-    // Today stays identifiable by its filled date circle and label.
-    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-today-circle'))).toHaveLength(1)
-    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-today-label'))).toHaveLength(1)
+    expect(hasClass(today, 'calendar-day--today')).toBe(true)
+    expect(cellsWithBorder(today, 'calendar-day-selection-border')).toHaveLength(1)
   })
 
-  it('keeps the today border while another day is selected', async () => {
+  it('leaves other selected days to the plain inset ring', async () => {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
       days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
       selectedDay: { year: 2026, month: 11, day: 5 },
     })))
     await nextTick()
     const cells = dayCells(mounted.root)
-    expect(todayBorders(cells[0]!)).toHaveLength(1)
     expect(hasClass(cells[0]!, 'ring-dp-accent')).toBe(false)
+    expect(cellsWithBorder(cells[0]!, 'calendar-day-selection-border')).toHaveLength(0)
     expect(hasClass(cells[4]!, 'ring-dp-accent')).toBe(true)
+    expect(cellsWithBorder(cells[4]!, 'calendar-day-selection-border')).toHaveLength(0)
   })
 
-  it('draws the highlight border instead of the today border when today is highlighted', async () => {
+  it('spotlights today without the selection border, then restores it', async () => {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
       days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
       highlightDay: { year: 2026, month: 11, day: 1 },
+      selectedDay: { year: 2026, month: 11, day: 1 },
     })))
     await nextTick()
-    const today = dayCells(mounted.root)[0]!
-    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-highlight-border'))).toHaveLength(1)
-    expect(todayBorders(today)).toHaveLength(0)
+    const today = () => dayCells(mounted.root)[0]!
+    const spotlight = findHostNodes(mounted.root, node => hasClass(node, 'calendar-grid-spotlight'))
+    expect(spotlight).toHaveLength(1)
+    expect(hasClass(today(), 'calendar-day--highlighted')).toBe(true)
+    expect(cellsWithBorder(today(), 'calendar-day-selection-border')).toHaveLength(0)
+
+    triggerHost(spotlight[0]!, 'onAnimationend')
+    await nextTick()
+    expect(hasClass(today(), 'calendar-day--highlighted')).toBe(false)
+    expect(cellsWithBorder(today(), 'calendar-day-selection-border')).toHaveLength(1)
+  })
+
+  // The pin label must be a direct child of the date row so it shares today's
+  // strip, right of the date.
+  it('renders the day-header slot as a direct child of the date row', async () => {
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
+    }, {
+      'day-header': () => h('span', { class: 'calendar-pin-label' }, 'D-3'),
+    })))
+    await nextTick()
+    const top = findHostNodes(dayCells(mounted.root)[0]!, node => hasClass(node, 'calendar-day-top'))[0]!
+    expect(top.children.filter(node => node.type === 'span').map(node => String(node.props.class)))
+      .toEqual(['calendar-day-number', 'calendar-pin-label'])
+  })
+})
+
+describe('CalendarGrid transient date spotlight', () => {
+  function gridRoot(root: HostNode) {
+    return findHostNodes(root, node => node.type === 'div' && hasClass(node, 'calendar-grid'))[0]!
+  }
+
+  // One overlay over the whole grid dims every day; the target is raised above it.
+  function spotlights(root: HostNode) {
+    return gridRoot(root).children.filter(node => hasClass(node, 'calendar-grid-spotlight'))
+  }
+
+  function highlightedCells(root: HostNode) {
+    return dayCells(root).filter(cell => hasClass(cell, 'calendar-day--highlighted'))
+  }
+
+  async function mountHighlighted() {
+    const highlightDay = ref<{ year: number; month: number; day: number } | null>({ year: 2026, month: 11, day: 12 })
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays(null), currentYear: 2026, currentMonth: 11, highlightDay: highlightDay.value,
+    })))
+    await nextTick()
+    return { root: mounted.root, highlightDay }
+  }
+
+  it('dims the grid around the highlighted day and leaves nothing behind once the animation ends', async () => {
+    const { root } = await mountHighlighted()
+    expect(highlightedCells(root).map(cell => hostText(findHostNodes(cell, node => hasClass(node, 'calendar-day-number'))[0]!)))
+      .toEqual(['12'])
+    expect(spotlights(root)).toHaveLength(1)
+    expect(spotlights(root)[0]!.props['aria-hidden']).toBe('true')
+    expect(findHostNodes(root, node => hasClass(node, 'calendar-day-highlight-flash'))).toHaveLength(0)
+    expect(dayCells(root).some(cell => hasClass(cell, 'highlight-pulse-glow'))).toBe(false)
+
+    triggerHost(spotlights(root)[0]!, 'onAnimationend')
+    await nextTick()
+    expect(spotlights(root)).toHaveLength(0)
+    expect(highlightedCells(root)).toHaveLength(0)
+  })
+
+  it('replays the spotlight when the same day is highlighted again', async () => {
+    const { root, highlightDay } = await mountHighlighted()
+    const first = spotlights(root)[0]!
+
+    // Re-highlighting mid-spotlight restarts the animation on a fresh element.
+    highlightDay.value = { year: 2026, month: 11, day: 12 }
+    await nextTick()
+    const restarted = spotlights(root)
+    expect(restarted).toHaveLength(1)
+    expect(restarted[0]).not.toBe(first)
+
+    triggerHost(restarted[0]!, 'onAnimationend')
+    await nextTick()
+    expect(spotlights(root)).toHaveLength(0)
+
+    highlightDay.value = { year: 2026, month: 11, day: 12 }
+    await nextTick()
+    expect(spotlights(root)).toHaveLength(1)
+    expect(highlightedCells(root)).toHaveLength(1)
+  })
+
+  it('stops the spotlight at once when the highlight is cleared', async () => {
+    const { root, highlightDay } = await mountHighlighted()
+    highlightDay.value = null
+    await nextTick()
+    expect(spotlights(root)).toHaveLength(0)
+    expect(highlightedCells(root)).toHaveLength(0)
+  })
+
+  it('does not dim the grid when the highlighted day is not on it', async () => {
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays(null), currentYear: 2026, currentMonth: 11, highlightDay: { year: 2027, month: 3, day: 1 },
+    })))
+    await nextTick()
+    expect(spotlights(mounted.root)).toHaveLength(0)
+  })
+
+  describe('lighting the day through the dim', () => {
+    type Rect = { left: number; top: number; width: number; height: number }
+
+    let observers: Array<{ callback: () => void; observed: unknown[]; disconnect: ReturnType<typeof vi.fn<() => void>> }>
+
+    beforeEach(() => {
+      observers = []
+      vi.stubGlobal('window', { innerHeight: 800 })
+      vi.stubGlobal('ResizeObserver', class {
+        record: { callback: () => void; observed: unknown[]; disconnect: ReturnType<typeof vi.fn<() => void>> }
+        constructor(callback: () => void) {
+          this.record = { callback, observed: [], disconnect: vi.fn<() => void>() }
+          observers.push(this.record)
+        }
+        observe(target: unknown) { this.record.observed.push(target) }
+        disconnect() { this.record.disconnect() }
+      })
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    function boxOf(rect: Rect) {
+      return { ...rect, right: rect.left + rect.width, bottom: rect.top + rect.height }
+    }
+
+    // The grid's padding box starts inside its 1px border at (101, 201).
+    function startSpotlight(root: HostNode, cellRect: Rect) {
+      const cell = { rect: cellRect, getBoundingClientRect: () => boxOf(cell.rect), scrollIntoView: vi.fn() }
+      const querySelector = vi.fn(() => cell)
+      const grid = { clientLeft: 1, clientTop: 1, getBoundingClientRect: () => boxOf({ left: 100, top: 200, width: 377, height: 500 }), querySelector }
+      triggerHost(spotlights(root)[0]!, 'onAnimationstart', { currentTarget: { parentElement: grid } })
+      return { cell, grid, querySelector }
+    }
+
+    function clipPath(root: HostNode) {
+      return (spotlights(root)[0]!.props.style as { clipPath?: string } | undefined)?.clipPath
+    }
+
+    it('cuts the highlighted day out of the dim instead of raising it', async () => {
+      const { root } = await mountHighlighted()
+      expect(clipPath(root)).toBeUndefined()
+
+      const { querySelector } = startSpotlight(root, { left: 154.5, top: 361, width: 53.5, height: 64 })
+      await nextTick()
+      expect(querySelector).toHaveBeenCalledWith('.calendar-day--highlighted')
+      expect(clipPath(root)).toBe(
+        'polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, '
+        + '53.5px 160px, 53.5px 224px, 107px 224px, 107px 160px, 53.5px 160px)',
+      )
+    })
+
+    it('re-measures the hole when the grid or the day resizes, and stops once the spotlight ends', async () => {
+      const { root } = await mountHighlighted()
+      const { cell, grid } = startSpotlight(root, { left: 154.5, top: 361, width: 53.5, height: 64 })
+      expect(observers).toHaveLength(1)
+      expect(observers[0]!.observed).toEqual([grid, cell])
+
+      cell.rect = { left: 201, top: 401, width: 80, height: 90 }
+      observers[0]!.callback()
+      await nextTick()
+      expect(clipPath(root)).toContain('100px 200px, 100px 290px, 180px 290px, 180px 200px, 100px 200px)')
+
+      triggerHost(spotlights(root)[0]!, 'onAnimationend')
+      await nextTick()
+      expect(observers[0]!.disconnect).toHaveBeenCalled()
+      expect(spotlights(root)).toHaveLength(0)
+    })
+
+    it('stops tracking the day when the highlight is cleared or replayed', async () => {
+      const { root, highlightDay } = await mountHighlighted()
+      startSpotlight(root, { left: 154.5, top: 361, width: 53.5, height: 64 })
+      highlightDay.value = { year: 2026, month: 11, day: 12 }
+      await nextTick()
+      expect(observers[0]!.disconnect).toHaveBeenCalled()
+      expect(clipPath(root)).toBeUndefined()
+
+      startSpotlight(root, { left: 154.5, top: 361, width: 53.5, height: 64 })
+      highlightDay.value = null
+      await nextTick()
+      expect(observers[1]!.disconnect).toHaveBeenCalled()
+    })
+
+    it('scrolls an off-screen highlighted day into view as the dim starts', async () => {
+      const { root } = await mountHighlighted()
+      const { cell } = startSpotlight(root, { left: 154.5, top: 900, width: 53.5, height: 90 })
+      expect(cell.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
+    })
+
+    it('leaves the page where it is when the highlighted day is already visible', async () => {
+      const { root } = await mountHighlighted()
+      const { cell } = startSpotlight(root, { left: 154.5, top: 300, width: 53.5, height: 90 })
+      expect(cell.scrollIntoView).not.toHaveBeenCalled()
+    })
   })
 })
 

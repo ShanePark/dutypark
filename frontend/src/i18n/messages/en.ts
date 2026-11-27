@@ -350,7 +350,6 @@ export default {
       yearLabel: '{year}',
       thisMonth: 'This month ({date})',
       goToThisMonth: 'This month',
-      today: 'Today',
     },
     datePicker: {
       placeholder: 'Select date',

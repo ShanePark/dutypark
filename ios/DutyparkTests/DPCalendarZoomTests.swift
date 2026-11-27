@@ -1,6 +1,7 @@
 import CoreGraphics
 import SwiftUI
 import UIKit
+import UIKit.UIGestureRecognizerSubclass
 import XCTest
 @testable import Dutypark
 
@@ -173,6 +174,123 @@ final class DPCalendarZoomTests: XCTestCase {
     }
 
     @MainActor
+    func testHostedZoomKeepsOuterScrollingOffWhenSwiftUIReappliesScrollSettings() throws {
+        let state = CalendarZoomHostState()
+        let host = UIHostingController(rootView: CalendarZoomHostFixture(state: state))
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 375, height: 600))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+
+        func render() {
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+            host.view.layoutIfNeeded()
+        }
+
+        func recognizers(in view: UIView) -> [UIGestureRecognizer] {
+            (view.gestureRecognizers ?? []) + view.subviews.flatMap { recognizers(in: $0) }
+        }
+
+        render()
+        let pinch = try XCTUnwrap(recognizers(in: host.view).first { $0.delegate is DPCalendarZoomCoordinator && $0 is UIPinchGestureRecognizer })
+        let zoom = try XCTUnwrap(pinch.delegate as? DPCalendarZoomCoordinator)
+        let outerScroll = try XCTUnwrap(pinch.view as? UIScrollView)
+
+        // SwiftUI may re-apply its scroll settings in any update, which re-enables
+        // UIScrollView's own pan unless SwiftUI itself knows scrolling is off.
+        zoom.handlePinch(state: .began, scale: 1, location: CGPoint(x: 100, y: 100))
+        zoom.handlePinch(state: .changed, scale: 2, location: CGPoint(x: 100, y: 100))
+        outerScroll.isScrollEnabled = true
+        render()
+        XCTAssertFalse(outerScroll.panGestureRecognizer.isEnabled, "A pinch must keep the outer scroll still")
+        zoom.handlePinch(state: .ended, scale: 2, location: CGPoint(x: 100, y: 100))
+        render()
+        XCTAssertTrue(zoom.isZoomed())
+        XCTAssertTrue(outerScroll.panGestureRecognizer.isEnabled)
+
+        zoom.handlePan(state: .began, translation: .zero)
+        outerScroll.isScrollEnabled = true
+        render()
+        XCTAssertFalse(outerScroll.panGestureRecognizer.isEnabled, "A zoom pan must keep the outer scroll still")
+        zoom.handlePan(state: .ended, translation: .zero)
+        render()
+        XCTAssertTrue(outerScroll.panGestureRecognizer.isEnabled)
+    }
+
+    @MainActor
+    func testHostedPinchIgnoresTapsUntilTheNextTouchSequence() throws {
+        let state = CalendarZoomHostState()
+        let host = UIHostingController(rootView: CalendarZoomHostFixture(state: state))
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 375, height: 600))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+
+        func render() {
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+            host.view.layoutIfNeeded()
+        }
+
+        func recognizers(in view: UIView) -> [UIGestureRecognizer] {
+            (view.gestureRecognizers ?? []) + view.subviews.flatMap { recognizers(in: $0) }
+        }
+
+        render()
+        let pinch = try XCTUnwrap(recognizers(in: host.view).first { $0.delegate is DPCalendarZoomCoordinator && $0 is UIPinchGestureRecognizer })
+        let zoom = try XCTUnwrap(pinch.delegate as? DPCalendarZoomCoordinator)
+        let outerScroll = try XCTUnwrap(pinch.view as? UIScrollView)
+        // The watcher sees every touch on the page without claiming or delaying one.
+        XCTAssertTrue(zoom.touchSequence.view === outerScroll)
+        XCTAssertFalse(zoom.touchSequence.cancelsTouchesInView)
+        XCTAssertFalse(zoom.touchSequence.delaysTouchesEnded)
+        XCTAssertFalse(zoom.touchSequence.canPrevent(outerScroll.panGestureRecognizer))
+        XCTAssertFalse(zoom.touchSequence.canBePrevented(by: zoom.pan))
+        XCTAssertFalse(state.ignoresTaps)
+
+        // Pinching back to actual size leaves a finger down after the pinch ends;
+        // its lift must not count as a tap on the day under it.
+        zoom.handlePinch(state: .began, scale: 1, location: CGPoint(x: 100, y: 100))
+        zoom.handlePinch(state: .changed, scale: 0.5, location: CGPoint(x: 100, y: 100))
+        zoom.handlePinch(state: .ended, scale: 0.5, location: CGPoint(x: 100, y: 100))
+        render()
+        XCTAssertFalse(zoom.isZoomed())
+        XCTAssertTrue(state.ignoresTaps)
+
+        zoom.touchSequenceBegan()
+        render()
+        XCTAssertFalse(state.ignoresTaps, "A fresh touch after the pinch is an ordinary tap")
+
+        zoom.handlePinch(state: .began, scale: 1, location: CGPoint(x: 100, y: 100))
+        zoom.handlePinch(state: .changed, scale: 2, location: CGPoint(x: 100, y: 100))
+        zoom.handlePinch(state: .ended, scale: 2, location: CGPoint(x: 100, y: 100))
+        render()
+        XCTAssertTrue(zoom.isZoomed())
+        XCTAssertTrue(state.ignoresTaps)
+        zoom.touchSequenceBegan()
+        render()
+        XCTAssertFalse(state.ignoresTaps, "Taps work again while zoomed in")
+    }
+
+    func testEveryZoomHostIgnoresDayTapsAfterAPinch() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        func source(_ path: String) throws -> String {
+            try String(contentsOf: root.appending(path: path), encoding: .utf8)
+        }
+        let calendar = try source("Dutypark/Features/Calendar/CalendarView.swift")
+        XCTAssertTrue(calendar.contains("ignoresTaps: $isCalendarTapIgnored"))
+        XCTAssertTrue(calendar.contains("guard !isSwipingMonth, !isSlidingMonth else { return }\n                        // The finger lifted last after a pinch was zooming, not tapping.\n                        guard !isCalendarTapIgnored else { return }"))
+        XCTAssertTrue(calendar.contains("openTodo: { todo in if !isCalendarTapIgnored { openTodo(todo) } }"))
+
+        let team = try source("Dutypark/Features/Team/TeamView.swift")
+        XCTAssertTrue(team.contains("ignoresTaps: $isCalendarTapIgnored"))
+        XCTAssertTrue(team.contains("guard !isCalendarTapIgnored, !isSwipingMonth, !isSlidingMonth, !viewModel.isLoading else { return }"))
+    }
+
+    @MainActor
     func testHostedZoomPreservesMagnificationDuringEdgePansAndGeometryChanges() throws {
         let state = CalendarZoomHostState()
         let host = UIHostingController(rootView: CalendarZoomHostFixture(state: state))
@@ -220,15 +338,17 @@ final class DPCalendarZoomTests: XCTestCase {
 private final class CalendarZoomHostState: ObservableObject {
     @Published var resetID = 0
     @Published var height: CGFloat = 300
+    @Published var ignoresTaps = false
 }
 
 private struct CalendarZoomHostFixture: View {
     @ObservedObject var state: CalendarZoomHostState
     @State private var isActive = false
+    @State private var isScrollLocked = false
 
     var body: some View {
         ScrollView {
-            DPCalendarZoom(resetID: AnyHashable(state.resetID), isActive: $isActive) {
+            DPCalendarZoom(resetID: AnyHashable(state.resetID), isActive: $isActive, isScrollLocked: $isScrollLocked, ignoresTaps: $state.ignoresTaps) {
                 Color.red
                     .frame(height: state.height)
                     .dpHorizontalPan(
@@ -237,5 +357,6 @@ private struct CalendarZoomHostFixture: View {
                     )
             }
         }
+        .scrollDisabled(isScrollLocked)
     }
 }

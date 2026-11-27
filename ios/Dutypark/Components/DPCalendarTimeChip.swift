@@ -109,9 +109,14 @@ extension DPCalendarCellStyle {
 /// title's two-line limit can never clip it. A range wraps only after its "~".
 struct DPCalendarScheduleTime: View {
     static let tracking: CGFloat = -0.36
-    /// 0.84em of the tile's item text.
-    static let fontSize: CGFloat = CalendarTypography.cellContent * 0.84
-    static let horizontalPadding: CGFloat = 3
+    /// 0.77em of the tile's item text, so a full range fits one line in a 375pt-wide tile.
+    static let fontSize: CGFloat = CalendarTypography.cellContent * 0.77
+    /// The chip box hugs its digits: 1pt each side, 1.2em tall, 2.5pt corners.
+    static let horizontalPadding: CGFloat = 1
+    static let boxHeightRatio: CGFloat = 1.2
+    static let cornerRadius: CGFloat = 2.5
+    /// A single time keeps 2pt clear of the row's edge; a range has no room to spare.
+    static let singleTrailingMargin: CGFloat = 2
 
     let time: String
     let dutyColor: String?
@@ -126,8 +131,7 @@ struct DPCalendarScheduleTime: View {
             .lineLimit(2)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, Self.horizontalPadding)
-            .padding(.vertical, 1)
-            .background(colors.background, in: RoundedRectangle(cornerRadius: 4))
+            .background(colors.background, in: RoundedRectangle(cornerRadius: Self.cornerRadius))
             .accessibilityLabel(Text(verbatim: time))
     }
 }

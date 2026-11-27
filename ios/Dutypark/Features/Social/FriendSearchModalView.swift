@@ -114,7 +114,7 @@ struct FriendSearchModalView: View {
                     .autocorrectionDisabled()
                     .submitLabel(.search)
                     .focused($focusedField, equals: .keyword)
-                    .onSubmit { search(page: 0) }
+                    .onSubmit { search() }
             }
             .padding(.horizontal, 14)
             .frame(minHeight: 48)
@@ -125,7 +125,7 @@ struct FriendSearchModalView: View {
                     .stroke(DPColor.borderInput, lineWidth: 1)
             }
 
-            Button { search(page: 0) } label: {
+            Button { search() } label: {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(DPColor.textOnDark)
@@ -185,7 +185,7 @@ struct FriendSearchModalView: View {
             if viewModel.searchTotalPages > 1 {
                 HStack(spacing: DPSpacing.small) {
                     pageButton(systemImage: "chevron.left", disabled: viewModel.searchPage == 0) {
-                        search(page: viewModel.searchPage - 1)
+                        showPage(viewModel.searchPage - 1)
                     }
                     Text(
                         socialFormat(
@@ -201,7 +201,7 @@ struct FriendSearchModalView: View {
                         systemImage: "chevron.right",
                         disabled: viewModel.searchPage + 1 >= viewModel.searchTotalPages
                     ) {
-                        search(page: viewModel.searchPage + 1)
+                        showPage(viewModel.searchPage + 1)
                     }
                 }
             }
@@ -254,8 +254,12 @@ struct FriendSearchModalView: View {
         .padding(DPSpacing.compact)
     }
 
-    private func search(page: Int) {
-        Task { await viewModel.search(keyword: keyword, page: page) }
+    private func search() {
+        Task { await viewModel.search(keyword: keyword) }
+    }
+
+    private func showPage(_ page: Int) {
+        Task { await viewModel.showSearchPage(page) }
     }
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="TSpan">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { getTimeChipColors, isLightColor } from '@/utils/color'
@@ -62,7 +62,7 @@ function getSourceIndex(visibleIndex: number): number {
   return calendarGridSlice.value.startIndex + visibleIndex
 }
 
-const { locale, t } = useI18n()
+const { locale } = useI18n()
 const weekDays = computed(() => {
   const formatter = new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
   return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2024, 0, 7 + index)))
@@ -83,14 +83,94 @@ function isToday(day: CalendarDay): boolean {
   )
 }
 
+// The lit day is a hole cut in the dim overlay rather than a raised tile, so
+// a multi-day band crossing it stays visible and lit there. The hole follows the
+// day while the grid or the day resizes.
+const spotlightHole = ref<{ left: number; top: number; right: number; bottom: number } | null>(null)
+let spotlightTracking: { grid: HTMLElement; cell: HTMLElement; observer: ResizeObserver } | null = null
+
+const spotlightStyle = computed(() => {
+  const hole = spotlightHole.value
+  if (!hole) return undefined
+  const { left: l, top: t, right: r, bottom: b } = hole
+  return {
+    clipPath: `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${l}px ${t}px, ${l}px ${b}px, ${r}px ${b}px, ${r}px ${t}px, ${l}px ${t}px)`,
+  }
+})
+
+// In the overlay's own coordinates: the grid's padding box, inside its border.
+function measureSpotlightHole() {
+  if (!spotlightTracking) return
+  const { grid, cell } = spotlightTracking
+  const gridRect = grid.getBoundingClientRect()
+  const cellRect = cell.getBoundingClientRect()
+  const originX = gridRect.left + grid.clientLeft
+  const originY = gridRect.top + grid.clientTop
+  spotlightHole.value = {
+    left: cellRect.left - originX,
+    top: cellRect.top - originY,
+    right: cellRect.right - originX,
+    bottom: cellRect.bottom - originY,
+  }
+}
+
+function stopSpotlightTracking() {
+  spotlightTracking?.observer.disconnect()
+  spotlightTracking = null
+  spotlightHole.value = null
+}
+
+function startSpotlight(event: AnimationEvent) {
+  const grid = (event.currentTarget as HTMLElement).parentElement
+  const cell = grid?.querySelector<HTMLElement>('.calendar-day--highlighted')
+  if (!grid || !cell) return
+  stopSpotlightTracking()
+  const observer = new ResizeObserver(measureSpotlightHole)
+  spotlightTracking = { grid, cell, observer }
+  measureSpotlightHole()
+  observer.observe(grid)
+  observer.observe(cell)
+  revealSpotlightCell(cell)
+}
+
+// The lit day may sit below the fold (on a phone); bring it on screen as the dim starts.
+function revealSpotlightCell(cell: HTMLElement) {
+  const { top, bottom } = cell.getBoundingClientRect()
+  if (top >= 0 && bottom <= window.innerHeight) return
+  cell.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+onBeforeUnmount(stopSpotlightTracking)
+
+// A highlight is a one-off spotlight: every new highlightDay value, even the
+// same date again, replays it, and it clears itself when the animation ends.
+const flashDay = ref<Props['highlightDay']>(null)
+const flashKey = ref(0)
+
+watch(() => props.highlightDay, day => {
+  stopSpotlightTracking()
+  flashDay.value = day
+  flashKey.value += 1
+}, { immediate: true })
+
+function endFlash() {
+  stopSpotlightTracking()
+  flashDay.value = null
+}
+
 function isHighlighted(day: CalendarDay): boolean {
-  if (!props.highlightDay) return false
+  if (!flashDay.value) return false
   return (
-    day.year === props.highlightDay.year &&
-    day.month === props.highlightDay.month &&
-    day.day === props.highlightDay.day
+    day.year === flashDay.value.year &&
+    day.month === flashDay.value.month &&
+    day.day === flashDay.value.day
   )
 }
+
+const hasSpotlight = computed(() => !props.focusedDay && visibleDays.value.some(isHighlighted))
+watch(hasSpotlight, shown => {
+  if (!shown) stopSpotlightTracking()
+})
 
 function isSelected(day: CalendarDay): boolean {
   if (!props.selectedDay) return false
@@ -101,10 +181,10 @@ function isSelected(day: CalendarDay): boolean {
   )
 }
 
-// The selection border wins over today's border; today stays recognisable by
-// its filled date circle and label.
-function hasSelectionBorder(day: CalendarDay): boolean {
-  return !props.focusedDay && (isHighlighted(day) || isSelected(day))
+// Today's date strip would cover the inset selection ring, so a selected today
+// redraws the ring above it.
+function hasTodaySelectionBorder(day: CalendarDay): boolean {
+  return !props.focusedDay && isToday(day) && isSelected(day) && !isHighlighted(day)
 }
 
 function isFocused(day: CalendarDay): boolean {
@@ -231,6 +311,8 @@ function getWeekendColor(day: CalendarDay, weekend: 'sunday' | 'saturday'): stri
 }
 
 function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
+  // Today's date strip sets its own (white) ink.
+  if (isToday(day)) return 'var(--calendar-ink)'
   if (!isCurrentMonth(day)) return 'var(--calendar-ink-muted)'
   if (dayOfWeek === 0) return getWeekendColor(day, 'sunday')
   if (dayOfWeek === 6) return getWeekendColor(day, 'saturday')
@@ -278,7 +360,6 @@ function handleDayClick(day: CalendarDay, index: number) {
           'calendar-day--outside': !isCurrentMonth(day),
           'calendar-day--today': isToday(day),
           'calendar-day--highlighted': !focusedDay && isHighlighted(day),
-          'highlight-pulse-glow': !focusedDay && isHighlighted(day),
           'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isHighlighted(day),
           'duty-day-focused': isFocused(day),
         }
@@ -286,13 +367,8 @@ function handleDayClick(day: CalendarDay, index: number) {
       :style="getDayStyle(day)"
     >
       <span
-        v-if="isToday(day) && !hasSelectionBorder(day)"
-        class="calendar-day-today-border"
-        aria-hidden="true"
-      />
-      <span
-        v-if="!focusedDay && isHighlighted(day)"
-        class="calendar-day-highlight-border"
+        v-if="hasTodaySelectionBorder(day)"
+        class="calendar-day-selection-border"
         aria-hidden="true"
       />
       <div class="calendar-day-head">
@@ -301,11 +377,7 @@ function handleDayClick(day: CalendarDay, index: number) {
             class="calendar-day-number"
             :style="{ color: getDayNumberColor(day, idx % 7) }"
           >
-            <template v-if="isToday(day)">
-              <span class="calendar-day-today-circle">{{ day.day }}</span>
-              <span class="calendar-day-today-label">{{ t('common.calendar.today') }}</span>
-            </template>
-            <template v-else>{{ day.day }}</template>
+            {{ day.day }}
           </span>
           <slot name="day-header" :day="day" :index="getSourceIndex(idx)" />
         </div>
@@ -356,6 +428,16 @@ function handleDayClick(day: CalendarDay, index: number) {
         <slot name="day-content" :day="day" :index="getSourceIndex(idx)" />
       </div>
     </div>
+
+    <span
+      v-if="hasSpotlight"
+      :key="flashKey"
+      class="calendar-grid-spotlight"
+      :style="spotlightStyle"
+      aria-hidden="true"
+      @animationstart="startSpotlight"
+      @animationend="endFlash"
+    />
   </div>
 </template>
 
@@ -366,8 +448,9 @@ function handleDayClick(day: CalendarDay, index: number) {
   --calendar-gutter: var(--dp-border-primary);
   --calendar-surface: var(--dp-calendar-cell-prev-next);
   --calendar-today: var(--dp-danger-hover);
-  --calendar-gap: 2px;
-  --calendar-pad-x: 3px;
+  /* Phones use the 1pt iOS gutter. */
+  --calendar-gap: 1px;
+  --calendar-pad-x: 1.5px;
   /* White glass would vanish on a light empty tile, so it takes a faint ink tint. */
   --calendar-span-empty-tint: var(--dp-text-primary);
   --calendar-span-empty-glass: 6%;
@@ -458,13 +541,11 @@ function handleDayClick(day: CalendarDay, index: number) {
   --calendar-ink-muted: color-mix(in srgb, var(--dp-text-on-light) 58%, transparent);
 }
 
-.calendar-day--today,
-.calendar-day--highlighted {
+.calendar-day--today {
   z-index: 1;
 }
 
 .calendar-day-top {
-  container: calendar-day-header / inline-size;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -490,51 +571,48 @@ function handleDayClick(day: CalendarDay, index: number) {
   font-weight: 600;
 }
 
-/* Today: a ring over the gutter (unless the day is selected), a filled date
-   circle, and (on wider screens) a label. */
-.calendar-day-today-border {
-  position: absolute;
-  inset: -2px;
-  border: 2px solid var(--calendar-today);
-  border-radius: 3px;
-  box-shadow: 0 0 0 1px var(--calendar-gutter), inset 0 0 0 1.5px #fff;
-  pointer-events: none;
-  z-index: 2;
-}
+/* Today: the date row becomes a red strip bled to the tile's top and sides,
+   cancelling the tile's padding, with white ink for the date and a pinned
+   D-Day label. */
+.calendar-day--today .calendar-day-top {
+  --calendar-ink: #fff;
+  --calendar-ink-muted: #fff;
 
-.calendar-day-today-circle {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 19px;
-  height: 19px;
-  margin-left: -1px;
-  border-radius: 9999px;
+  margin: -4px calc(-1 * var(--calendar-pad-x)) 2px;
+  padding: 4px calc(var(--calendar-pad-x) + 2px) 2px;
   background: var(--calendar-today);
-  color: #fff;
-  font-size: 11.5px;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 20%);
 }
 
-/* A filled pill keeps the optional label legible on any fill. */
-.calendar-day-today-label {
-  display: none;
-  white-space: nowrap;
-  padding: 3px 6px;
-  border-radius: 9999px;
-  background: var(--calendar-today);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.calendar-day-highlight-border {
+.calendar-day-selection-border {
   position: absolute;
   inset: 0;
-  border: 2px solid var(--dp-warning);
+  border: 2px solid var(--dp-accent);
   pointer-events: none;
   z-index: 1;
+}
+
+/* Spotlight: one overlay dims the whole grid, multi-day bands (z-index 2)
+   included, except the lit day clipped out of it (spotlightStyle), for 0.25s
+   in, a hold until 1.05s and 0.9s out, as on iOS. The grid's overflow keeps it
+   inside the rounded corners. It rests invisible, so nothing lingers even
+   before animationend removes it. Dimming is not motion, so reduced motion
+   keeps it. */
+.calendar-grid-spotlight {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: rgb(0 0 0 / 40%);
+  opacity: 0;
+  pointer-events: none;
+  animation: calendar-grid-spotlight 1.95s ease-in;
+}
+
+@keyframes calendar-grid-spotlight {
+  0% { opacity: 0; }
+  12.8205% { opacity: 1; }
+  53.8462% { opacity: 1; animation-timing-function: ease-out; }
+  100% { opacity: 0; }
 }
 
 .calendar-day-holiday {
@@ -612,9 +690,10 @@ function handleDayClick(day: CalendarDay, index: number) {
 }
 
 /* Only overflowing titles retain a clamped box, keeping their time visible.
-   Titles that fit two lines flow inline so the time can use their final line. */
+   Titles that fit two lines flow inline so the time can use their final line.
+   The line contains the floated time chip, so a wrapped chip adds to its height. */
 :slotted(.calendar-item__line--chip) {
-  display: block;
+  display: flow-root;
   overflow: visible;
   -webkit-line-clamp: none;
   line-clamp: none;
@@ -636,22 +715,42 @@ function handleDayClick(day: CalendarDay, index: number) {
   vertical-align: baseline;
 }
 
-/* An atomic pill moves to the next line whole; only a range wider than the
-   line breaks inside it, at the <wbr> after "~". On a duty fill the tile sets a
-   tone-on-tone pair; otherwise the chip is a neutral ink tint. */
+/* The gap before the chip, as on iOS: a preserved space takes room when the chip
+   shares the title's last line, but hangs at a line end, so it neither wraps the
+   title nor narrows a chip on its own line. */
+:slotted(.calendar-item__line--chip > .calendar-item__text--flow)::after {
+  content: ' ';
+  white-space: pre-wrap;
+}
+
+/* Floated after the title, the whole pill sits at the right edge of the title's
+   last line when it fits beside it, and at the right edge of the next line
+   otherwise. Only a range wider than the line breaks inside it, at the <wbr>
+   after "~", with both lines flush right. On a duty fill the tile sets a
+   tone-on-tone pair; otherwise the chip is a neutral ink tint. On phones a short
+   box with the iOS tracking and a hairline of side room fits a narrow row. */
 :slotted(.calendar-item__time) {
   display: inline-block;
+  float: right;
   max-width: 100%;
   margin-top: 1px;
-  padding: 1px 3px;
-  border-radius: 4px;
+  margin-left: 0;
+  padding: 0 1px;
+  border-radius: 2.5px;
   background: var(--calendar-time-bg, color-mix(in srgb, var(--calendar-ink) 8.5%, transparent));
   color: var(--calendar-time-ink, color-mix(in srgb, var(--calendar-ink) 82%, transparent));
-  font-size: 0.84em;
+  font-size: 0.77em;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
-  letter-spacing: normal;
+  letter-spacing: -0.36px;
+  text-align: right;
+}
+
+/* A lone time has room to spare on a phone row, so it stops short of the edge;
+   a range keeps the whole row. */
+:slotted(.calendar-item__time--single) {
+  margin-right: 2px;
 }
 
 :slotted(.calendar-item__time-part) {
@@ -808,16 +907,9 @@ function handleDayClick(day: CalendarDay, index: number) {
   stroke-width: 2.5;
 }
 
-/* Use the tile's available width: the date and full D-Day label can wrap
-   onto separate header lines before either is squeezed or clipped. */
-@container calendar-day-header (min-width: 6rem) {
-  .calendar-day-today-label {
-    display: inline-block;
-  }
-}
-
 @media (min-width: 640px) {
   .calendar-grid {
+    --calendar-gap: 2px;
     --calendar-pad-x: 8px;
 
     border-width: 2px;
@@ -846,17 +938,9 @@ function handleDayClick(day: CalendarDay, index: number) {
     font-size: 17px;
   }
 
-  .calendar-day-today-border {
-    border-width: 3px;
-    border-radius: 4px;
-    box-shadow: 0 0 0 2px var(--calendar-gutter), inset 0 0 0 2px #fff;
-  }
-
-  .calendar-day-today-circle {
-    width: 26px;
-    height: 26px;
-    margin: -1px 0 0 -3px;
-    font-size: 15px;
+  .calendar-day--today .calendar-day-top {
+    margin: -7px calc(-1 * var(--calendar-pad-x)) 4px;
+    padding: 6px var(--calendar-pad-x) 4px;
   }
 
   .calendar-day-holiday {
@@ -882,8 +966,20 @@ function handleDayClick(day: CalendarDay, index: number) {
 
   :slotted(.calendar-item__time) {
     margin-top: 0;
+    margin-left: 0.25em;
     padding: 1px 5px;
     border-radius: 5px;
+    font-size: 0.84em;
+    line-height: 1.4;
+    letter-spacing: normal;
+  }
+
+  :slotted(.calendar-item__time--single) {
+    margin-right: 0;
+  }
+
+  :slotted(.calendar-item__line--chip > .calendar-item__text--flow)::after {
+    content: none;
   }
 
   .calendar-span-lanes {

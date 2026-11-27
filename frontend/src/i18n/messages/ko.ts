@@ -352,7 +352,6 @@ export default {
       yearLabel: '{year}년',
       thisMonth: '이번달 ({date})',
       goToThisMonth: '이번달',
-      today: '오늘',
     },
     datePicker: {
       placeholder: '날짜 선택',

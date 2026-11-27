@@ -47,6 +47,8 @@ struct TeamView: View {
     @State private var isSwipingMonth = false
     @State private var isSlidingMonth = false
     @State private var isCalendarZoomActive = false
+    @State private var isCalendarScrollLocked = false
+    @State private var isCalendarTapIgnored = false
     @State private var monthSlideTask: Task<Void, Never>?
     private let onOpenCalendar: (MemberID) -> Void
 
@@ -330,7 +332,9 @@ struct TeamView: View {
                 VStack(spacing: DPSpacing.compact) {
                     DPCalendarZoom(
                         resetID: AnyHashable("\(team.id)-\(viewModel.calendarMonth.year)-\(viewModel.calendarMonth.month)"),
-                        isActive: $isCalendarZoomActive
+                        isActive: $isCalendarZoomActive,
+                        isScrollLocked: $isCalendarScrollLocked,
+                        ignoresTaps: $isCalendarTapIgnored
                     ) {
                         calendar
                     }
@@ -344,6 +348,7 @@ struct TeamView: View {
                 .padding(.top, DPSpacing.medium + Self.thisMonthCalloutClearance)
                 .padding(.bottom, DPSpacing.medium)
             }
+            .scrollDisabled(isCalendarScrollLocked)
 
             thisMonthCalloutLayer
                 .offset(y: DPThisMonthCallout.verticalOffset)
@@ -583,7 +588,7 @@ struct TeamView: View {
                         weekDays: DPCalendarSpanRibbonDay.week(containing: index - firstIndex, in: ribbonDays),
                         isSelected: day == page.selectedDay
                     ) {
-                        guard !isSwipingMonth, !isSlidingMonth, !viewModel.isLoading else { return }
+                        guard !isCalendarTapIgnored, !isSwipingMonth, !isSlidingMonth, !viewModel.isLoading else { return }
                         Task { await viewModel.selectDay(at: index) }
                     }
                 }
@@ -974,7 +979,7 @@ private struct TeamCalendarDayCell: View {
         .buttonStyle(.plain)
         // The tile's own layer stays inside the button, so the button carries it into the grid.
         .zIndex(DPCalendarTileRing.zIndex(
-            ring: DPCalendarTileRing(isToday: isToday, hasHighlight: isSelected),
+            ring: DPCalendarTileRing(hasHighlight: isSelected),
             ribbonColumn: ribbonColumn
         ))
         .accessibilityLabel(Text(verbatim: "\(day.year)-\(day.month)-\(day.day)"))

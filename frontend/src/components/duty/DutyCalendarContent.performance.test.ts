@@ -171,6 +171,28 @@ describe('calendar month transition layout', () => {
     const track = findHostNode(mounted.root, node => node.props.class === 'calendar-month-swipe__track')!
     expect(findHostNode(track, node => node.props['data-test'] === 'dday-list')).not.toBeNull()
   })
+
+  it('spotlights a jumped-to day in another month only once that month is on screen', async () => {
+    const props = reactive(makeProps(0))
+    const root = mountCalendar(props)
+    const highlightedCells = () => calendarDayCells(root)
+      .filter(cell => String(cell.props.class).split(' ').includes('calendar-day--highlighted'))
+
+    // October 3 is also a trailing cell of the September grid that stays up while October loads.
+    props.currentMonth = 10
+    props.isCalendarMonthLoaded = false
+    props.highlightDay = { year: 2026, month: 10, day: 3 }
+    await nextTick()
+    expect(highlightedCells()).toHaveLength(0)
+
+    props.days = makeMonthDays(2026, 9, 27)
+    props.calendarDataMonth = 10
+    props.isCalendarMonthLoaded = true
+    await nextTick()
+    const cells = calendarDayCells(root)
+    const octoberThird = props.days.findIndex(day => day.month === 10 && day.day === 3)
+    expect(highlightedCells()).toEqual([cells[octoberThird]])
+  })
 })
 
 describe('calendar derived display data', () => {
@@ -357,7 +379,7 @@ describe('calendar derived display data', () => {
     expect(findHostNode(root, node => String(node.props.class ?? '').split(' ').includes('calendar-span-lane'))).toBeNull()
   })
 
-  it('ends the title line with a time chip that breaks only after the tilde', () => {
+  it('follows the title with a time chip that breaks only after the tilde', () => {
     const props = makeProps(0)
     const range = makeSchedule('range')
     const startOnly = { ...makeSchedule('start-only'), endDateTime: '2026-09-01T09:30' }
@@ -372,10 +394,12 @@ describe('calendar derived display data', () => {
     const chips = lines.map(line => line.children.filter(child => hasClass(child, 'calendar-item__time')))
     expect(items.map(item => item.children.filter(child => hasClass(child, 'calendar-item__time')).length)).toEqual([0, 0, 0, 0])
     expect(chips.map(found => found.length)).toEqual([1, 1, 1, 0])
+    // A lone start or end time is marked so phones can keep it off the row edge.
+    const chipClasses = ['calendar-item__time', 'calendar-item__time calendar-item__time--single', 'calendar-item__time calendar-item__time--single']
     for (const index of [0, 1, 2]) {
       const children = lines[index]!.children.filter(child => child.type !== '#comment' && !(child.type === '#text' && !child.text))
       expect(children.map(child => child.type === '#text' ? child.text : child.props.class)).toEqual([
-        'calendar-item__text', ' ', 'calendar-item__time',
+        'calendar-item__text', chipClasses[index],
       ])
     }
     const shape = (node: HostNode) => node.children
