@@ -113,13 +113,22 @@ onMounted(async () => {
       </button>
     </section>
 
-    <footer class="mt-6 flex items-center justify-center gap-1 text-xs text-dp-text-muted">
-      <router-link to="/terms" class="more-footer-link inline-flex min-h-11 items-center rounded px-2">
-        {{ t('policy.terms.title') }}
+    <footer class="mt-6 flex items-center justify-center gap-2">
+      <router-link to="/terms" class="more-footer-link inline-flex min-h-11 items-center rounded-full">
+        <span
+          class="more-footer-pill inline-flex h-[34px] items-center gap-0.5 rounded-full border border-dp-border-primary bg-dp-bg-card pl-3.5 pr-2.5 text-[12.5px] font-medium text-dp-text-secondary"
+        >
+          {{ t('policy.terms.title') }}
+          <ChevronRight class="h-[13px] w-[13px] shrink-0 text-dp-text-muted" :stroke-width="2.25" />
+        </span>
       </router-link>
-      <span aria-hidden="true">·</span>
-      <router-link to="/privacy" class="more-footer-link inline-flex min-h-11 items-center rounded px-2">
-        {{ t('policy.privacy.title') }}
+      <router-link to="/privacy" class="more-footer-link inline-flex min-h-11 items-center rounded-full">
+        <span
+          class="more-footer-pill inline-flex h-[34px] items-center gap-0.5 rounded-full border border-dp-border-primary bg-dp-bg-card pl-3.5 pr-2.5 text-[12.5px] font-medium text-dp-text-secondary"
+        >
+          {{ t('policy.privacy.title') }}
+          <ChevronRight class="h-[13px] w-[13px] shrink-0 text-dp-text-muted" :stroke-width="2.25" />
+        </span>
       </router-link>
     </footer>
   </div>
@@ -144,16 +153,22 @@ onMounted(async () => {
   color: var(--dp-danger-hover);
 }
 
-.more-footer-link {
-  transition: color 0.15s ease;
+.more-footer-pill {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.more-footer-link:hover {
-  color: var(--dp-text-secondary);
-  text-decoration: underline;
+.more-footer-link:hover .more-footer-pill,
+.more-footer-link:active .more-footer-pill {
+  background-color: var(--dp-bg-hover);
+  color: var(--dp-text-primary);
 }
 
 .more-footer-link:focus-visible {
+  outline: none;
+}
+
+.more-footer-link:focus-visible .more-footer-pill {
   outline: 2px solid var(--dp-accent);
   outline-offset: 2px;
 }
