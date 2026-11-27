@@ -44,13 +44,63 @@ struct CalendarMonthCellGrid<Item: Identifiable, Cell: View>: View {
     @ViewBuilder let content: (Int, Item) -> Cell
 
     var body: some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: DPCalendarCellStyle.gutterWidth), count: 7),
-            spacing: DPCalendarCellStyle.gutterWidth
-        ) {
+        // Not a LazyVGrid: a lazy grid keeps the row heights it estimated for the
+        // month it showed before, so a month body measured taller (or shorter) than
+        // its own rows, and the swipe viewport and D-Day cards jumped on commit.
+        CalendarMonthRowsLayout(spacing: DPCalendarCellStyle.gutterWidth) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 content(index, item)
             }
+        }
+    }
+}
+
+/// Seven equal columns, each row as tall as its tallest tile, every tile measured.
+private struct CalendarMonthRowsLayout: Layout {
+    let spacing: CGFloat
+    private let columns = 7
+
+    init(spacing: CGFloat) {
+        self.spacing = spacing
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
+        let width = proposal.width ?? idealWidth(subviews)
+        let heights = rowHeights(subviews, columnWidth: columnWidth(width))
+        return CGSize(width: width, height: heights.reduce(0, +) + spacing * CGFloat(max(heights.count - 1, 0)))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
+        let columnWidth = columnWidth(bounds.width)
+        var y = bounds.minY
+        for (row, height) in rowHeights(subviews, columnWidth: columnWidth).enumerated() {
+            for column in 0..<columns {
+                let index = row * columns + column
+                guard index < subviews.count else { break }
+                subviews[index].place(
+                    at: CGPoint(x: bounds.minX + CGFloat(column) * (columnWidth + spacing), y: y),
+                    anchor: .topLeading,
+                    proposal: ProposedViewSize(width: columnWidth, height: height)
+                )
+            }
+            y += height + spacing
+        }
+    }
+
+    private func columnWidth(_ width: CGFloat) -> CGFloat {
+        max((width - spacing * CGFloat(columns - 1)) / CGFloat(columns), 0)
+    }
+
+    private func idealWidth(_ subviews: Subviews) -> CGFloat {
+        let widest = subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
+        return widest * CGFloat(columns) + spacing * CGFloat(columns - 1)
+    }
+
+    private func rowHeights(_ subviews: Subviews, columnWidth: CGFloat) -> [CGFloat] {
+        stride(from: 0, to: subviews.count, by: columns).map { start in
+            subviews[start..<min(start + columns, subviews.count)]
+                .map { $0.sizeThatFits(ProposedViewSize(width: columnWidth, height: nil)).height }
+                .max() ?? 0
         }
     }
 }
@@ -1185,12 +1235,16 @@ struct CalendarView: View {
                 ) { page, index in
                     calendarMonthBody(page: page, isInteractive: index == 1 && !isSlidingMonth)
                 }
+                // The track and the resting month show the same page in the same place
+                // when a swipe commits; a fade would dissolve the grid through the gutter.
+                .transition(.identity)
             } else {
                 calendarMonthBody(
                     page: CalendarMonthPage(key: displayedMonthKey, days: model.days),
                     isInteractive: true
                 )
                 .fixedSize(horizontal: false, vertical: true)
+                .transition(.identity)
             }
         }
         .onPreferenceChange(CalendarMonthBodyHeightsPreferenceKey.self) { heights in
@@ -1502,8 +1556,10 @@ struct CalendarView: View {
                         .allowsHitTesting(index == 1 && !isSwipingMonth && !isSlidingMonth)
                         .accessibilityHidden(index != 1)
                 }
+                .transition(.identity)
             } else {
                 dDaySection
+                    .transition(.identity)
             }
         }
     }

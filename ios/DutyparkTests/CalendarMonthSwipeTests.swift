@@ -346,6 +346,68 @@ final class CalendarMonthSwipeTests: XCTestCase {
         }
     }
 
+    /// The resting month body is one grid whose months change in place. A lazy grid
+    /// carried the row heights it had estimated for an earlier, taller month into the
+    /// next, so a plain month stood on a gutter-coloured band; a swipe then started
+    /// from that taller viewport and dropped the band once the month was committed.
+    @MainActor
+    func testTheRestingMonthGridMeasuresTheRowsOfTheMonthItShows() throws {
+        let state = CalendarGridReuseFixtureState()
+        let host = UIHostingController(rootView: CalendarGridReuseFixture(state: state))
+        host.view.frame = CGRect(x: 0, y: 0, width: 375, height: 812)
+        let window = UIWindow(frame: host.view.frame)
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+
+        func render() {
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+            host.view.layoutIfNeeded()
+        }
+
+        for (month, rows, rowHeight): (Int, Int, CGFloat) in [(0, 5, 150), (1, 5, 64), (2, 6, 64), (3, 5, 64)] {
+            state.month = month
+            state.rows = rows
+            state.rowHeight = rowHeight
+            render()
+            XCTAssertEqual(
+                state.height,
+                calendarFixtureBodyHeight(rows: rows, rowHeight: rowHeight),
+                accuracy: 0.5,
+                "Month \(month) must be as tall as its own \(rows) rows"
+            )
+        }
+    }
+
+    /// Committing a swipe swaps the three-page track for the resting month inside the
+    /// slide-in animation. Both already show the same month in the same place, so the
+    /// default fade would only cross-dissolve the grid and D-Day cards through the
+    /// background: one blank flash after every swipe.
+    func testCommittingASwipeSwapsTheTrackWithoutCrossFading() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Dutypark/Features/Calendar/CalendarView.swift"),
+            encoding: .utf8
+        )
+        for (start, end) in [
+            ("private var monthBodyPager: some View", "private func calendarMonthBody("),
+            ("private var monthDDayPager: some View", "private func openDDayDetail("),
+        ] {
+            let lower = try XCTUnwrap(source.range(of: start))
+            let upper = try XCTUnwrap(source.range(of: end, range: lower.upperBound..<source.endIndex))
+            let pager = source[lower.lowerBound..<upper.lowerBound]
+            XCTAssertEqual(
+                pager.components(separatedBy: ".transition(.identity)").count - 1,
+                2,
+                "Both branches of \(start) must swap without a fade"
+            )
+        }
+    }
+
     /// The swipe has to ride along with the enclosing scroll view and the day cells'
     /// own tap. `simultaneousGesture(DragGesture())` was not enough: it claimed every
     /// drag that passed its minimum distance whichever way it went, so a scroll that
@@ -708,6 +770,44 @@ private struct CalendarMonthHeightFixture: View {
                 key: CalendarMonthLayoutFramesPreferenceKey.self,
                 value: [name: proxy.frame(in: .named("calendar-height"))]
             )
+        }
+    }
+}
+
+@MainActor
+private final class CalendarGridReuseFixtureState: ObservableObject {
+    @Published var month = 0
+    @Published var rows = 5
+    @Published var rowHeight: CGFloat = 64
+    var height: CGFloat = 0
+}
+
+/// The resting month body as CalendarView lays it out: one fixed-size grid in the
+/// scrolling stack, its cells identified by day so a new month brings new cells.
+@MainActor
+private struct CalendarGridReuseFixture: View {
+    @ObservedObject var state: CalendarGridReuseFixtureState
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: DPSpacing.small) {
+                CalendarMonthCellGrid(
+                    items: (0..<(state.rows * 7)).map { CalendarMonthLayoutCell(id: state.month * 100 + $0) }
+                ) { index, _ in
+                    Text("\(index + 1)")
+                        .frame(maxWidth: .infinity, minHeight: state.rowHeight, alignment: .topLeading)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onAppear { state.height = proxy.size.height }
+                            .onChange(of: proxy.size.height) { _, height in state.height = height }
+                    }
+                }
+                Color.cyan.frame(height: 108)
+            }
+            .padding(.horizontal, DPSpacing.small)
         }
     }
 }
