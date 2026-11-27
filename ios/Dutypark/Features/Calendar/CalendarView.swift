@@ -264,6 +264,9 @@ struct CalendarView: View {
     @State private var showsSearch = false
     /// Set once UIKit reports the screen fully on, after any push or tab transition.
     @State private var hasFinishedAppearing = false
+    /// Stays true until UIKit has finished sliding the search cover away, which is
+    /// after `showsSearch` turns false.
+    @State private var isSearchCoverOnScreen = false
     @State private var dDayModalSelection: DDayModalSelection?
     @State private var showsMonthPicker = false
     @State private var showsDutyComparison = false
@@ -424,7 +427,7 @@ struct CalendarView: View {
                 }
             }
         }
-        .fullScreenCover(isPresented: $showsSearch) {
+        .fullScreenCover(isPresented: $showsSearch, onDismiss: { isSearchCoverOnScreen = false }) {
             DPModalOverlay(
                 onDismiss: {
                     showsSearch = false
@@ -576,7 +579,7 @@ struct CalendarView: View {
     /// A spotlight waits until the dim can be seen arriving: the screen has finished
     /// sliding or switching in, and the search that picked the date has fully closed.
     private var isDateSpotlightRevealable: Bool {
-        hasFinishedAppearing && !showsSearch
+        hasFinishedAppearing && !isSearchCoverOnScreen
     }
 
     private var calendarContent: some View {
@@ -965,7 +968,10 @@ struct CalendarView: View {
     private func performSearch() {
         guard model.canSearchSchedules else { return }
         DPHapticCenter.shared.emit(.routine)
-        withoutPresentationAnimation { showsSearch = true }
+        withoutPresentationAnimation {
+            isSearchCoverOnScreen = true
+            showsSearch = true
+        }
         if !model.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Task { await model.search() }
         }

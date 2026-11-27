@@ -644,8 +644,18 @@ final class CalendarFeatureTests: XCTestCase {
             "The view tells the model when the grid is visible and uncovered"
         )
         XCTAssertTrue(
-            source.contains("hasFinishedAppearing && !showsSearch"),
+            source.contains("hasFinishedAppearing && !isSearchCoverOnScreen"),
             "A spotlight waits for a push to finish and for the search to close"
+        )
+        // UIKit still slides the cover and its frosted backdrop away after `showsSearch`
+        // turns false; a dim started then is revealed top-down as the backdrop leaves.
+        XCTAssertFalse(
+            source.contains("hasFinishedAppearing && !showsSearch"),
+            "The binding turning false is not the cover being gone"
+        )
+        XCTAssertTrue(
+            source.contains(".fullScreenCover(isPresented: $showsSearch, onDismiss: { isSearchCoverOnScreen = false })"),
+            "The search counts as closed only once its dismissal has finished"
         )
         XCTAssertTrue(
             source.contains("override func viewDidAppear"),
