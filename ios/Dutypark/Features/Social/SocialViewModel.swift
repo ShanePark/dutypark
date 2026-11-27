@@ -11,6 +11,8 @@ final class SocialViewModel: ObservableObject {
     @Published private(set) var searchPage = 0
     @Published private(set) var searchTotalPages = 0
     @Published private(set) var searchTotalElements: Int64 = 0
+    /// The keyword of the last search that ran; the modal's field is only what is being edited.
+    private(set) var searchedKeyword: String?
     @Published private(set) var isLoading = false
     @Published private(set) var isSearching = false
     @Published private(set) var isPerformingAction = false
@@ -122,6 +124,7 @@ final class SocialViewModel: ObservableObject {
                 size: searchPageSize
             )
             searchResults = result.content
+            searchedKeyword = keyword
             searchPage = result.number
             searchTotalPages = result.totalPages
             searchTotalElements = result.totalElements
@@ -135,8 +138,15 @@ final class SocialViewModel: ObservableObject {
         }
     }
 
+    /// Pages through the last search that ran, whatever the field holds now.
+    func showSearchPage(_ page: Int) async {
+        guard let searchedKeyword else { return }
+        await search(keyword: searchedKeyword, page: page)
+    }
+
     func clearSearch() {
         searchResults = []
+        searchedKeyword = nil
         searchPage = 0
         searchTotalPages = 0
         searchTotalElements = 0
