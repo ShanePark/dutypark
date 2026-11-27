@@ -48,6 +48,7 @@ struct TeamView: View {
     @State private var isSlidingMonth = false
     @State private var isCalendarZoomActive = false
     @State private var isCalendarScrollLocked = false
+    @State private var isCalendarTapIgnored = false
     @State private var monthSlideTask: Task<Void, Never>?
     private let onOpenCalendar: (MemberID) -> Void
 
@@ -332,7 +333,8 @@ struct TeamView: View {
                     DPCalendarZoom(
                         resetID: AnyHashable("\(team.id)-\(viewModel.calendarMonth.year)-\(viewModel.calendarMonth.month)"),
                         isActive: $isCalendarZoomActive,
-                        isScrollLocked: $isCalendarScrollLocked
+                        isScrollLocked: $isCalendarScrollLocked,
+                        ignoresTaps: $isCalendarTapIgnored
                     ) {
                         calendar
                     }
@@ -586,7 +588,7 @@ struct TeamView: View {
                         weekDays: DPCalendarSpanRibbonDay.week(containing: index - firstIndex, in: ribbonDays),
                         isSelected: day == page.selectedDay
                     ) {
-                        guard !isSwipingMonth, !isSlidingMonth, !viewModel.isLoading else { return }
+                        guard !isCalendarTapIgnored, !isSwipingMonth, !isSlidingMonth, !viewModel.isLoading else { return }
                         Task { await viewModel.selectDay(at: index) }
                     }
                 }

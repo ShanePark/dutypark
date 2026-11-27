@@ -293,6 +293,7 @@ struct CalendarView: View {
     @State private var isSwipingMonth = false
     @State private var isCalendarZoomActive = false
     @State private var isCalendarScrollLocked = false
+    @State private var isCalendarTapIgnored = false
     @State private var leavesAfterBlock = false
     @State private var refreshesAfterReportedBlock = false
     @StateObject private var blockModel = MemberBlockViewModel()
@@ -1321,7 +1322,9 @@ struct CalendarView: View {
         let range = CalendarDateSupport.displayedCellRange(in: cells)
         let days = Array(page.days[range])
 
-        let openDDay: ((DDayDTO) -> Void)? = isInteractive ? { openDDayDetail($0) } : nil
+        let openDDay: ((DDayDTO) -> Void)? = isInteractive
+            ? { item in if !isCalendarTapIgnored { openDDayDetail(item) } }
+            : nil
         let spanLanes = DPCalendarSpanLanes.layout(
             days.map(\.schedules),
             id: \.id,
@@ -1349,7 +1352,7 @@ struct CalendarView: View {
                     calendarMemberID: model.targetMemberID,
                     isMyCalendar: model.isMyCalendar,
                     opensDetail: opensDetail,
-                    openTodo: openTodo,
+                    openTodo: { todo in if !isCalendarTapIgnored { openTodo(todo) } },
                     openDDay: openDDay
                 )
                 if opensDetail {
@@ -1357,6 +1360,8 @@ struct CalendarView: View {
                         // A finger that pulled the grid sideways was swiping, not
                         // tapping, even when it gave up short of the next month.
                         guard !isSwipingMonth, !isSlidingMonth else { return }
+                        // The finger lifted last after a pinch was zooming, not tapping.
+                        guard !isCalendarTapIgnored else { return }
                         if model.isQuickDutyEditing { model.focusQuickDuty(on: day) }
                         else {
                             withoutPresentationAnimation { model.selectDay(day) }
@@ -1429,7 +1434,8 @@ struct CalendarView: View {
         DPCalendarZoom(
             resetID: AnyHashable("\(model.targetMemberID?.description ?? "self")-\(displayedMonthKey.year)-\(displayedMonthKey.month)-\(model.isQuickDutyEditing)"),
             isActive: $isCalendarZoomActive,
-            isScrollLocked: $isCalendarScrollLocked
+            isScrollLocked: $isCalendarScrollLocked,
+            ignoresTaps: $isCalendarTapIgnored
         ) {
             calendarGrid
         }
