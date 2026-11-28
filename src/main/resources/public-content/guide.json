@@ -146,7 +146,7 @@
               "id": "login",
               "title": "로그인과 가입",
               "items": [
-                "카카오, 네이버, Apple 계정으로 로그인합니다. 처음 로그인하면 사용할 이름(1~10자)을 정하고 이용약관과 개인정보처리방침에 동의해 가입합니다.",
+                "카카오, 네이버, Apple 계정으로 로그인합니다. 처음 로그인하면 사용할 이름(1~20자)을 정하고 이용약관과 개인정보처리방침에 동의해 가입합니다.",
                 "비밀번호가 설정된 계정은 이메일과 비밀번호로도 로그인할 수 있으며, '아이디 저장'을 켜면 이메일이 기억됩니다.",
                 "로그인하지 않아도 이용 안내, 문의·지원, 이용약관·개인정보처리방침과 시간표를 '누구나'에게 공개한 사람의 달력을 볼 수 있습니다."
               ]
@@ -679,7 +679,7 @@
               "title": "관리 중인 계정과 보조 계정",
               "items": [
                 "'내가 관리 중인 계정'에서 '로그인하기'를 눌러 그 계정으로 전환할 수 있습니다.",
-                "'보조 계정 추가'로 자녀나 부업처럼 따로 로그인하지 않는 계정(이름 최대 10자)을 만들어 직접 관리할 수 있습니다.",
+                "'보조 계정 추가'로 자녀나 부업처럼 따로 로그인하지 않는 계정(이름 최대 20자)을 만들어 직접 관리할 수 있습니다.",
                 "회원 탈퇴하면 내가 만든 보조 계정도 함께 삭제됩니다."
               ]
             },
@@ -773,7 +773,7 @@
               "id": "login",
               "title": "Signing in and signing up",
               "items": [
-                "Sign in with Kakao, Naver, or Apple. On your first sign-in, choose a name (1–10 characters) and agree to the Terms and Privacy Policy to create your account.",
+                "Sign in with Kakao, Naver, or Apple. On your first sign-in, choose a name (1–20 characters) and agree to the Terms and Privacy Policy to create your account.",
                 "Accounts with a password can also sign in with email and password; turn on “Remember email” to keep your email filled in.",
                 "Without signing in, you can still read this guide, contact support, read the Terms and Privacy Policy, and view calendars shared with “Everyone”."
               ]
@@ -1306,7 +1306,7 @@
               "title": "Managed and auxiliary accounts",
               "items": [
                 "In “Accounts I manage”, tap “Sign in” to switch to that account.",
-                "Use “Add auxiliary account” to create an account without its own sign-in, such as for a child or a side job (name up to 10 characters), and manage it yourself.",
+                "Use “Add auxiliary account” to create an account without its own sign-in, such as for a child or a side job (name up to 20 characters), and manage it yourself.",
                 "Auxiliary accounts you created are deleted together with your account."
               ]
             },

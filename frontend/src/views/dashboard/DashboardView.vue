@@ -14,6 +14,7 @@ import type {
   MemberPreviewDto,
 } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import FittedMemberName from '@/components/common/FittedMemberName.vue'
 import FriendSearchModal from '@/components/common/FriendSearchModal.vue'
 import IntroSection from '@/components/intro/IntroSection.vue'
 import {
@@ -573,7 +574,7 @@ watch(
                   </span>
 
                   <span class="dashboard-friend-card__name">
-                    <span class="dashboard-friend-card__name-text" :title="friend.member.name">{{ friend.member.name }}</span>
+                    <FittedMemberName class="dashboard-friend-card__name-text" :name="friend.member.name" :title="friend.member.name" />
                     <Home
                       v-if="friend.isFamily"
                       class="dashboard-friend-card__family"

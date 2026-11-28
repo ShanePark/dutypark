@@ -1297,7 +1297,7 @@ struct SettingsFeatureTests {
     @Test
     func nameChangeRejectsBlankOrTooLongNamesWithoutAnyRequest() async {
         defer { SettingsURLProtocolStub.handler = nil }
-        for invalid in ["   ", "12345678901", "가나다라마바사아자😀"] {
+        for invalid in ["   ", "123456789012345678901", String(repeating: "가", count: 19) + "😀"] {
             let recorder = SettingsRequestRecorder()
             let haptics = DPHapticCenter()
             let model = await nameChangeModel(recorder: recorder, haptics: haptics, renameStatus: 200)

@@ -585,11 +585,34 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `sso signup accepts a username at the max length`() {
+        saveCurrentPolicies()
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "kakao-id-max-name"))
+        val request = SsoSignupRequest(
+            uuid = ssoRegister.uuid,
+            username = "Alexandra Montgomery",
+            termAgree = true,
+            privacyAgree = true,
+            termsVersion = policyService.getCurrentPolicy(PolicyType.TERMS)!!.version,
+            privacyVersion = policyService.getCurrentPolicy(PolicyType.PRIVACY)!!.version
+        )
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/sso/signup/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+
+        assertThat(memberRepository.findAll().count { it.name == "Alexandra Montgomery" }).isEqualTo(1)
+    }
+
+    @Test
     fun `sso signup returns validation envelope when username exceeds max length`() {
         val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "kakao-id-5"))
         val request = SsoSignupRequest(
             uuid = ssoRegister.uuid,
-            username = "toolongname",
+            username = "Christopher Alexander",
             termAgree = true,
             privacyAgree = true,
             termsVersion = "2025-01-15",
@@ -607,7 +630,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 field = "username"
             )
 
-        assertThat(memberRepository.findAll().none { it.name == "toolongname" }).isTrue
+        assertThat(memberRepository.findAll().none { it.name == "Christopher Alexander" }).isTrue
     }
 
     private fun stateJson(

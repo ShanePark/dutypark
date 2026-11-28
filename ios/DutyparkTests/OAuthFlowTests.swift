@@ -180,47 +180,55 @@ final class SsoSignupNamePolicyTests: XCTestCase {
     func testAppleNameFallsBackToGivenNameThenTruncatesToTheLimit() {
         XCTAssertEqual(
             SsoSignupNamePolicy.appleName(from: name(given: "Johnathan", family: "Smith")),
-            "Johnathan"
+            "Johnathan Smith"
         )
         XCTAssertEqual(
             SsoSignupNamePolicy.appleName(from: name(given: "Maximiliano", family: "Rodriguez")),
-            "Maximilian"
+            "Maximiliano"
         )
         XCTAssertEqual(
-            SsoSignupNamePolicy.appleName(from: name(family: "Wolfeschlegelstein")),
-            "Wolfeschle"
+            SsoSignupNamePolicy.appleName(from: name(family: "Wolfeschlegelsteinhausen")),
+            "Wolfeschlegelsteinha"
         )
         XCTAssertEqual(
-            SsoSignupNamePolicy.appleName(from: name(given: "Ann Marie Lee", family: "X")),
-            "Ann Marie"
+            SsoSignupNamePolicy.appleName(from: name(given: "Ann Marie Lee Jones Wu", family: "X")),
+            "Ann Marie Lee Jones"
         )
     }
 
     func testNameLengthCountsUTF16CodeUnitsLikeTheServerAndWeb() {
-        XCTAssertEqual(SsoSignupNamePolicy.length(of: "가나다라마바사아자차"), 10)
-        XCTAssertTrue(SsoSignupNamePolicy.fits("가나다라마바사아자차"))
-        XCTAssertEqual(SsoSignupNamePolicy.length(of: "가나다라마바사아자😀"), 11)
-        XCTAssertFalse(SsoSignupNamePolicy.fits("가나다라마바사아자😀"))
-        XCTAssertTrue(SsoSignupNamePolicy.fits("가나다라마바사아😀"))
+        let twenty = String(repeating: "가", count: 20)
+        let nineteen = String(repeating: "가", count: 19)
+        let eighteen = String(repeating: "가", count: 18)
+        XCTAssertEqual(SsoSignupNamePolicy.length(of: twenty), 20)
+        XCTAssertTrue(SsoSignupNamePolicy.fits(twenty))
+        XCTAssertEqual(SsoSignupNamePolicy.length(of: nineteen + "😀"), 21)
+        XCTAssertFalse(SsoSignupNamePolicy.fits(nineteen + "😀"))
+        XCTAssertTrue(SsoSignupNamePolicy.fits(eighteen + "😀"))
     }
 
     func testTruncatedDropsWholeGraphemesUntilTheNameFitsTheLimit() {
-        XCTAssertEqual(SsoSignupNamePolicy.truncated("가나다라마바사아자😀"), "가나다라마바사아자")
-        XCTAssertEqual(SsoSignupNamePolicy.truncated("가나다라마바사아자차카"), "가나다라마바사아자차")
-        XCTAssertEqual(SsoSignupNamePolicy.truncated("12345678🇰🇷"), "12345678")
-        XCTAssertEqual(SsoSignupNamePolicy.truncated("123456789👨‍👩‍👧"), "123456789")
-        XCTAssertEqual(SsoSignupNamePolicy.truncated("가나다라마바사아😀"), "가나다라마바사아😀")
+        let twenty = String(repeating: "가", count: 20)
+        let nineteen = String(repeating: "가", count: 19)
+        let eighteen = String(repeating: "가", count: 18)
+        XCTAssertEqual(SsoSignupNamePolicy.truncated(nineteen + "😀"), nineteen)
+        XCTAssertEqual(SsoSignupNamePolicy.truncated(twenty + "카"), twenty)
+        XCTAssertEqual(SsoSignupNamePolicy.truncated("123456789012345678🇰🇷"), "123456789012345678")
+        XCTAssertEqual(SsoSignupNamePolicy.truncated("1234567890123456789👨‍👩‍👧"), "1234567890123456789")
+        XCTAssertEqual(SsoSignupNamePolicy.truncated(eighteen + "😀"), eighteen + "😀")
         XCTAssertEqual(SsoSignupNamePolicy.truncated("Jane"), "Jane")
     }
 
     func testAppleNameMeasuresTheLimitInUTF16CodeUnits() {
+        let seventeen = String(repeating: "가", count: 17)
+        let nineteen = String(repeating: "가", count: 19)
         XCTAssertEqual(
-            SsoSignupNamePolicy.appleName(from: name(given: "아자😀", family: "가나다라마바사")),
+            SsoSignupNamePolicy.appleName(from: name(given: "아자😀", family: seventeen)),
             "아자😀"
         )
         XCTAssertEqual(
-            SsoSignupNamePolicy.appleName(from: name(family: "가나다라마바사아자😀")),
-            "가나다라마바사아자"
+            SsoSignupNamePolicy.appleName(from: name(family: nineteen + "😀")),
+            nineteen
         )
     }
 

@@ -1475,13 +1475,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usernames must be between 1 and 10 characters."
+            "value": "Usernames must be between 1 and 20 characters."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사용자명은 1자 이상 10자 이하로 입력해주세요."
+            "value": "사용자명은 1자 이상 20자 이하로 입력해주세요."
           }
         }
       }

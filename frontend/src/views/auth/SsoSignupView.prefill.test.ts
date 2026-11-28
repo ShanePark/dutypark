@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, nextTick } from 'vue'
 import { findHostNode, hostText, mountHost, triggerHost, type HostNode } from '@/test/hostRenderer'
+import { MEMBER_NAME_MAX_LENGTH } from '@/utils/signupName'
 
 const mocks = vi.hoisted(() => ({
   getCurrentPolicies: vi.fn(),
@@ -87,7 +88,8 @@ describe('SsoSignupView name pre-fill', () => {
     const root = await mountSignup()
 
     expect(nameInput(root).value).toBe('사용자0482')
-    expect(hostText(root)).toContain('(7/10)')
+    expect(hostText(root)).toContain('(7/20)')
+    expect(nameInput(root).props.maxlength).toBe(MEMBER_NAME_MAX_LENGTH)
     expect(hostText(root)).not.toContain('auth.ssoSignup.username.helper.emptyIdle')
   })
 
@@ -126,6 +128,22 @@ describe('SsoSignupView name pre-fill', () => {
 
     const hint = findHostNode(root, (node) => node.type === 'p' && hostText(node).includes('auth.ssoSignup.hints.requiredPrefix'))!
     expect(String(hint.props.class)).toContain('text-dp-text-muted')
+  })
+
+  it('accepts a 20-character name and rejects a 21-character one', async () => {
+    const root = await mountSignup()
+    const input = nameInput(root)
+    check(root, 'termAgree')
+    check(root, 'privacyAgree')
+
+    triggerHost(input, 'onInput', { target: { value: 'Christopher Johnsons' } })
+    await flush()
+    const submit = findHostNode(root, (node) => node.type === 'button' && node.props.type === 'submit')!
+    expect(submit.props.disabled).toBe(false)
+
+    triggerHost(input, 'onInput', { target: { value: 'Christopher Johnsonss' } })
+    await flush()
+    expect(submit.props.disabled).toBe(true)
   })
 
   it('submits the pre-filled name without the user typing anything', async () => {

@@ -187,7 +187,7 @@ const apiErrors = {
     },
     username: {
       required: 'Username is required.',
-      length: 'Usernames must be between 1 and 10 characters.',
+      length: 'Usernames must be between 1 and 20 characters.',
     },
   },
   dday: {
@@ -896,18 +896,18 @@ export default {
       subtitle: 'Welcome to Dutypark',
       username: {
         label: 'Username',
-        placeholder: 'Enter a username (1-10 characters)',
+        placeholder: 'Enter a username (1-20 characters)',
         defaultPrefix: 'User',
         helper: {
           emptyActive: 'Enter a username to complete sign-up.',
-          emptyIdle: 'Choose a username between 1 and 10 characters.',
-          tooLong: 'Usernames must be 10 characters or fewer.',
+          emptyIdle: 'Choose a username between 1 and 20 characters.',
+          tooLong: 'Usernames must be 20 characters or fewer.',
           valid: 'This name will appear on your profile and schedule.',
         },
       },
       requiredItems: {
         username: 'Enter a username',
-        usernameMax: 'Keep the username within 10 characters',
+        usernameMax: 'Keep the username within 20 characters',
         terms: 'Agree to the Terms of Service',
         privacy: 'Agree to the Privacy Policy',
       },
@@ -966,7 +966,7 @@ export default {
       nameChange: {
         action: 'Change name',
         modalTitle: 'Change name',
-        placeholder: 'Enter a name (1-10 characters)',
+        placeholder: 'Enter a name (1-20 characters)',
         hint: 'This name appears on your profile and schedules.',
         required: 'Enter a name.',
         submit: 'Save',
@@ -1297,12 +1297,12 @@ export default {
       description: 'Create an extra account for a child, side job, or any separate schedule.\nYou can switch to it directly from this screen.',
       nameLabel: 'Account name',
       namePlaceholder: 'Example: Second child, Side job',
-      maxLength: 'Up to 10 characters',
+      maxLength: 'Up to 20 characters',
       submitting: 'Creating...',
       submit: 'Create',
       validation: {
         required: 'Enter a name.',
-        max: 'Names must be 10 characters or fewer.',
+        max: 'Names must be 20 characters or fewer.',
       },
       success: 'The auxiliary account has been created.',
       createFailed: 'Failed to create the auxiliary account.',

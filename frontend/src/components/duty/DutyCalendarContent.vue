@@ -11,6 +11,7 @@ import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import type { HolidayDto } from '@/types'
 import type { CalendarDay, DutyType, Schedule, OtherDuty, LocalDDay, DutyDay, TodoDueItem } from '@/views/duty/dutyViewTypes'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
+import { calendarTagLabel } from '@/utils/memberName'
 import { canOpenCalendarDay } from '@/utils/calendarDayOpening'
 import { assignCalendarSpanLanes } from '@/utils/calendarSpanLanes'
 import { useCalendarMonthSwipe } from '@/composables/useCalendarMonthSwipe'
@@ -225,11 +226,6 @@ function getDisplayTagMembers(schedule: Schedule) {
   return displayTagMembersBySchedule.value.get(schedule) ?? []
 }
 
-function getCalendarTagLabel(name: string) {
-  const chars = Array.from(name)
-  return chars.length > 3 ? `${chars.slice(0, 2).join('')}…` : name
-}
-
 const MOBILE_CALENDAR_TODO_TITLE_LIMIT = 6
 
 function truncateMobileCalendarText(text: string, limit: number) {
@@ -306,7 +302,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
             v-if="getDisplayTagMembers(segment.item).length"
             :tags="getDisplayTagMembers(segment.item)"
             :title="segment.item.contentWithoutTime || segment.item.content"
-            :format-label="getCalendarTagLabel"
+            :format-label="calendarTagLabel"
           />
           <span
             v-if="segment.isEnd && formatSpanClock(segment.item.endDateTime)"
@@ -431,7 +427,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                     size="xs"
                     class="schedule-tag-avatar"
                   />
-                  <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
+                  <span class="schedule-tag-label">{{ calendarTagLabel(tag.name) }}</span>
                 </span>
                 <span
                   v-if="getHiddenMobileCalendarTagCount(schedule) > 0"
@@ -457,7 +453,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                     size="xs"
                     class="schedule-tag-avatar"
                   />
-                  <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
+                  <span class="schedule-tag-label">{{ calendarTagLabel(tag.name) }}</span>
                 </span>
               </div>
             </div>

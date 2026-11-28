@@ -108,7 +108,7 @@ async function createAuxiliaryAccount() {
     showError(t('member.auxiliary.validation.required'))
     return
   }
-  if (name.length > 10) {
+  if (name.length > MEMBER_NAME_MAX_LENGTH) {
     showError(t('member.auxiliary.validation.max'))
     return
   }
@@ -1220,7 +1220,7 @@ onMounted(async () => {
             id="member-name-input"
             v-model="nameDraft"
             type="text"
-            maxlength="10"
+            :maxlength="MEMBER_NAME_MAX_LENGTH"
             autocomplete="name"
             class="form-control-card"
             :disabled="savingName"
@@ -1276,7 +1276,7 @@ onMounted(async () => {
           <input
             v-model="auxiliaryName"
             type="text"
-            maxlength="10"
+            :maxlength="MEMBER_NAME_MAX_LENGTH"
             class="form-control-card"
             :placeholder="t('member.auxiliary.namePlaceholder')"
             @keyup.enter="createAuxiliaryAccount"

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Check, ChevronLeft, ChevronRight, RotateCcw, Search, UserPlus, X } from '@lucide/vue'
 import type { TaggableFriend } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import FittedMemberName from '@/components/common/FittedMemberName.vue'
 import {
   buildSelectedEntries,
   filterTaggableFriends,
@@ -224,7 +225,7 @@ function getSubtitle(friend: TaggableFriend) {
                 <Check class="h-3 w-3" />
               </span>
             </span>
-            <span class="friend-tag-selector__card-name">{{ friend.name }}</span>
+            <FittedMemberName class="friend-tag-selector__card-name" :name="friend.name" />
             <span
               class="friend-tag-selector__card-team"
               :aria-hidden="getSubtitle(friend) ? undefined : 'true'"
@@ -297,7 +298,7 @@ function getSubtitle(friend: TaggableFriend) {
               size="sm"
               class="friend-tag-selector__chip-avatar"
             />
-            <span class="friend-tag-selector__chip-name">{{ friend.name }}</span>
+            <FittedMemberName class="friend-tag-selector__chip-name" :name="friend.name" />
             <X class="h-3 w-3 flex-shrink-0" />
           </button>
         </div>

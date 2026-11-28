@@ -120,12 +120,13 @@ nonisolated enum DPMemberTagSize: Sendable {
 
 nonisolated enum DPMemberTagPresentation {
     /// Shortens a name only when it would not fit, so a name already short enough
-    /// never gains an ellipsis it does not need.
+    /// never gains an ellipsis it does not need. A name too long for the limit shows its
+    /// initials when it has them, as the web's `calendarTagLabel` does.
     static func displayName(_ name: String, limit: Int?) -> String {
         guard let limit, limit > 0 else { return name }
         let characters = Array(name)
         guard characters.count > limit + 1 else { return name }
-        return String(characters.prefix(limit)) + "…"
+        return MemberNameInitials.initials(for: name) ?? String(characters.prefix(limit)) + "…"
     }
 
     static func accessibilityLabel(for item: DPMemberTagItem, locale: Locale? = nil) -> String {

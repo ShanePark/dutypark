@@ -75,7 +75,7 @@ class Member(
     }
 
     companion object {
-        const val NAME_MAX_LENGTH = 10
+        const val NAME_MAX_LENGTH = 20
     }
 
     fun isEquals(loginMember: LoginMember): Boolean {

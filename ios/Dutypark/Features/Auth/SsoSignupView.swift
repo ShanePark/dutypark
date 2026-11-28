@@ -7,7 +7,7 @@ nonisolated enum SsoSignupCancellationDecision: Equatable {
 }
 
 nonisolated enum SsoSignupNamePolicy {
-    static let maxLength = 10
+    static let maxLength = 20
 
     /// Counts UTF-16 code units, matching the server's `@Size` check and the web's `String.length`.
     static func length(of name: String) -> Int { name.utf16.count }

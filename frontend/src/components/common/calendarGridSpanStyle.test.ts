@@ -178,8 +178,16 @@ describe('multi-day schedule bands', () => {
     expect(lone).toContain('class="span-tag-lone"')
     expect(lone).toContain('data-span-tag-item')
     expect(lone).toMatch(/<span v-if="tags\.length > 1" class="span-tag-lone__more">\{\{ calendarSpanCompactMore\(tags\.length\) \}\}/)
-    expect(calendarSpanTags).toMatch(/v-else-if="\(fit\.level === 'chips' \|\| fit\.level === 'avatars'\) && hidden > 0"/)
+    expect(calendarSpanTags).toMatch(/v-else-if="\(fit\.level === 'names' \|\| fit\.level === 'chips' \|\| fit\.level === 'avatars'\) && hidden > 0"/)
     expect(ruleBody(spanTags, '.span-tag-lone__more')).toContain('position: absolute')
+  })
+
+  // A full-name chip is chosen only when its measured width fits, so it is not
+  // capped like the short label's 3em.
+  it('draws full-name chips uncapped and measures them apart from the short labels', () => {
+    expect(ruleBody(spanTags, '.span-tag-chip__label--full')).toContain('max-width: none')
+    expect(calendarSpanTags).toContain('class="span-tag-chip" data-chip="name"')
+    expect(calendarSpanTags).toContain('class="span-tag-chip" data-chip="label"')
   })
 
   it('drops the times before the title in a segment too narrow for both', () => {

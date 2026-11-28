@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import FittedMemberName from '@/components/common/FittedMemberName.vue'
 import type { DisplayTagMember } from '@/utils/tagMembers'
 
 type ChipDensity = 'regular' | 'compact'
@@ -83,12 +84,11 @@ function handleChipClick(member: DisplayTagMember) {
         size="sm"
         class="member-tag-chip__avatar"
       />
-      <span
+      <FittedMemberName
         class="member-tag-chip__label"
         :class="density === 'regular' ? 'member-tag-chip__label--regular' : 'member-tag-chip__label--compact'"
-      >
-        {{ member.name }}
-      </span>
+        :name="member.name"
+      />
     </component>
 
     <span

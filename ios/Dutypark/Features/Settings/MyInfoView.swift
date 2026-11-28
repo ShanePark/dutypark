@@ -2116,13 +2116,15 @@ private struct AuxiliaryAccountModal: View {
                 .foregroundStyle(DPColor.textPrimary)
             TextField(SettingsLocalization.string("settings.auxiliary.name"), text: $name)
                 .onChange(of: name) { _, value in
-                    if value.count > 10 { name = String(value.prefix(10)) }
+                    if !SsoSignupNamePolicy.fits(value) {
+                        name = SsoSignupNamePolicy.truncated(value)
+                    }
                 }
                 .focused($focused)
                 .dpInputChrome(isFocused: focused)
                 .onSubmit(createAccount)
                 .id(Field.name)
-            Text("\(name.count)/10")
+            Text("\(SsoSignupNamePolicy.length(of: name))/\(SsoSignupNamePolicy.maxLength)")
                 .font(DPTypography.caption)
                 .foregroundStyle(DPColor.textMuted)
                 .frame(maxWidth: .infinity, alignment: .trailing)
