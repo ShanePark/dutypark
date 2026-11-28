@@ -234,37 +234,81 @@ describe('responsive calendar day headers', () => {
   })
 })
 
-// Today's date row is a full-width red strip with white ink, replacing the old ring.
-describe('today date strip', () => {
-  it('bleeds the strip to the tile\'s top and sides with a hairline under it', () => {
-    const strip = ruleBody(baseBlock, '.calendar-day--today .calendar-day-top')
-    expect(strip).toContain('margin: -4px calc(-1 * var(--calendar-pad-x)) 2px')
-    expect(strip).toContain('padding: 4px calc(var(--calendar-pad-x) + 2px) 2px')
-    expect(strip).toContain('background: var(--calendar-today)')
-    expect(strip).toContain('box-shadow: 0 1px 0 rgb(0 0 0 / 20%)')
-    // The tile pads its top by 4px on phones and 7px on desktop; the strip cancels exactly that.
-    expect(ruleBody(desktopBlock, '.calendar-day--today .calendar-day-top'))
-      .toContain('margin: -7px calc(-1 * var(--calendar-pad-x)) 4px')
+// Today is a lifted card with a red date circle, without a strip, ring or label.
+describe('today lifted card', () => {
+  it('leaves the date row like any other day, without a strip or white ink', () => {
+    expect(style).not.toContain('.calendar-day--today .calendar-day-top')
+    expect(style).not.toContain('--calendar-today:')
+    expect(style).not.toContain('var(--calendar-today)')
     expect(style).not.toContain('.calendar-day-today-border')
-    expect(style).not.toContain('.calendar-day-today-circle')
     expect(template).not.toContain('calendar-day-today-border')
-  })
-
-  it('writes the date and a pinned D-Day label in white, without a today word', () => {
-    const strip = ruleBody(baseBlock, '.calendar-day--today .calendar-day-top')
-    expect(strip).toContain('--calendar-ink: #fff')
-    expect(strip).toContain('--calendar-ink-muted: #fff')
+    expect(calendarGrid).not.toContain('calendar-day-today-label')
+    expect(calendarGrid).not.toContain(':has(')
+    expect(style).not.toContain('@container calendar-day-header')
     const dutyStyle = dutyCalendarContent.slice(dutyCalendarContent.indexOf('<style scoped>'))
     expect(ruleBody(dutyStyle, '.calendar-pin-label')).toContain('color: var(--calendar-ink-muted)')
     expect(ruleBody(dutyStyle, '.calendar-pin-label--zero')).toContain('color: var(--calendar-ink)')
     expect(dutyCalendarContent).toMatch(/#day-header[\s\S]*?class="calendar-pin-label"/)
-    // The strip carries no visible today word, so nothing styles or hides one.
-    expect(calendarGrid).not.toContain('calendar-day-today-label')
-    expect(calendarGrid).not.toContain(':has(')
-    expect(style).not.toContain('@container calendar-day-header')
   })
 
-  it('redraws the selection ring above the strip', () => {
+  it('scales the card up with a rounded shadow and a theme halo', () => {
+    const lift = ruleBody(baseBlock, '.calendar-day-lift')
+    expect(lift).toContain('position: absolute')
+    expect(lift).toContain('background: var(--calendar-lift-fill)')
+    expect(lift).toContain('box-shadow: 0 8px 20px rgb(0 0 0 / 35%), 0 0 0 1.5px var(--calendar-today-halo)')
+    expect(lift).toContain('pointer-events: none')
+    expect(ruleBody(baseBlock, '.calendar-grid')).toContain('--calendar-today-halo: #fff')
+    expect(ruleBody(baseBlock, ':global(.dark .calendar-grid)')).toContain('--calendar-today-halo: #111827')
+    // The card, the hover veil and frame, and the selection ring share one lift.
+    const shared = baseBlock.match(/([^{}]*\.calendar-day-lift,[^{}]*)\{([^}]*)\}/)
+    expect(shared?.[1]).toContain('.calendar-day--today .calendar-day-selection-border')
+    expect(shared?.[1]).toContain('.calendar-day--today.calendar-day-hoverable::before')
+    expect(shared?.[1]).toContain('.calendar-day--today.calendar-day-hoverable::after')
+    expect(shared?.[2]).toContain('border-radius: 8px')
+    expect(shared?.[2]).toContain('inset: var(--calendar-lift-inset)')
+    expect(shared?.[2]).not.toContain('transform')
+  })
+
+  // Inner sides grow 3.5% (a 1.07 card); on a grid edge the card sits 1.5px in,
+  // so its 1.5px halo lands flush on the grid's clipped edge and corners.
+  it('grows inner sides and sets the halo flush on the grid edges', () => {
+    const grid = ruleBody(baseBlock, '.calendar-grid')
+    expect(grid).toContain('--calendar-lift-grow: -3.5%')
+    expect(grid).toContain('--calendar-lift-edge: 1.5px')
+  })
+
+  it('circles today\'s date in red with a white numeral', () => {
+    const circle = ruleBody(baseBlock, '.calendar-day-today-circle')
+    expect(circle).toContain('width: 19px')
+    expect(circle).toContain('height: 19px')
+    expect(circle).toContain('margin-left: -1px')
+    expect(circle).toContain('border-radius: 9999px')
+    expect(circle).toContain('background: var(--dp-danger-hover)')
+    expect(circle).toContain('color: #fff')
+    expect(circle).toContain('font-size: 11.5px')
+    const desktop = ruleBody(desktopBlock, '.calendar-day-today-circle')
+    expect(desktop).toContain('width: 26px')
+    expect(desktop).toContain('height: 26px')
+    expect(desktop).toContain('margin: -1px 0 0 -3px')
+    expect(desktop).toContain('font-size: 15px')
+    expect(template).toMatch(/<template v-if="isToday\(day\)">\s*<span class="calendar-day-today-circle">\{\{ day\.day \}\}<\/span>\s*<\/template>/)
+  })
+
+  it('raises today over its neighbours but under the multi-day bands', () => {
+    expect(ruleBody(baseBlock, '.calendar-day--today')).toContain('z-index: 1')
+    expect(ruleBody(baseBlock, '.calendar-span')).toContain('z-index: 2')
+    // The cell itself stays unscaled, so a band starting on today keeps its geometry.
+    expect(ruleBody(baseBlock, '.calendar-day--today')).not.toContain('transform')
+  })
+
+  it('underlines today\'s weekday in strong ink instead of filling it', () => {
+    const header = ruleBody(baseBlock, '.calendar-weekday--today')
+    expect(header).not.toContain('background')
+    expect(header).toContain('color: var(--dp-text-primary) !important')
+    expect(header).toContain('box-shadow: inset 0 -2px 0 var(--dp-text-primary)')
+  })
+
+  it('redraws the selection ring on the card', () => {
     const border = ruleBody(baseBlock, '.calendar-day-selection-border')
     expect(border).toContain('position: absolute')
     expect(border).toContain('inset: 0')

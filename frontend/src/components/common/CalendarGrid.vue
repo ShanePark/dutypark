@@ -103,7 +103,8 @@ function measureSpotlightHole() {
   if (!spotlightTracking) return
   const { grid, cell } = spotlightTracking
   const gridRect = grid.getBoundingClientRect()
-  const cellRect = cell.getBoundingClientRect()
+  // Today's lifted card overhangs its cell, so the hole follows the card.
+  const cellRect = (cell.querySelector('.calendar-day-lift') ?? cell).getBoundingClientRect()
   const originX = gridRect.left + grid.clientLeft
   const originY = gridRect.top + grid.clientTop
   spotlightHole.value = {
@@ -181,8 +182,8 @@ function isSelected(day: CalendarDay): boolean {
   )
 }
 
-// Today's date strip would cover the inset selection ring, so a selected today
-// redraws the ring above it.
+// A selected today draws its ring on the lifted card instead of the cell's inset
+// ring, which the card would cover.
 function hasTodaySelectionBorder(day: CalendarDay): boolean {
   return !props.focusedDay && isToday(day) && isSelected(day) && !isHighlighted(day)
 }
@@ -254,7 +255,8 @@ function getSpanGutterOffset(n: number, days: number, gapShare: string): string 
 // The band is opaque: each day's stretch is the glass over that day's tile, and
 // neighbouring days meet in the middle of the gutter between them, under its
 // divider. The rim takes each day's ink the same way.
-function getSpanStyle(firstIndex: number, days: number): Record<string, string | number> {
+function getSpanStyle(firstIndex: number, segment: CalendarSpanSegment<TSpan>): Record<string, string | number> {
+  const { days } = segment
   const covered = visibleDays.value.slice(firstIndex, firstIndex + days)
   const glasses = covered.map(day => getSpanGlass(day))
   const inks = covered.map(getSpanInk)
@@ -275,7 +277,23 @@ function getSpanStyle(firstIndex: number, days: number): Record<string, string |
     ...perDay,
     '--calendar-span-end-ink': getSpanInk(covered[covered.length - 1]!),
     '--calendar-span-ring': glasses[glasses.length - 1]!,
+    ...getSpanCardEnds(firstIndex, segment),
   }
+}
+
+// On a grid edge today's card pulls in from its cell (getDayLiftStyle), so a band
+// ends at the card there rather than running past its halo.
+function getSpanCardEnds(firstIndex: number, segment: CalendarSpanSegment<TSpan>): Record<string, string> {
+  const lastIndex = firstIndex + segment.days - 1
+  const atCard = (rounded: boolean) => rounded
+    ? 'max(var(--calendar-span-inset), var(--calendar-lift-edge))'
+    : 'var(--calendar-lift-edge)'
+  const first = visibleDays.value[firstIndex]
+  const last = visibleDays.value[lastIndex]
+  const ends: Record<string, string> = {}
+  if (firstIndex % 7 === 0 && first && isToday(first)) ends['--calendar-span-start'] = atCard(segment.isStart)
+  if (lastIndex % 7 === 6 && last && isToday(last)) ends['--calendar-span-end'] = atCard(segment.isEnd)
+  return ends
 }
 
 // The divider over the gutter before covered day n is a box, not a gradient
@@ -311,8 +329,6 @@ function getWeekendColor(day: CalendarDay, weekend: 'sunday' | 'saturday'): stri
 }
 
 function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
-  // Today's date strip sets its own (white) ink.
-  if (isToday(day)) return 'var(--calendar-ink)'
   if (!isCurrentMonth(day)) return 'var(--calendar-ink-muted)'
   if (dayOfWeek === 0) return getWeekendColor(day, 'sunday')
   if (dayOfWeek === 6) return getWeekendColor(day, 'saturday')
@@ -322,6 +338,22 @@ function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
 function getHolidayColor(day: CalendarDay, holiday: HolidayDto): string {
   if (holiday.isHoliday) return getWeekendColor(day, 'sunday')
   return 'var(--calendar-ink-muted)'
+}
+
+// The grid clips its rounded edges, so on a grid edge (or under the weekday row)
+// today's card pulls in and grows outward only on its inner sides.
+function getDayLiftStyle(day: CalendarDay, index: number): Record<string, string> | null {
+  if (!isToday(day)) return null
+  const column = index % 7
+  const row = Math.floor(index / 7)
+  const side = (atEdge: boolean) => atEdge ? 'var(--calendar-lift-edge)' : 'var(--calendar-lift-grow)'
+  const lastRow = Math.ceil(visibleDays.value.length / 7) - 1
+  return {
+    // Only the card paints the tile, so that gap shows the gutter, not a sliver of tile.
+    backgroundColor: 'transparent',
+    '--calendar-lift-fill': getFillColor(day) ?? (isCurrentMonth(day) ? 'var(--dp-calendar-cell-bg)' : 'var(--calendar-surface)'),
+    '--calendar-lift-inset': [row === 0, column === 6, row === lastRow, column === 0].map(side).join(' '),
+  }
 }
 
 const todayWeekdayIndex = computed(() => {
@@ -360,12 +392,17 @@ function handleDayClick(day: CalendarDay, index: number) {
           'calendar-day--outside': !isCurrentMonth(day),
           'calendar-day--today': isToday(day),
           'calendar-day--highlighted': !focusedDay && isHighlighted(day),
-          'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isHighlighted(day),
+          'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isHighlighted(day) && !isToday(day),
           'duty-day-focused': isFocused(day),
         }
       ]"
-      :style="getDayStyle(day)"
+      :style="[getDayStyle(day), getDayLiftStyle(day, idx)]"
     >
+      <span
+        v-if="isToday(day)"
+        class="calendar-day-lift"
+        aria-hidden="true"
+      />
       <span
         v-if="hasTodaySelectionBorder(day)"
         class="calendar-day-selection-border"
@@ -377,7 +414,10 @@ function handleDayClick(day: CalendarDay, index: number) {
             class="calendar-day-number"
             :style="{ color: getDayNumberColor(day, idx % 7) }"
           >
-            {{ day.day }}
+            <template v-if="isToday(day)">
+              <span class="calendar-day-today-circle">{{ day.day }}</span>
+            </template>
+            <template v-else>{{ day.day }}</template>
           </span>
           <slot name="day-header" :day="day" :index="getSourceIndex(idx)" />
         </div>
@@ -400,7 +440,7 @@ function handleDayClick(day: CalendarDay, index: number) {
                 'calendar-span--start': lane.segment.isStart,
                 'calendar-span--end': lane.segment.isEnd,
               }"
-              :style="getSpanStyle(idx, lane.segment.days)"
+              :style="getSpanStyle(idx, lane.segment)"
             >
               <span
                 v-for="n in lane.segment.days - 1"
@@ -447,7 +487,11 @@ function handleDayClick(day: CalendarDay, index: number) {
 .calendar-grid {
   --calendar-gutter: var(--dp-border-primary);
   --calendar-surface: var(--dp-calendar-cell-prev-next);
-  --calendar-today: var(--dp-danger-hover);
+  --calendar-today-halo: #fff;
+  /* Today's card grows 3.5% on inner sides (a 1.07 card); on a grid edge it sits
+     1.5px in, so its 1.5px halo lands flush on the clipped edge and corners. */
+  --calendar-lift-grow: -3.5%;
+  --calendar-lift-edge: 1.5px;
   /* Phones use the 1pt iOS gutter. */
   --calendar-gap: 1px;
   --calendar-pad-x: 1.5px;
@@ -467,6 +511,7 @@ function handleDayClick(day: CalendarDay, index: number) {
 
 /* The dark prev/next surface is the page colour, so the header sits on the card instead. */
 :global(.dark .calendar-grid) {
+  --calendar-today-halo: #111827;
   --calendar-span-empty-tint: #fff;
   --calendar-span-empty-glass: 10%;
 }
@@ -485,8 +530,8 @@ function handleDayClick(day: CalendarDay, index: number) {
 }
 
 .calendar-weekday--today {
-  background: var(--calendar-today);
-  color: #fff !important;
+  color: var(--dp-text-primary) !important;
+  box-shadow: inset 0 -2px 0 var(--dp-text-primary);
 }
 
 .calendar-day {
@@ -541,8 +586,28 @@ function handleDayClick(day: CalendarDay, index: number) {
   --calendar-ink-muted: color-mix(in srgb, var(--dp-text-on-light) 58%, transparent);
 }
 
+/* Today is lifted over its neighbours, under the multi-day bands (z-index 2). */
 .calendar-day--today {
   z-index: 1;
+}
+
+/* The card is a layer under today's content, not the cell itself, so a band that
+   starts on today keeps its geometry. The hover veil and frame and the
+   selection ring lift with it. */
+.calendar-day-lift,
+.calendar-day--today .calendar-day-selection-border,
+.calendar-day--today.calendar-day-hoverable::before,
+.calendar-day--today.calendar-day-hoverable::after {
+  inset: var(--calendar-lift-inset);
+  border-radius: 8px;
+}
+
+.calendar-day-lift {
+  position: absolute;
+  z-index: -1;
+  background: var(--calendar-lift-fill);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 35%), 0 0 0 1.5px var(--calendar-today-halo);
+  pointer-events: none;
 }
 
 .calendar-day-top {
@@ -571,17 +636,18 @@ function handleDayClick(day: CalendarDay, index: number) {
   font-weight: 600;
 }
 
-/* Today: the date row becomes a red strip bled to the tile's top and sides,
-   cancelling the tile's padding, with white ink for the date and a pinned
-   D-Day label. */
-.calendar-day--today .calendar-day-top {
-  --calendar-ink: #fff;
-  --calendar-ink-muted: #fff;
-
-  margin: -4px calc(-1 * var(--calendar-pad-x)) 2px;
-  padding: 4px calc(var(--calendar-pad-x) + 2px) 2px;
-  background: var(--calendar-today);
-  box-shadow: 0 1px 0 rgb(0 0 0 / 20%);
+.calendar-day-today-circle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  margin-left: -1px;
+  border-radius: 9999px;
+  background: var(--dp-danger-hover);
+  color: #fff;
+  font-size: 11.5px;
 }
 
 .calendar-day-selection-border {
@@ -938,9 +1004,11 @@ function handleDayClick(day: CalendarDay, index: number) {
     font-size: 17px;
   }
 
-  .calendar-day--today .calendar-day-top {
-    margin: -7px calc(-1 * var(--calendar-pad-x)) 4px;
-    padding: 6px var(--calendar-pad-x) 4px;
+  .calendar-day-today-circle {
+    width: 26px;
+    height: 26px;
+    margin: -1px 0 0 -3px;
+    font-size: 15px;
   }
 
   .calendar-day-holiday {

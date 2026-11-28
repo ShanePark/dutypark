@@ -1254,7 +1254,7 @@ struct CalendarView: View {
         .overlayPreferenceValue(CalendarDateSpotlightTargetKey.self) { target in
             if let target, let flash = model.dateFlash {
                 GeometryReader { proxy in
-                    CalendarDateSpotlight(target: proxy[target]).id(flash.id)
+                    CalendarDateSpotlight(target: proxy[target.bounds], lift: target.lift).id(flash.id)
                 }
             }
         }
@@ -1347,6 +1347,8 @@ struct CalendarView: View {
                 let cell = CalendarDayCell(
                     day: day,
                     weekday: index % 7,
+                    isFirstRow: index < 7,
+                    isLastRow: index / 7 == (days.count - 1) / 7,
                     comparedDuties: comparedDutyRows[index],
                     spanLanes: spanLanes[index],
                     weekDays: DPCalendarSpanRibbonDay.week(containing: index, in: ribbonDays),
@@ -2180,11 +2182,17 @@ private struct CalendarAppearanceReporter: UIViewControllerRepresentable {
     }
 }
 
+/// The spotlit day's laid-out frame, and how it is lifted when it is today.
+private struct CalendarDateSpotlightTarget {
+    let bounds: Anchor<CGRect>
+    let lift: DPCalendarTodayLift.Placement?
+}
+
 /// The frame of the spotlit day, reported up to the month grid.
 private struct CalendarDateSpotlightTargetKey: PreferenceKey {
-    static let defaultValue: Anchor<CGRect>? = nil
+    static let defaultValue: CalendarDateSpotlightTarget? = nil
 
-    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+    static func reduce(value: inout CalendarDateSpotlightTarget?, nextValue: () -> CalendarDateSpotlightTarget?) {
         value = value ?? nextValue()
     }
 }
@@ -2194,10 +2202,15 @@ private struct CalendarDateSpotlightTargetKey: PreferenceKey {
 /// gets a fresh view, so the timeline replays from the start.
 private struct CalendarDateSpotlight: View {
     let target: CGRect
+    /// Today's lift: the hole is then its lifted, rounded card.
+    let lift: DPCalendarTodayLift.Placement?
     @State private var dim = 0.0
 
     var body: some View {
-        Cutout(hole: target)
+        Cutout(
+            hole: lift.map { DPCalendarTodayLift.liftedFrame(target, placement: $0) } ?? target,
+            cornerRadius: lift == nil ? 0 : DPCalendarTodayLift.cornerRadius * DPCalendarTodayLift.scale
+        )
             .fill(Color.black, style: FillStyle(eoFill: true))
             .opacity(dim)
             .allowsHitTesting(false)
@@ -2220,10 +2233,11 @@ private struct CalendarDateSpotlight: View {
 
     private struct Cutout: Shape {
         let hole: CGRect
+        let cornerRadius: CGFloat
 
         nonisolated func path(in rect: CGRect) -> Path {
             var path = Path(rect)
-            path.addRect(hole)
+            path.addRoundedRect(in: hole, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
             return path
         }
     }
@@ -2232,6 +2246,8 @@ private struct CalendarDateSpotlight: View {
 private struct CalendarDayCell: View {
     let day: CalendarDayContent
     let weekday: Int
+    let isFirstRow: Bool
+    let isLastRow: Bool
     /// The month's compared-duty rows for this day; `nil` keeps an empty row.
     let comparedDuties: [ComparedDuty?]
     let spanLanes: [DPCalendarSpanLanes.Placement<ScheduleDTO>?]
@@ -2256,7 +2272,9 @@ private struct CalendarDayCell: View {
             isToday: showsToday,
             hasHoliday: !hidesDetails && !day.holidays.isEmpty,
             highlight: highlightBorder,
-            ribbonColumn: !hidesDetails && DPCalendarSpanLanes.startsRibbon(spanLanes, column: weekday) ? weekday : nil
+            ribbonColumn: !hidesDetails && DPCalendarSpanLanes.startsRibbon(spanLanes, column: weekday) ? weekday : nil,
+            isFirstRow: isFirstRow,
+            isLastRow: isLastRow
         ) {
             if let label = pinLabel {
                 Text(verbatim: label)
@@ -2266,9 +2284,7 @@ private struct CalendarDayCell: View {
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                    .foregroundStyle(showsToday
-                        ? DPCalendarTodayStrip.ink.opacity(label == "D-Day" ? 1 : 0.95)
-                        : label == "D-Day" ? primaryForeground : secondaryForeground)
+                    .foregroundStyle(label == "D-Day" ? primaryForeground : secondaryForeground)
             }
         } content: {
             if !hidesDetails {
@@ -2276,7 +2292,7 @@ private struct CalendarDayCell: View {
             }
         }
         .anchorPreference(key: CalendarDateSpotlightTargetKey.self, value: .bounds) {
-            isSpotlit && !hidesDetails ? $0 : nil
+            isSpotlit && !hidesDetails ? CalendarDateSpotlightTarget(bounds: $0, lift: showsToday ? liftPlacement : nil) : nil
         }
         .contentShape(Rectangle())
         // The day gesture belongs to the whole cell. Without an explicit accessibility
@@ -2391,8 +2407,12 @@ private struct CalendarDayCell: View {
         return day.cell.year == today.year && day.cell.month == today.month && day.cell.day == today.day
     }
 
-    /// Quick duty editing keeps its own selection indicator without the today strip.
+    /// Quick duty editing keeps its own selection indicator without today's lift.
     private var showsToday: Bool { isToday && !hidesDetails }
+
+    private var liftPlacement: DPCalendarTodayLift.Placement {
+        DPCalendarTodayLift.placement(column: weekday, isFirstRow: isFirstRow, isLastRow: isLastRow)
+    }
 
     private var pinLabel: String? {
         guard let pinnedDDay, !hidesDetails else { return nil }
