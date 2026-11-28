@@ -615,6 +615,18 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertFalse(tile.contains("DPCalendarTodayRing"), "Today no longer draws a ring")
     }
 
+    func testOnlyTheDisplayedMonthsOwnDayCutsTheSpotlightHole() throws {
+        let source = try Self.calendarViewSource()
+        let body = try Self.declaration(named: "private func calendarMonthBody(", in: source)
+
+        // A swipe lays out the neighbouring months too, and their outside-month copy
+        // of the date must not win the first-anchor reduce and dim the visible grid.
+        XCTAssertTrue(
+            body.contains("isSpotlit: day.cell.isCurrentMonth && model.dateFlash?.date == day.cell.date"),
+            "Only the in-month cell of the flashed date, on its own month's page, is spotlit"
+        )
+    }
+
     func testAJumpedToDateIsSpotlitByDimmingTheRestOfTheGrid() throws {
         let source = try Self.calendarViewSource()
         let grid = try Self.declaration(named: "private var calendarGrid: some View", in: source)

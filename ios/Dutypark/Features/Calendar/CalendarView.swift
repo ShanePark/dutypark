@@ -1351,7 +1351,9 @@ struct CalendarView: View {
                     spanLanes: spanLanes[index],
                     weekDays: DPCalendarSpanRibbonDay.week(containing: index, in: ribbonDays),
                     highlighted: model.highlightedDate == day.cell.date,
-                    isSpotlit: model.dateFlash?.date == day.cell.date,
+                    // A swipe also lays out the neighbouring months, whose outside-month
+                    // copy of the date must not take the spotlight hole off screen.
+                    isSpotlit: day.cell.isCurrentMonth && model.dateFlash?.date == day.cell.date,
                     pinnedDDay: model.pinnedDDay,
                     hidesDetails: model.isQuickDutyEditing,
                     calendarMemberID: model.targetMemberID,
