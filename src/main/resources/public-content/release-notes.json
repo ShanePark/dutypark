@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-447": {
+          "title": "소셜 가입 이름 자동 입력과 이름 변경",
+          "summary": "소셜 계정으로 가입할 때 이름이 미리 채워지고, 가입한 뒤에도 내 정보에서 이름을 바꿀 수 있습니다.",
+          "changes": [
+            "Apple로 처음 가입하면 Apple이 알려준 이름을, 그 밖에는 '사용자1234' 같은 기본 이름을 미리 채워 두어 바로 가입할 수 있습니다.",
+            "웹의 내 정보와 iOS의 더보기 > 내 정보에서 이름을 바꿀 수 있습니다.",
+            "모바일 웹에서 언어를 고르면 바로 바뀌고 선택 창도 닫힙니다."
+          ]
+        },
         "pr-446": {
           "title": "iOS 달력 넘김과 날짜 강조 안정화",
           "summary": "iOS 달력에서 달을 넘길 때 이웃 달 내용이 바로 보이고, 날짜 강조가 넘기는 도중에도 제자리에 머뭅니다.",
@@ -2501,6 +2510,15 @@
         }
       },
       "entries": {
+        "pr-447": {
+          "title": "Pre-filled signup names and name changes",
+          "summary": "Signing up with a social account pre-fills your name, and you can change it later from your profile.",
+          "changes": [
+            "Signing up with Apple for the first time pre-fills the name Apple shares; other sign-ups start with a default such as \"User1234\", so you can sign up right away.",
+            "You can change your name from your profile on the web, and from More > My info on iOS.",
+            "On mobile web, choosing a language applies it right away and closes the picker."
+          ]
+        },
         "pr-446": {
           "title": "Steadier iOS month swipes and date spotlight",
           "summary": "On iOS, neighbouring months show their contents right away while swiping, and the date spotlight stays in place mid-swipe.",
@@ -4925,6 +4943,19 @@
     }
   },
   "items": [
+    {
+      "id": "pr-447",
+      "version": "2026.11.28.03",
+      "date": "2026-11-28",
+      "pr": 447,
+      "url": "https://github.com/ShanePark/dutypark/pull/447",
+      "category": "fix",
+      "areas": [
+        "auth",
+        "profile",
+        "localization"
+      ]
+    },
     {
       "id": "pr-446",
       "version": "2026.11.28.02",
