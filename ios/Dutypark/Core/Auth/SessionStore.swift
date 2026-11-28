@@ -240,6 +240,26 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    /// Patches the renamed member directly: `auth/status` echoes the access token's name claim,
+    /// so refreshing right after a rename could restore the old name.
+    func applyCurrentMemberName(_ name: String, memberID: MemberID) async {
+        guard case .authenticated(let currentMember) = state,
+              currentMember.id == memberID
+        else { return }
+        let renamedMember = LoginMember(
+            id: currentMember.id,
+            email: currentMember.email,
+            name: name,
+            teamId: currentMember.teamId,
+            team: currentMember.team,
+            isAdmin: currentMember.isAdmin,
+            isImpersonating: currentMember.isImpersonating,
+            originalMemberId: currentMember.originalMemberId
+        )
+        state = .authenticated(renamedMember)
+        try? await offlineSessionStore.save(renamedMember, at: nil)
+    }
+
     private func applyTeamFallback(
         _ fallbackTeam: TeamDTO?,
         expectedMemberID: MemberID,

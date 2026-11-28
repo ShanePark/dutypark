@@ -1,4 +1,5 @@
 import { authApi, type AppleExchangeResponse } from '@/api/auth'
+import type { AppleUserName } from '@/utils/signupName'
 import { ref } from 'vue'
 
 const APPLE_SDK_BASE_URL = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1'
@@ -21,7 +22,13 @@ interface AppleIdAuthorization {
 
 interface AppleIdSignInResponse {
   authorization?: AppleIdAuthorization
+  /** Present only on the user's first authorization of this app. */
+  user?: { name?: AppleUserName }
   error?: string
+}
+
+export interface AppleSignInResult extends AppleExchangeResponse {
+  appleUserName: AppleUserName | null
 }
 
 export interface AppleIdSdk {
@@ -166,7 +173,7 @@ export async function authorizeAppleLogin({
   loadSdk,
   exchange,
   crypto: cryptoOverride,
-}: AuthorizeAppleLoginOptions): Promise<AppleExchangeResponse> {
+}: AuthorizeAppleLoginOptions): Promise<AppleSignInResult> {
   if (!clientId || !redirectUri) {
     throw new AppleSignInError('CONFIGURATION_UNAVAILABLE')
   }
@@ -189,9 +196,11 @@ async function exchangePreparedAppleLogin(
   redirectUri: string,
   purpose: AppleOAuthPurpose,
   exchange: typeof authApi.exchangeAppleLogin,
-): Promise<AppleExchangeResponse> {
+): Promise<AppleSignInResult> {
   sdk.auth.init({
     clientId,
+    // Like iOS, only login asks for the name, to pre-fill signup; never request the email.
+    ...(purpose === 'LOGIN' ? { scope: 'name' } : {}),
     redirectURI: redirectUri,
     state: attempt.state,
     nonce: attempt.hashedNonce,
@@ -230,12 +239,13 @@ async function exchangePreparedAppleLogin(
     throw new AppleSignInError('STATE_MISMATCH')
   }
 
-  return exchange({
+  const exchangeResponse = await exchange({
     identityToken: authorization.id_token,
     authorizationCode: authorization.code,
     rawNonce: attempt.rawNonce,
     purpose,
   })
+  return { ...exchangeResponse, appleUserName: response.user?.name ?? null }
 }
 
 const appleSdkLocale = typeof document !== 'undefined' && document.documentElement.lang.toLowerCase().startsWith('ko')

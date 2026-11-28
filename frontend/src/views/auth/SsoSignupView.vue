@@ -12,6 +12,7 @@ import PolicyModal from '@/components/common/PolicyModal.vue'
 import { renderPolicyMarkdown } from '@/utils/policyMarkdown'
 import { getSafeRedirect } from '@/utils/redirect'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
+import { generateDefaultSignupName, readSsoSignupNameState } from '@/utils/signupName'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,7 +22,10 @@ const contentFilterStore = useContentFilterStore()
 const { t } = useI18n()
 
 const uuid = ref('')
-const username = ref('')
+// Pre-filled once per visit so social signup never requires typing a name.
+const initialUsername = readSsoSignupNameState(typeof window === 'undefined' ? null : window.history.state)
+  || generateDefaultSignupName(t('auth.ssoSignup.username.defaultPrefix'))
+const username = ref(initialUsername)
 const termAgree = ref(false)
 const privacyAgree = ref(false)
 const isLoading = ref(false)
@@ -49,7 +53,7 @@ function openPolicyModal(type: 'terms' | 'privacy') {
 const trimmedUsername = computed(() => username.value.trim())
 
 const hasStartedFormInput = computed(() => {
-  return username.value.length > 0 || termAgree.value || privacyAgree.value
+  return username.value !== initialUsername || termAgree.value || privacyAgree.value
 })
 
 const isUsernameMissing = computed(() => trimmedUsername.value.length === 0)

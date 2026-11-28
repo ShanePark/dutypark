@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.AuxiliaryAccountCreateRequest
 import com.tistory.shanepark.dutypark.member.domain.dto.ManagerMemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
+import com.tistory.shanepark.dutypark.member.domain.dto.MemberNameUpdateRequest
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.dto.VisibilityUpdateRequest
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
@@ -12,6 +13,9 @@ import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.member.service.MemberSocialAccountService
 import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.service.AuthService
+import com.tistory.shanepark.dutypark.security.service.CookieService
+import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
 import org.springframework.core.io.Resource
 import org.springframework.core.io.UrlResource
@@ -31,6 +35,8 @@ class MemberController(
     private val friendService: FriendService,
     private val profilePhotoService: ProfilePhotoService,
     private val memberSocialAccountService: MemberSocialAccountService,
+    private val authService: AuthService,
+    private val cookieService: CookieService,
 ) {
 
     @GetMapping("/me")
@@ -38,6 +44,18 @@ class MemberController(
         @Login loginMember: LoginMember,
     ): MemberDto {
         return memberService.findById(loginMember.id)
+    }
+
+    @PutMapping("/me/name")
+    fun updateMyName(
+        @Login loginMember: LoginMember,
+        @Valid @RequestBody request: MemberNameUpdateRequest,
+        response: HttpServletResponse,
+    ): MemberDto {
+        val updated = memberService.updateName(loginMember, request.name!!)
+        // The access token carries the member name, so re-sign it for cookie-based clients.
+        authService.reissueAccessToken(loginMember)?.let { cookieService.setAccessTokenCookie(response, it) }
+        return updated
     }
 
     @PutMapping("{memberId}/visibility")

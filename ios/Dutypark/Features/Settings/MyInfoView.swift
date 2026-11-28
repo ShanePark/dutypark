@@ -44,6 +44,7 @@ struct MyInfoView: View {
     @State private var showAIConsentConfirmation = false
     @State private var showPassword = false
     @State private var showAuxiliary = false
+    @State private var showNameChange = false
     @State private var showAccountDeletion = false
     @State private var accountDeletionIsWorking = false
     @State private var confirmation: SettingsConfirmation?
@@ -56,14 +57,17 @@ struct MyInfoView: View {
     @State private var photoNoticeMessage: String?
     private let onProfilePhotoChanged: () -> Void
     private let onProfilePhotoStateChanged: (Bool, Int64) -> Void
+    private let onProfileNameChanged: () -> Void
     private let settingsService = SettingsService()
 
     init(
         onProfilePhotoChanged: @escaping () -> Void = {},
-        onProfilePhotoStateChanged: @escaping (Bool, Int64) -> Void = { _, _ in }
+        onProfilePhotoStateChanged: @escaping (Bool, Int64) -> Void = { _, _ in },
+        onProfileNameChanged: @escaping () -> Void = {}
     ) {
         self.onProfilePhotoChanged = onProfilePhotoChanged
         self.onProfilePhotoStateChanged = onProfilePhotoStateChanged
+        self.onProfileNameChanged = onProfileNameChanged
     }
 
     var body: some View {
@@ -218,6 +222,7 @@ struct MyInfoView: View {
                 )
             }
         }
+        .fullScreenCover(isPresented: $showNameChange) { nameChangeModal }
         .fullScreenCover(isPresented: $showAccountDeletion) {
             if accountActionVisibility.showsAccountControls,
                let memberID = model.member?.id,
@@ -323,6 +328,34 @@ struct MyInfoView: View {
         .disabled(model.isWorking || confirmationAction.isWorking)
     }
 
+    @ViewBuilder
+    private var nameChangeModal: some View {
+        if let member = model.member {
+            DPModalOverlay(
+                onDismiss: { showNameChange = false },
+                closeOnBackdrop: false,
+                canDismiss: !model.isWorking
+            ) { availableSize, dismiss in
+                ProfileNameChangeModal(
+                    model: model,
+                    currentName: member.name,
+                    maximumHeight: availableSize.height,
+                    dismiss: dismiss,
+                    save: { name in await saveName(name, dismiss: dismiss) }
+                )
+            }
+        }
+    }
+
+    private func saveName(_ name: String, dismiss: () -> Void) async {
+        guard await model.updateName(name) else { return }
+        if let renamed = model.member, let memberID = renamed.id {
+            await session.applyCurrentMemberName(renamed.name, memberID: memberID)
+        }
+        onProfileNameChanged()
+        dismiss()
+    }
+
     private var profileSection: some View {
         let cameraForeground = DPColor.textOnDark
         let cameraBackground = DPColor.accent
@@ -385,7 +418,25 @@ struct MyInfoView: View {
                 .accessibilityIdentifier("settings.photo.actions")
 
                 VStack(alignment: .leading, spacing: DPSpacing.small) {
-                    memberInfoRow("person", "settings.profile.name", model.member?.name ?? "-")
+                    HStack(alignment: .center, spacing: DPSpacing.small) {
+                        memberInfoRow("person", "settings.profile.name", model.member?.name ?? "-")
+                        if model.member != nil {
+                            Button {
+                                DPHapticCenter.shared.emit(.routine)
+                                model.clearNotice()
+                                withoutPresentationAnimation { showNameChange = true }
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(DPColor.accent)
+                                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(SettingsLocalization.text("settings.name.change"))
+                            .accessibilityIdentifier("settings.name.change")
+                        }
+                    }
                     memberInfoRow("building.2", "settings.profile.team", model.member?.team ?? "-")
                     if let email = model.member?.email {
                         memberInfoRow("envelope", "settings.profile.email", MyInfoEmailDisplay.wrappable(email))
@@ -1886,6 +1937,110 @@ private struct PasswordChangeView: View {
         if currentPassword == newPassword { return "settings.password.same" }
         if newPassword != confirmation { return "settings.password.mismatch" }
         return nil
+    }
+}
+
+private struct ProfileNameChangeModal: View {
+    @ObservedObject var model: SettingsViewModel
+    let currentName: String
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
+    let save: (String) async -> Void
+    @State private var name: String
+    @FocusState private var focused: Bool
+
+    private enum Field { case name }
+
+    init(
+        model: SettingsViewModel,
+        currentName: String,
+        maximumHeight: CGFloat,
+        dismiss: @escaping () -> Void,
+        save: @escaping (String) async -> Void
+    ) {
+        self.model = model
+        self.currentName = currentName
+        self.maximumHeight = maximumHeight
+        self.dismiss = dismiss
+        self.save = save
+        _name = State(initialValue: currentName)
+    }
+
+    var body: some View {
+        DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focused ? Field.name : nil) {
+            SettingsModalHeader(
+                titleKey: "settings.name.change",
+                closeDisabled: model.isWorking,
+                close: dismiss
+            )
+        } content: {
+            bodyContent
+        } footer: {
+            SettingsModalActions {
+                Button(action: dismiss) {
+                    SettingsLocalization.text("settings.action.close")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(model.isWorking)
+                Button(action: submit) {
+                    SettingsLocalization.text("settings.action.save")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .disabled(!canSave)
+                .accessibilityIdentifier("settings.name.save")
+            }
+        }
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canSave: Bool {
+        !trimmedName.isEmpty && SsoSignupNamePolicy.fits(trimmedName) && trimmedName != currentName && !model.isWorking
+    }
+
+    private var bodyContent: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            SettingsLocalization.text("settings.name.description")
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+            SettingsLocalization.text("settings.profile.name")
+                .font(DPTypography.label)
+                .foregroundStyle(DPColor.textPrimary)
+            TextField(SettingsLocalization.string("settings.profile.name"), text: $name)
+                .onChange(of: name) { _, value in
+                    if !SsoSignupNamePolicy.fits(value) {
+                        name = SsoSignupNamePolicy.truncated(value)
+                    }
+                }
+                .focused($focused)
+                .dpInputChrome(isFocused: focused)
+                .onSubmit(submit)
+                .id(Field.name)
+                .accessibilityIdentifier("settings.name.field")
+            Text("\(SsoSignupNamePolicy.length(of: name))/\(SsoSignupNamePolicy.maxLength)")
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            if model.noticeIsError, let key = model.noticeKey {
+                SettingsLocalization.text(key)
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.danger)
+            }
+        }
+        .padding(DPSpacing.large)
+    }
+
+    private func submit() {
+        guard canSave else { return }
+        focused = false
+        let name = trimmedName
+        Task {
+            await save(name)
+        }
     }
 }
 

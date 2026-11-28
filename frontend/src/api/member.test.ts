@@ -7,6 +7,7 @@ vi.mock('./client', () => ({
     get: vi.fn(),
     delete: vi.fn(),
     patch: vi.fn(),
+    put: vi.fn(),
   },
 }))
 
@@ -77,6 +78,18 @@ describe('member social account API contract', () => {
       expect(apiClient.delete).toHaveBeenCalledWith(`/members/me/social-accounts/${provider}`)
     },
   )
+})
+
+describe('member name API contract', () => {
+  it('renames the current member and returns the updated member', async () => {
+    const renamed = member({ name: '새이름' })
+    vi.mocked(apiClient.put).mockResolvedValue({ data: renamed })
+
+    const response = await memberApi.updateMyName('새이름')
+
+    expect(apiClient.put).toHaveBeenCalledExactlyOnceWith('/members/me/name', { name: '새이름' })
+    expect(response.data).toEqual(renamed)
+  })
 })
 
 describe('friend order API contract', () => {

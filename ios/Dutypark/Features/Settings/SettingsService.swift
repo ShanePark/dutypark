@@ -219,6 +219,14 @@ nonisolated struct SettingsService: AccountDeletionServicing, AccountDeletionSta
         try await client.request("members/me")
     }
 
+    func updateName(_ name: String) async throws -> MemberDTO {
+        try await client.request(
+            "members/me/name",
+            method: .put,
+            body: MemberNameUpdateRequest(name: name)
+        )
+    }
+
     func familyMembers() async throws -> [MemberPreviewDTO] {
         try await client.request("members/family")
     }

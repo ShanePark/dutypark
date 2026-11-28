@@ -897,6 +897,7 @@ export default {
       username: {
         label: 'Username',
         placeholder: 'Enter a username (1-10 characters)',
+        defaultPrefix: 'User',
         helper: {
           emptyActive: 'Enter a username to complete sign-up.',
           emptyIdle: 'Choose a username between 1 and 10 characters.',
@@ -962,6 +963,17 @@ export default {
       name: 'Name',
       team: 'Team',
       email: 'Email',
+      nameChange: {
+        action: 'Change name',
+        modalTitle: 'Change name',
+        placeholder: 'Enter a name (1-10 characters)',
+        hint: 'This name appears on your profile and schedules.',
+        required: 'Enter a name.',
+        submit: 'Save',
+        submitting: 'Saving...',
+        success: 'Your name has been changed.',
+        failed: 'Could not change your name. Please try again.',
+      },
     },
     visibility: {
       sectionTitle: 'Calendar Visibility',

@@ -11,7 +11,6 @@ const { t } = useI18n()
 const isOpen = ref(false)
 const isSuggestionDismissedLocally = ref(false)
 const switcherRef = ref<HTMLDivElement | null>(null)
-const isSaving = ref(false)
 const suggestionRef = ref<HTMLDivElement | null>(null)
 const suggestionShift = ref(0)
 
@@ -77,35 +76,21 @@ function chooseAnotherLanguage() {
   })
 }
 
-async function acceptSuggestedLanguage() {
-  if (isSaving.value) {
-    return
-  }
-
-  isSaving.value = true
-  try {
-    await localeStore.confirmDetectedLocale()
-    isSuggestionDismissedLocally.value = false
-    closeDropdown()
-  } finally {
-    isSaving.value = false
-  }
+function acceptSuggestedLanguage() {
+  localeStore.confirmDetectedLocale()
+  isSuggestionDismissedLocally.value = false
+  closeDropdown()
 }
 
-async function changeLocale(nextLocale: SupportedLocale) {
-  if (isSaving.value || (localeStore.locale === nextLocale && localeStore.explicitLocale)) {
+function changeLocale(nextLocale: SupportedLocale) {
+  if (localeStore.locale === nextLocale && localeStore.explicitLocale) {
     closeDropdown()
     return
   }
 
-  isSaving.value = true
-  try {
-    await localeStore.setLocale(nextLocale)
-    isSuggestionDismissedLocally.value = false
-    closeDropdown()
-  } finally {
-    isSaving.value = false
-  }
+  localeStore.setLocale(nextLocale)
+  isSuggestionDismissedLocally.value = false
+  closeDropdown()
 }
 
 function handleClickOutside(event: MouseEvent) {

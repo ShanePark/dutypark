@@ -186,6 +186,208 @@ class MemberControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `updateMyName trims and saves the name and returns the updated member`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "  새이름  ")))
+                .withAuth(member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(member.id))
+            .andExpect(jsonPath("$.name").value("새이름"))
+            .andDo(
+                document(
+                    "members/update-name",
+                    requestFields(
+                        fieldWithPath("name").description("New display name (trimmed, 1-${Member.NAME_MAX_LENGTH} characters)")
+                    )
+                )
+            )
+
+        val findMember = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(findMember.name).isEqualTo("새이름")
+    }
+
+    @Test
+    fun `updateMyName reissues the access token cookie with the new name on the same session`() {
+        val member = TestData.member
+        val session = sessionTokenService.createRefreshToken(member.id!!, "127.0.0.1", "integration-test")
+
+        val response = mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "새이름")))
+                .withAuth(member, session.id)
+        )
+            .andExpect(status().isOk)
+            .andReturn().response
+
+        val accessToken = response.getCookie("access_token")?.value
+        assertThat(accessToken).isNotBlank
+        val reissued = jwtProvider.parseToken(accessToken!!)
+        assertThat(reissued.id).isEqualTo(member.id)
+        assertThat(reissued.name).isEqualTo("새이름")
+        assertThat(reissued.sessionId).isEqualTo(session.id)
+        assertThat(reissued.isImpersonating).isFalse
+        assertThat(response.getCookie("refresh_token")).isNull()
+    }
+
+    @Test
+    fun `updateMyName returns 400 when name is blank`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "   ")))
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("sso.username.required"))
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
+
+        assertThat(memberRepository.findById(member.id!!).orElseThrow().name).isEqualTo(member.name)
+    }
+
+    @Test
+    fun `updateMyName returns 400 when name is only ideographic space`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "　")))
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("sso.username.required"))
+            .andExpect(jsonPath("$.fieldErrors.length()").value(1))
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
+
+        assertThat(memberRepository.findById(member.id!!).orElseThrow().name).isEqualTo(member.name)
+    }
+
+    @Test
+    fun `updateMyName returns 400 when name is only no-break space`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to " ")))
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("sso.username.required"))
+            .andExpect(jsonPath("$.fieldErrors.length()").value(1))
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
+
+        assertThat(memberRepository.findById(member.id!!).orElseThrow().name).isEqualTo(member.name)
+    }
+
+    @Test
+    fun `updateMyName validates the length after trimming padding`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "  가나다라마바사아자차　")))
+                .withAuth(member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.name").value("가나다라마바사아자차"))
+
+        assertThat(memberRepository.findById(member.id!!).orElseThrow().name).isEqualTo("가나다라마바사아자차")
+    }
+
+    @Test
+    fun `updateMyName returns 400 when name is missing`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .accept("application/json")
+                .contentType("application/json")
+                .content("{}")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("sso.username.required"))
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
+    }
+
+    @Test
+    fun `updateMyName rejects a name longer than the signup limit`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "가나다라마바사아자차카")))
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("sso.username.length"))
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
+
+        assertThat(memberRepository.findById(member.id!!).orElseThrow().name).isEqualTo(member.name)
+    }
+
+    @Test
+    fun `updateMyName accepts a name at the signup limit`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "가나다라마바사아자차")))
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.name").value("가나다라마바사아자차"))
+    }
+
+    @Test
+    fun `updateMyName requires authentication`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "새이름")))
+        )
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `updateMyName while impersonating renames the impersonated member without reissuing a token`() {
+        val target = TestData.member
+        val impersonationToken = getImpersonationJwt(target, TestData.admin)
+
+        val response = mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/members/me/name")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "새이름")))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $impersonationToken")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(target.id))
+            .andExpect(jsonPath("$.name").value("새이름"))
+            .andReturn().response
+
+        assertThat(memberRepository.findById(target.id!!).orElseThrow().name).isEqualTo("새이름")
+        assertThat(memberRepository.findById(TestData.admin.id!!).orElseThrow().name).isEqualTo(TestData.admin.name)
+        assertThat(response.getCookie("access_token")).isNull()
+    }
+
+    @Test
     fun `amIManager returns false when not logged in`() {
         val member = TestData.member
 

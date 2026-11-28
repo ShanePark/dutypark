@@ -202,6 +202,40 @@ final class APIClientAuthTests: XCTestCase {
     }
 
     @MainActor
+    func testApplyCurrentMemberNamePatchesOnlyTheMatchingAccountAndPersistsIt() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-renamed-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let offlineStore = OfflineSessionStore(directoryURL: directory)
+        URLProtocolStub.error = URLError(.notConnectedToInternet)
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            offlineSessionStore: offlineStore
+        )
+
+        await store.applyCurrentMemberName("Other", memberID: Self.testMember.id + 1)
+        XCTAssertEqual(store.state, .authenticated(Self.testMember))
+
+        await store.applyCurrentMemberName("Renamed", memberID: Self.testMember.id)
+
+        let expectedMember = LoginMember(
+            id: Self.testMember.id,
+            email: Self.testMember.email,
+            name: "Renamed",
+            teamId: Self.testMember.teamId,
+            team: Self.testMember.team,
+            isAdmin: Self.testMember.isAdmin,
+            isImpersonating: Self.testMember.isImpersonating,
+            originalMemberId: Self.testMember.originalMemberId
+        )
+        XCTAssertEqual(store.state, .authenticated(expectedMember))
+        let persistedMember = await offlineStore.load(at: nil)
+        XCTAssertEqual(persistedMember, expectedMember)
+    }
+
+    @MainActor
     func testRefreshCurrentMemberAuthoritativelyPatchesCreatedTeamOverStaleStatusClaim() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("dutypark-created-team-stale-claim-\(UUID().uuidString)")

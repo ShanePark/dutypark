@@ -41,6 +41,8 @@ import {
   type SocialLinkProvider,
 } from '@/utils/socialLinkCallback'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
+import { MEMBER_NAME_MAX_LENGTH } from '@/utils/signupName'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import {
   User,
   Building2,
@@ -61,6 +63,7 @@ import {
   Plus,
   Settings,
   Apple,
+  Pencil,
 } from '@lucide/vue'
 
 const route = useRoute()
@@ -678,6 +681,49 @@ async function fetchMemberInfo() {
   }
 }
 
+// Name change
+const showNameModal = ref(false)
+const nameDraft = ref('')
+const savingName = ref(false)
+const trimmedNameDraft = computed(() => nameDraft.value.trim())
+const isNameSubmitDisabled = computed(() =>
+  savingName.value
+  || !trimmedNameDraft.value
+  || trimmedNameDraft.value.length > MEMBER_NAME_MAX_LENGTH
+  || trimmedNameDraft.value === memberInfo.value?.name
+)
+
+function openNameModal() {
+  if (!memberInfo.value) return
+  nameDraft.value = memberInfo.value.name
+  showNameModal.value = true
+}
+
+async function saveName() {
+  if (isNameSubmitDisabled.value) return
+  const name = trimmedNameDraft.value
+  if (contentFilterStore.isBlocked(name)) {
+    showError(t('contentFilter.blocked'))
+    return
+  }
+
+  savingName.value = true
+  try {
+    const response = await memberApi.updateMyName(name)
+    memberInfo.value = response.data
+    if (authStore.user) {
+      authStore.setUser({ ...authStore.user, name: response.data.name })
+    }
+    showNameModal.value = false
+    toastSuccess(t('member.profile.nameChange.success'))
+  } catch (error) {
+    console.error('Failed to update name:', error)
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'member.profile.nameChange.failed' }, t))
+  } finally {
+    savingName.value = false
+  }
+}
+
 // Initialize data
 onMounted(async () => {
   loading.value = true
@@ -780,6 +826,17 @@ onMounted(async () => {
               <User class="w-4 h-4 flex-shrink-0 text-dp-text-secondary" />
               <span class="text-sm w-12 sm:w-14 flex-shrink-0 text-dp-text-secondary">{{ t('member.profile.name') }}</span>
               <span class="font-medium truncate text-dp-text-primary">{{ memberInfo?.name }}</span>
+              <button
+                v-if="memberInfo"
+                type="button"
+                class="-my-3 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg text-dp-text-muted transition hover:bg-dp-bg-hover hover:text-dp-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer"
+                :aria-label="t('member.profile.nameChange.action')"
+                :title="t('member.profile.nameChange.action')"
+                aria-haspopup="dialog"
+                @click="openNameModal"
+              >
+                <Pencil class="h-4 w-4" aria-hidden="true" />
+              </button>
             </div>
             <div class="flex items-center gap-2 sm:gap-3">
               <Building2 class="w-4 h-4 flex-shrink-0 text-dp-text-secondary" />
@@ -1129,6 +1186,63 @@ onMounted(async () => {
         >
           <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
           {{ changingPassword ? t('member.password.submitting') : t('member.password.submit') }}
+        </button>
+      </div>
+    </BaseModal>
+
+    <!-- Name Change Modal -->
+    <BaseModal
+      :is-open="showNameModal"
+      size="md"
+      height="fit"
+      rounded
+      :panel-style="memberModalPanelStyle"
+      @close="showNameModal = false"
+    >
+      <div class="modal-header">
+        <h2>{{ t('member.profile.nameChange.modalTitle') }}</h2>
+        <button @click="showNameModal = false" class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted">
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+      <div class="modal-body-form-lg">
+        <div>
+          <label for="member-name-input" class="form-label text-dp-text-primary">
+            {{ t('member.profile.name') }}
+            <CharacterCounter :current="nameDraft.length" :max="MEMBER_NAME_MAX_LENGTH" />
+          </label>
+          <input
+            id="member-name-input"
+            v-model="nameDraft"
+            type="text"
+            maxlength="10"
+            autocomplete="name"
+            class="form-control-card"
+            :disabled="savingName"
+            :placeholder="t('member.profile.nameChange.placeholder')"
+            @keyup.enter="saveName"
+          />
+          <p class="text-xs mt-1" :class="trimmedNameDraft ? 'text-dp-text-muted' : 'text-dp-danger'">
+            {{ trimmedNameDraft ? t('member.profile.nameChange.hint') : t('member.profile.nameChange.required') }}
+          </p>
+        </div>
+      </div>
+      <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
+        <button
+          @click="showNameModal = false"
+          :disabled="savingName"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
+          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
+        >
+          {{ t('common.actions.close') }}
+        </button>
+        <button
+          @click="saveName"
+          :disabled="isNameSubmitDisabled"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <Loader2 v-if="savingName" class="w-4 h-4 animate-spin" />
+          {{ savingName ? t('member.profile.nameChange.submitting') : t('member.profile.nameChange.submit') }}
         </button>
       </div>
     </BaseModal>

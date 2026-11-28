@@ -54,7 +54,7 @@ describe('locale store', () => {
     localStorageMock.getItem.mockClear()
     localStorageMock.setItem.mockClear()
     localStorageMock.removeItem.mockClear()
-    vi.mocked(syncServiceWorkerLocale).mockClear()
+    vi.mocked(syncServiceWorkerLocale).mockReset().mockResolvedValue(undefined)
     document.documentElement.lang = ''
     setNavigatorLanguage('ko-KR')
     vi.resetModules()
@@ -163,6 +163,57 @@ describe('locale store', () => {
     expect(store.shouldSuggestLocale).toBe(false)
     expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale', 'en')
     expect(syncServiceWorkerLocale).toHaveBeenCalledWith('en')
+  })
+
+  it('does not wait for a service worker sync that never settles', async () => {
+    // `navigator.serviceWorker.ready` stays pending until push notifications register a worker.
+    vi.mocked(syncServiceWorkerLocale).mockImplementation(() => new Promise(() => {}))
+    setNavigatorLanguage('en-US')
+    const { useLocaleStore } = await import('./locale')
+    const store = useLocaleStore()
+    store.initializeLocale()
+    const pending = Symbol('pending')
+    const settled = (result: unknown) =>
+      Promise.race([Promise.resolve(result), new Promise(resolve => setTimeout(() => resolve(pending), 0))])
+
+    expect(await settled(store.confirmDetectedLocale())).not.toBe(pending)
+    expect(store.locale).toBe('en')
+    expect(await settled(store.setLocale('ko'))).not.toBe(pending)
+    expect(store.locale).toBe('ko')
+    expect(await settled(store.setLocale('en'))).not.toBe(pending)
+    expect(store.locale).toBe('en')
+  })
+
+  it('applies the locale and swallows a failed service worker sync', async () => {
+    // A mocked sync would not do: Vitest's spy observes every promise a mock returns, so a
+    // rejection from it is never unhandled. Use the real sync with a failing registration lookup.
+    vi.doUnmock('@/utils/serviceWorkerLocale')
+    Object.defineProperty(globalThis, 'navigator', {
+      value: {
+        language: 'en-US',
+        serviceWorker: {
+          getRegistration: () => Promise.reject(new Error('getRegistration failed')),
+        },
+      },
+      configurable: true,
+    })
+    const unhandled = vi.fn()
+    process.on('unhandledRejection', unhandled)
+    try {
+      const { useLocaleStore } = await import('./locale')
+      const store = useLocaleStore()
+      store.initializeLocale()
+      store.confirmDetectedLocale()
+      expect(store.locale).toBe('en')
+      store.setLocale('ko')
+      expect(store.locale).toBe('ko')
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(unhandled).not.toHaveBeenCalled()
+    } finally {
+      process.off('unhandledRejection', unhandled)
+      vi.doMock('@/utils/serviceWorkerLocale', () => ({ syncServiceWorkerLocale }))
+    }
   })
 
   it('keeps the explicit locale after initialization without server sync', async () => {

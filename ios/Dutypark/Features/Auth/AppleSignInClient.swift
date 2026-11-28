@@ -80,17 +80,27 @@ nonisolated struct AppleSignInAttempt: Equatable, Sendable {
 nonisolated struct AppleAuthorizationRequest: Equatable, Sendable {
     let nonce: String
     let state: String
+    /// Only sign-in asks for the name, so a new member's signup form can be pre-filled.
+    /// Email is never requested.
+    var requestsFullName = false
+
+    var requestedScopes: [ASAuthorization.Scope] {
+        requestsFullName ? [.fullName] : []
+    }
 }
 
 nonisolated struct AppleAuthorizationCredential: Equatable, Sendable {
     let identityToken: String
     let authorizationCode: String
     let state: String
+    /// Apple returns the name only on the first authorization of the app, so it is often nil.
+    var fullName: PersonNameComponents? = nil
 
     static func decode(
         identityToken: Data?,
         authorizationCode: Data?,
-        state: String?
+        state: String?,
+        fullName: PersonNameComponents? = nil
     ) throws -> AppleAuthorizationCredential {
         guard let identityToken,
               let authorizationCode,
@@ -106,7 +116,8 @@ nonisolated struct AppleAuthorizationCredential: Equatable, Sendable {
         return AppleAuthorizationCredential(
             identityToken: token,
             authorizationCode: code,
-            state: state
+            state: state,
+            fullName: fullName
         )
     }
 }
@@ -131,7 +142,7 @@ final class AppleAuthorizationController: NSObject, AppleAuthorizationPerforming
         }
 
         let appleRequest = ASAuthorizationAppleIDProvider().createRequest()
-        appleRequest.requestedScopes = []
+        appleRequest.requestedScopes = request.requestedScopes
         appleRequest.nonce = request.nonce
         appleRequest.state = request.state
 
@@ -161,7 +172,8 @@ final class AppleAuthorizationController: NSObject, AppleAuthorizationPerforming
             finish(with: .success(try AppleAuthorizationCredential.decode(
                 identityToken: credential.identityToken,
                 authorizationCode: credential.authorizationCode,
-                state: credential.state
+                state: credential.state,
+                fullName: credential.fullName
             )))
         } catch {
             finish(with: .failure(error))
@@ -232,7 +244,8 @@ final class AppleSignInClient {
 
     func configure(_ request: ASAuthorizationAppleIDRequest) throws -> AppleSignInAttempt {
         let attempt = try AppleSignInAttempt.make()
-        request.requestedScopes = []
+        // Sign-in only: the name pre-fills signup for new members. Email is never requested.
+        request.requestedScopes = [.fullName]
         request.nonce = attempt.hashedNonce
         request.state = attempt.state
         return attempt
@@ -258,26 +271,27 @@ final class AppleSignInClient {
             credential: AppleAuthorizationCredential.decode(
                 identityToken: credential.identityToken,
                 authorizationCode: credential.authorizationCode,
-                state: credential.state
+                state: credential.state,
+                fullName: credential.fullName
             ),
             attempt: attempt
         )
     }
 
     func login() async throws -> MobileOAuthLoginOutcome {
-        let exchange = try await authorizeAndExchange(purpose: .login)
-        return try loginOutcome(from: exchange)
+        let (credential, exchange) = try await authorizeAndExchange(purpose: .login)
+        return try loginOutcome(from: exchange, fullName: credential.fullName)
     }
 
     func link() async throws {
-        let response = try await authorizeAndExchange(purpose: .link)
+        let (_, response) = try await authorizeAndExchange(purpose: .link)
         guard response.signupRequired == false else {
             throw AppleSignInError.invalidCredential
         }
     }
 
     func reauthenticateForAccountDeletion() async throws -> MobileOAuthReauthProof {
-        let response = try await authorizeAndExchange(purpose: .deleteAccount)
+        let (_, response) = try await authorizeAndExchange(purpose: .deleteAccount)
         guard response.signupRequired == false,
               let proof = response.reauthProof,
               !proof.isEmpty,
@@ -293,20 +307,22 @@ final class AppleSignInClient {
         credential: AppleAuthorizationCredential,
         attempt: AppleSignInAttempt
     ) async throws -> MobileOAuthLoginOutcome {
-        try await loginOutcome(from: exchange(
-            credential: credential,
-            attempt: attempt,
-            purpose: .login
-        ))
+        try await loginOutcome(
+            from: exchange(credential: credential, attempt: attempt, purpose: .login),
+            fullName: credential.fullName
+        )
     }
 
-    private func authorizeAndExchange(purpose: AppleSignInPurpose) async throws -> AppleExchangeResponse {
+    private func authorizeAndExchange(
+        purpose: AppleSignInPurpose
+    ) async throws -> (AppleAuthorizationCredential, AppleExchangeResponse) {
         let attempt = try AppleSignInAttempt.make()
         let credential = try await authorizer.authorize(request: AppleAuthorizationRequest(
             nonce: attempt.hashedNonce,
-            state: attempt.state
+            state: attempt.state,
+            requestsFullName: purpose == .login
         ))
-        return try await exchange(credential: credential, attempt: attempt, purpose: purpose)
+        return (credential, try await exchange(credential: credential, attempt: attempt, purpose: purpose))
     }
 
     private func exchange(
@@ -335,9 +351,13 @@ final class AppleSignInClient {
         )
     }
 
-    private func loginOutcome(from response: AppleExchangeResponse) throws -> MobileOAuthLoginOutcome {
+    private func loginOutcome(
+        from response: AppleExchangeResponse,
+        fullName: PersonNameComponents?
+    ) throws -> MobileOAuthLoginOutcome {
         if response.signupRequired, let uuid = response.signupUuid, !uuid.isEmpty {
-            return .signup(uuid: uuid)
+            // The name stays on-device and only pre-fills the signup form the user submits.
+            return .signup(uuid: uuid, suggestedName: SsoSignupNamePolicy.appleName(from: fullName))
         }
         guard response.signupRequired == false else {
             throw AppleSignInError.invalidCredential

@@ -85,6 +85,38 @@ class MemberServiceTest {
     }
 
     @Test
+    fun `update name changes the member name and returns the updated dto`() {
+        val member = createMember(1L, "shane", "shane@email.com")
+        val loginMember = createLoginMember(member)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(memberDtoAssembler.toDto(member)).thenAnswer { memberDtoOf(member) }
+
+        val result = memberService.updateName(loginMember, "새이름")
+
+        assertThat(member.name).isEqualTo("새이름")
+        assertThat(result.name).isEqualTo("새이름")
+    }
+
+    @Test
+    fun `update name writes a before and after audit log`() {
+        val member = createMember(1L, "shane", "shane@email.com")
+        val loginMember = createLoginMember(member)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(memberDtoAssembler.toDto(member)).thenAnswer { memberDtoOf(member) }
+        val logger = org.slf4j.LoggerFactory.getLogger(MemberService::class.java) as ch.qos.logback.classic.Logger
+        val appender = ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            memberService.updateName(loginMember, "renamed")
+            val logs = appender.list.joinToString("\n") { it.formattedMessage }
+            assertThat(logs).contains("member.name.changed", "shane", "renamed")
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+    }
+
+    @Test
     fun `create Sso member`() {
         val uuid = UUID.randomUUID().toString()
         val ssoRegister = MemberSsoRegister(SsoType.KAKAO, "kakao_id")

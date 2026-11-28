@@ -100,6 +100,7 @@ nonisolated struct SettingsLoadPlan: Equatable, Sendable {
 final class SettingsViewModel: ObservableObject {
     private let service: SettingsService
     private let contentFilter: ContentFilterStore
+    private let hapticCenter: DPHapticCenter
 
     @Published private(set) var member: MemberDTO?
     @Published private(set) var familyMembers: [MemberPreviewDTO] = []
@@ -120,10 +121,12 @@ final class SettingsViewModel: ObservableObject {
 
     init(
         service: SettingsService = SettingsService(),
-        contentFilter: ContentFilterStore = .shared
+        contentFilter: ContentFilterStore = .shared,
+        hapticCenter: DPHapticCenter = .shared
     ) {
         self.service = service
         self.contentFilter = contentFilter
+        self.hapticCenter = hapticCenter
     }
 
     var availableManagers: [MemberPreviewDTO] {
@@ -214,7 +217,7 @@ final class SettingsViewModel: ObservableObject {
         }
         if values.0 == nil, member != nil {
             showError("settings.error.load")
-            DPHapticCenter.shared.emit(.error)
+            hapticCenter.emit(.error)
         }
     }
 
@@ -289,10 +292,29 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
+    /// Returns true only after the server saved the name; an unchanged name is a silent no-op.
+    func updateName(_ rawName: String) async -> Bool {
+        let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, SsoSignupNamePolicy.fits(name) else {
+            showError("settings.name.invalid")
+            hapticCenter.emit(.warning)
+            return false
+        }
+        guard !contentFilter.isBlocked(name) else {
+            showError("settings.error.contentFilter")
+            hapticCenter.emit(.warning)
+            return false
+        }
+        guard name != member?.name else { return false }
+        return await workResult(success: "settings.name.updated", failure: "settings.name.failed") {
+            member = try await service.updateName(name)
+        }
+    }
+
     func createAuxiliaryAccount(name: String) async {
         guard !contentFilter.isBlocked(name) else {
             showError("settings.error.contentFilter")
-            DPHapticCenter.shared.emit(.warning)
+            hapticCenter.emit(.warning)
             return
         }
         await work(success: "settings.auxiliary.created") {
@@ -307,10 +329,10 @@ final class SettingsViewModel: ObservableObject {
         defer { isWorking = false }
         do {
             try await service.impersonate(memberID: memberID)
-            DPHapticCenter.shared.emit(.success)
+            hapticCenter.emit(.success)
         } catch {
             showError("settings.error.generic")
-            DPHapticCenter.shared.emit(.error)
+            hapticCenter.emit(.error)
             throw error
         }
     }
@@ -343,10 +365,10 @@ final class SettingsViewModel: ObservableObject {
                     newPassword: newPassword
                 )
             )
-            DPHapticCenter.shared.emit(.success)
+            hapticCenter.emit(.success)
         } catch {
             showError("settings.password.failed")
-            DPHapticCenter.shared.emit(.error)
+            hapticCenter.emit(.error)
             throw error
         }
     }
@@ -384,7 +406,7 @@ final class SettingsViewModel: ObservableObject {
         } catch {
             dutyPatternLoadFailed = true
             showError("settings.pattern.loadFailed")
-            DPHapticCenter.shared.emit(.error)
+            hapticCenter.emit(.error)
         }
     }
 
@@ -435,13 +457,18 @@ final class SettingsViewModel: ObservableObject {
         do {
             try await operation()
             showNotice(success)
-            DPHapticCenter.shared.emit(.success)
+            hapticCenter.emit(.success)
             return true
         } catch {
             showError(failure)
-            DPHapticCenter.shared.emit(.error)
+            hapticCenter.emit(.error)
             return false
         }
+    }
+
+    func clearNotice() {
+        noticeKey = nil
+        noticeIsError = false
     }
 
     func showNotice(_ key: String) {
