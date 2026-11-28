@@ -40,6 +40,14 @@
         }
       },
       "entries": {
+        "pr-446": {
+          "title": "iOS 달력 넘김과 날짜 강조 안정화",
+          "summary": "iOS 달력에서 달을 넘길 때 이웃 달 내용이 바로 보이고, 날짜 강조가 넘기는 도중에도 제자리에 머뭅니다.",
+          "changes": [
+            "iOS 내 달력에서 달을 넘길 때 연결이 느려도 저장된 내용으로 이웃 달을 바로 보여 줍니다.",
+            "검색한 날짜가 강조되는 동안 달을 넘겨도 화면 전체가 어두워지지 않습니다."
+          ]
+        },
         "pr-445": {
           "title": "검색 날짜 강조와 더 안정적인 iOS 달력 확대",
           "summary": "검색 결과로 이동한 날짜가 잠시 강조되고, iOS 달력을 핀치로 확대·축소할 때 화면이 흔들리거나 날짜가 잘못 열리지 않습니다.",
@@ -2493,6 +2501,14 @@
         }
       },
       "entries": {
+        "pr-446": {
+          "title": "Steadier iOS month swipes and date spotlight",
+          "summary": "On iOS, neighbouring months show their contents right away while swiping, and the date spotlight stays in place mid-swipe.",
+          "changes": [
+            "On your iOS calendar, swiping shows the neighbouring months from saved data right away, even on a slow connection.",
+            "Swiping while a searched date is highlighted no longer dims the whole calendar."
+          ]
+        },
         "pr-445": {
           "title": "Search date spotlight and steadier iOS calendar zoom",
           "summary": "Jumping to a searched date briefly highlights it, and pinching an iOS calendar no longer shakes the page or opens the wrong day.",
@@ -4909,6 +4925,17 @@
     }
   },
   "items": [
+    {
+      "id": "pr-446",
+      "version": "2026.11.28.02",
+      "date": "2026-11-28",
+      "pr": 446,
+      "url": "https://github.com/ShanePark/dutypark/pull/446",
+      "category": "fix",
+      "areas": [
+        "calendar"
+      ]
+    },
     {
       "id": "pr-445",
       "version": "2026.11.28",
