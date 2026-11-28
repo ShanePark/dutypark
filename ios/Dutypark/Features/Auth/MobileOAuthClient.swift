@@ -33,7 +33,8 @@ extension MobileOAuthError: LocalizedError {
 
 nonisolated enum MobileOAuthLoginOutcome: Equatable, Sendable {
     case authenticated
-    case signup(uuid: String)
+    /// `suggestedName` is a provider-supplied name used only to pre-fill the signup form.
+    case signup(uuid: String, suggestedName: String? = nil)
 }
 
 nonisolated struct MobileOAuthReauthProof: Equatable, Sendable {

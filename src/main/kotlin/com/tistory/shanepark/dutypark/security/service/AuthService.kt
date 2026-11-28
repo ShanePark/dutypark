@@ -252,6 +252,19 @@ class AuthService(
         )
     }
 
+    /**
+     * Re-signs the current session's access token so claims copied from the member (such as `name`)
+     * reflect a change immediately instead of after the next refresh. Impersonation tokens are left
+     * alone because re-signing would extend the impersonation beyond its original expiry, and legacy
+     * tokens without a session id cannot be tied back to a session.
+     */
+    fun reissueAccessToken(loginMember: LoginMember): String? {
+        if (loginMember.isImpersonating) return null
+        val sessionId = loginMember.sessionId ?: return null
+        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        return jwtProvider.createToken(member, sessionId)
+    }
+
     fun getTokenResponseByMemberId(memberId: Long, req: HttpServletRequest): TokenResponse {
         val member = memberRepository.findById(memberId).orElseThrow {
             log.warn(

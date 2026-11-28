@@ -99,6 +99,18 @@ class MemberService(
         )
     }
 
+    fun updateName(loginMember: LoginMember, name: String): MemberDto {
+        val member = memberRepository.findById(loginMember.id).orElseThrow()
+        val previous = member.name
+        member.name = name
+        log.auditChangeAfterCommit(
+            event = "member.name.changed", actor = loginMember.toAuditActor(),
+            target = mapOf("memberId" to member.id),
+            before = mapOf("name" to previous), after = mapOf("name" to name),
+        )
+        return memberDtoAssembler.toDto(member)
+    }
+
     fun getDutyBatchTemplate(memberId: Long): DutyBatchTemplate? {
         val member = memberRepository.findById(memberId).orElseThrow()
         return member.team?.dutyBatchTemplate

@@ -742,6 +742,9 @@ struct RootTabView: View {
                 onProfilePhotoStateChanged: { hasPhoto, version in
                     hasProfilePhoto = hasPhoto
                     profilePhotoVersion = version
+                },
+                onProfileNameChanged: {
+                    homeRefreshID &+= 1
                 }
             )
             .navigationTitle(RootChromeLocalization.localizable("root.menu.myInfo"))

@@ -57,7 +57,8 @@ describe('authorizeAppleLogin', () => {
       redirectURI: 'https://dutypark.example/auth/apple/callback',
       usePopup: true,
     })
-    expect(options).not.toHaveProperty('scope')
+    // Request only the name so the signup form can be pre-filled; never the email.
+    expect(options?.scope).toBe('name')
     expect(options?.nonce).toMatch(/^[a-f0-9]{64}$/)
     expect(options?.state).toMatch(/^[A-Za-z0-9_-]{43}$/)
     expect(exchange).toHaveBeenCalledWith({
@@ -74,6 +75,47 @@ describe('authorizeAppleLogin', () => {
     ).join('')
     expect(options?.nonce).toBe(expectedHashedNonce)
     expect(response.signupRequired).toBe(false)
+    expect(response.appleUserName).toBeNull()
+  })
+
+  it('returns the name Apple shares on the first authorization alongside the exchange result', async () => {
+    let options: AppleIdSignInOptions | undefined
+    const sdk: AppleIdSdk = {
+      auth: {
+        init: vi.fn((value) => {
+          options = value
+        }),
+        signIn: vi.fn(async () => ({
+          authorization: {
+            code: 'authorization-code',
+            id_token: 'identity-token',
+            state: options?.state,
+          },
+          user: { name: { firstName: '길동', lastName: '홍' } },
+        })),
+      },
+    }
+    const exchange = vi.fn(async () => ({
+      signupRequired: true,
+      signupUuid: 'signup-uuid',
+      expiresIn: null,
+      reauthProof: null,
+    }))
+
+    const response = await authorizeAppleLogin({
+      clientId: 'kr.or.dutypark.web',
+      redirectUri: 'https://dutypark.example/auth/apple/callback',
+      loadSdk: async () => sdk,
+      exchange,
+    })
+
+    expect(response).toEqual({
+      signupRequired: true,
+      signupUuid: 'signup-uuid',
+      expiresIn: null,
+      reauthProof: null,
+      appleUserName: { firstName: '길동', lastName: '홍' },
+    })
   })
 
   it('exchanges the prepared Apple credential with LINK purpose', async () => {
@@ -112,6 +154,8 @@ describe('authorizeAppleLogin', () => {
       authorizationCode: 'link-code',
       purpose: 'LINK',
     }))
+    // Only login pre-fills a signup form, so linking must not ask Apple for the name.
+    expect(options).not.toHaveProperty('scope')
   })
 
   it('rejects a mismatched state without exchanging credentials', async () => {

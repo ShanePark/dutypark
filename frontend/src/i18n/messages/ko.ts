@@ -899,6 +899,7 @@ export default {
       username: {
         label: '사용자명',
         placeholder: '사용자명을 입력하세요 (1-10자)',
+        defaultPrefix: '사용자',
         helper: {
           emptyActive: '사용자명을 입력해야 가입할 수 있어요.',
           emptyIdle: '가입 시 사용할 사용자명을 1-10자로 입력해주세요.',
@@ -965,6 +966,17 @@ export default {
       name: '이름',
       team: '소속',
       email: '이메일',
+      nameChange: {
+        action: '이름 변경',
+        modalTitle: '이름 변경',
+        placeholder: '이름을 입력하세요 (1-10자)',
+        hint: '프로필과 일정에 표시되는 이름입니다.',
+        required: '이름을 입력해주세요.',
+        submit: '저장',
+        submitting: '저장 중...',
+        success: '이름이 변경되었습니다.',
+        failed: '이름을 변경하지 못했습니다. 다시 시도해주세요.',
+      },
     },
     visibility: {
       sectionTitle: '시간표 공개 설정',

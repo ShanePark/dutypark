@@ -15,6 +15,7 @@ struct LoginView: View {
     @State private var appleSignInClient = AppleSignInClient()
     @State private var oauthErrorMessage: String?
     @State private var signupUUID: String?
+    @State private var signupSuggestedName: String?
     @State private var activeOAuthProvider: OAuthProvider?
     @State private var appleSignInAttempt: AppleSignInAttempt?
     @FocusState private var focusedField: LoginField?
@@ -44,8 +45,12 @@ struct LoginView: View {
             )
         ) {
             if let signupUUID {
-                SsoSignupView(uuid: signupUUID, oauthClient: oauthClient)
-                    .environmentObject(session)
+                SsoSignupView(
+                    uuid: signupUUID,
+                    oauthClient: oauthClient,
+                    suggestedName: signupSuggestedName
+                )
+                .environmentObject(session)
             }
         }
         .accessibilityIdentifier("screen.login")
@@ -362,7 +367,8 @@ struct LoginView: View {
                 switch try await oauthClient.login(provider: provider) {
                 case .authenticated:
                     try await session.finishExternalLogin()
-                case .signup(let uuid):
+                case .signup(let uuid, let suggestedName):
+                    signupSuggestedName = suggestedName
                     signupUUID = uuid
                 }
             } catch MobileOAuthError.cancelled {
@@ -405,7 +411,8 @@ struct LoginView: View {
                 switch try await appleSignInClient.completeLogin(result: result, attempt: attempt) {
                 case .authenticated:
                     try await session.finishExternalLogin()
-                case .signup(let uuid):
+                case .signup(let uuid, let suggestedName):
+                    signupSuggestedName = suggestedName
                     signupUUID = uuid
                 }
             } catch AppleSignInError.cancelled {

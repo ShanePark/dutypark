@@ -91,6 +91,12 @@
         "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름" } }
       }
     },
+    "auth.oauth.signup.name.defaultPrefix" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "User" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "사용자" } }
+      }
+    },
     "auth.oauth.signup.name.help" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter 1–10 characters." } },

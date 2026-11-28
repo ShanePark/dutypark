@@ -103,6 +103,10 @@ nonisolated struct AuxiliaryAccountCreateRequest: Codable, Equatable, Sendable {
     let name: String
 }
 
+nonisolated struct MemberNameUpdateRequest: Codable, Equatable, Sendable {
+    let name: String
+}
+
 nonisolated struct DDayDTO: Codable, Equatable, Sendable {
     let id: Int64
     let title: String

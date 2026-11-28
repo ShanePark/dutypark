@@ -121,6 +121,13 @@ export const memberApi = {
   },
 
   /**
+   * Change my name
+   */
+  updateMyName(name: string) {
+    return apiClient.put<MemberDto>('/members/me/name', { name })
+  },
+
+  /**
    * Get member info by ID (requires visibility permission)
    */
   getMemberById(memberId: number) {

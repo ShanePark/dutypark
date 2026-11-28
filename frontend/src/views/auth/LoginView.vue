@@ -11,6 +11,7 @@ import PolicyModal from '@/components/common/PolicyModal.vue'
 import { getSafeRedirect } from '@/utils/redirect'
 import { getApiErrorDetail } from '@/utils/resolveApiError'
 import { resolveLoginErrorMessage } from '@/utils/loginError'
+import { buildSsoSignupNameState, formatAppleDisplayName } from '@/utils/signupName'
 
 const REMEMBER_EMAIL_KEY = 'dp-remember-email'
 
@@ -163,6 +164,7 @@ async function handleAppleLogin() {
       await router.push({
         path: '/auth/sso-signup',
         query: redirect === '/' ? { uuid } : { uuid, redirect },
+        state: buildSsoSignupNameState(formatAppleDisplayName(response.appleUserName)),
       })
       return
     }

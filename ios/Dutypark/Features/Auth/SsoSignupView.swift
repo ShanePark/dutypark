@@ -6,18 +6,80 @@ nonisolated enum SsoSignupCancellationDecision: Equatable {
     case blocked
 }
 
+nonisolated enum SsoSignupNamePolicy {
+    static let maxLength = 10
+
+    /// Counts UTF-16 code units, matching the server's `@Size` check and the web's `String.length`.
+    static func length(of name: String) -> Int { name.utf16.count }
+
+    static func fits(_ name: String) -> Bool { length(of: name) <= maxLength }
+
+    /// Drops whole trailing characters so a surrogate pair or grapheme is never split.
+    static func truncated(_ name: String) -> String {
+        var result = ""
+        var units = 0
+        for character in name {
+            units += character.utf16.count
+            guard units <= maxLength else { break }
+            result.append(character)
+        }
+        return result
+    }
+
+    private static let eastAsianScriptPattern =
+        "[\\p{Script=Hangul}\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}]"
+
+    /// A localized placeholder such as `User0042`, so signup never asks for a name Apple already withheld.
+    static func defaultName(
+        locale: Locale? = nil,
+        randomNumber: () -> Int = { Int.random(in: 0...9999) }
+    ) -> String {
+        let digits = String(format: "%04d", min(max(randomNumber(), 0), 9999))
+        return oauthString("auth.oauth.signup.name.defaultPrefix", locale: locale) + digits
+    }
+
+    /// Formats the Apple-supplied name to fit the member name rule, or nil when none was shared.
+    static func appleName(from components: PersonNameComponents?) -> String? {
+        let given = components?.givenName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let family = components?.familyName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let usesEastAsianOrder = (given + family)
+            .range(of: eastAsianScriptPattern, options: .regularExpression) != nil
+        let fullName = usesEastAsianOrder
+            ? family + given
+            : [given, family].filter { !$0.isEmpty }.joined(separator: " ")
+        let name = fits(fullName)
+            ? fullName
+            : truncated(given.isEmpty ? fullName : given)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : name
+    }
+
+    static func initialName(
+        suggestedName: String?,
+        locale: Locale? = nil,
+        randomNumber: () -> Int = { Int.random(in: 0...9999) }
+    ) -> String {
+        let suggested = suggestedName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return suggested.isEmpty ? defaultName(locale: locale, randomNumber: randomNumber) : suggested
+    }
+}
+
 nonisolated struct SsoSignupPresentationPolicy {
+    /// A pre-filled name the user has not touched is not a draft worth confirming before discard.
     static func hasDraft(
         username: String,
+        initialUsername: String = "",
         agreesToTerms: Bool,
         agreesToPrivacy: Bool
     ) -> Bool {
-        !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-            agreesToTerms || agreesToPrivacy
+        let name = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        let initialName = initialUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (!name.isEmpty && name != initialName) || agreesToTerms || agreesToPrivacy
     }
 
     static func cancellationDecision(
         username: String,
+        initialUsername: String = "",
         agreesToTerms: Bool,
         agreesToPrivacy: Bool,
         isWorking: Bool
@@ -27,6 +89,7 @@ nonisolated struct SsoSignupPresentationPolicy {
         }
         return hasDraft(
             username: username,
+            initialUsername: initialUsername,
             agreesToTerms: agreesToTerms,
             agreesToPrivacy: agreesToPrivacy
         ) ? .confirmDiscard : .dismiss
@@ -36,10 +99,19 @@ nonisolated struct SsoSignupPresentationPolicy {
 struct SsoSignupView: View {
     let uuid: String
     let oauthClient: MobileOAuthClient
+    /// A provider-supplied name (currently only from Apple) that pre-fills the editable name field.
+    let suggestedName: String?
+
+    init(uuid: String, oauthClient: MobileOAuthClient, suggestedName: String? = nil) {
+        self.uuid = uuid
+        self.oauthClient = oauthClient
+        self.suggestedName = suggestedName
+    }
 
     @EnvironmentObject private var session: SessionStore
     @Environment(\.dismiss) private var dismiss
     @State private var username = ""
+    @State private var initialUsername: String?
     @State private var agreesToTerms = false
     @State private var agreesToPrivacy = false
     @State private var policies: CurrentPoliciesDTO?
@@ -71,7 +143,7 @@ struct SsoSignupView: View {
                                 HStack {
                                     Text(oauthString("auth.oauth.signup.name"))
                                     Spacer()
-                                    Text("\(username.count)/10")
+                                    Text("\(SsoSignupNamePolicy.length(of: username))/\(SsoSignupNamePolicy.maxLength)")
                                         .foregroundStyle(DPColor.textMuted)
                                 }
                                 .font(DPTypography.label)
@@ -89,8 +161,8 @@ struct SsoSignupView: View {
                                 .dpInputChrome(isFocused: isNameFocused, isDisabled: isWorking)
                                 .disabled(isWorking)
                                 .onChange(of: username) { _, value in
-                                    if value.count > 10 {
-                                        username = String(value.prefix(10))
+                                    if !SsoSignupNamePolicy.fits(value) {
+                                        username = SsoSignupNamePolicy.truncated(value)
                                     }
                                 }
                                 .accessibilityIdentifier("oauth.signup.name")
@@ -195,6 +267,7 @@ struct SsoSignupView: View {
                         .accessibilityIdentifier("oauth.signup.cancel")
                 }
             }
+            .onAppear(perform: prefillName)
             .task { await loadPolicies() }
         }
         .dpKeyboardDismissToolbar()
@@ -275,13 +348,14 @@ struct SsoSignupView: View {
 
     private var canSubmit: Bool {
         let name = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !isWorking && !name.isEmpty && name.count <= 10 && agreesToTerms && agreesToPrivacy &&
+        return !isWorking && !name.isEmpty && SsoSignupNamePolicy.fits(name) && agreesToTerms && agreesToPrivacy &&
             policies?.terms != nil && policies?.privacy != nil
     }
 
     private var cancellationDecision: SsoSignupCancellationDecision {
         SsoSignupPresentationPolicy.cancellationDecision(
             username: username,
+            initialUsername: initialUsername ?? "",
             agreesToTerms: agreesToTerms,
             agreesToPrivacy: agreesToPrivacy,
             isWorking: isWorking
@@ -399,6 +473,13 @@ struct SsoSignupView: View {
         case .aiScheduleParsing, .unknown:
             oauthString("auth.oauth.signup.viewPolicy")
         }
+    }
+
+    private func prefillName() {
+        guard initialUsername == nil else { return }
+        let name = SsoSignupNamePolicy.initialName(suggestedName: suggestedName)
+        initialUsername = name
+        username = name
     }
 
     private func requestCancellation() {

@@ -69,14 +69,14 @@ final class AppleSignInClientTests: XCTestCase {
     }
 
     @MainActor
-    func testConfiguresAppleRequestWithNoScopesAndFreshNonceAndState() throws {
+    func testConfiguresSignInRequestWithFullNameScopeOnlyAndFreshNonceAndState() throws {
         let client = AppleSignInClient(client: makeClient(), authorizer: AppleAuthorizerStub())
         let request = ASAuthorizationAppleIDProvider().createRequest()
-        request.requestedScopes = [.email, .fullName]
+        request.requestedScopes = [.email]
 
         let attempt = try client.configure(request)
 
-        XCTAssertEqual(request.requestedScopes, [])
+        XCTAssertEqual(request.requestedScopes, [.fullName])
         XCTAssertEqual(request.nonce, attempt.hashedNonce)
         XCTAssertEqual(request.state, attempt.state)
         XCTAssertNotEqual(
@@ -114,6 +114,93 @@ final class AppleSignInClientTests: XCTestCase {
         XCTAssertEqual(body["nonce"] as? String, attempt.rawNonce)
         XCTAssertEqual(body["purpose"] as? String, "LOGIN")
         XCTAssertFalse(String(data: try XCTUnwrap(Self.requestBody(request)), encoding: .utf8)?.contains(attempt.hashedNonce) == true)
+    }
+
+    func testAuthorizationRequestAsksForFullNameOnlyWhenRequested() {
+        XCTAssertEqual(
+            AppleAuthorizationRequest(nonce: "n", state: "s", requestsFullName: true).requestedScopes,
+            [.fullName]
+        )
+        XCTAssertEqual(AppleAuthorizationRequest(nonce: "n", state: "s").requestedScopes, [])
+    }
+
+    @MainActor
+    func testOnlyLoginAuthorizationAsksAppleForTheFullName() async throws {
+        let recorder = AppleRequestRecorder()
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        let authorizer = AppleAuthorizerStub()
+        let client = AppleSignInClient(client: makeClient(), authorizer: authorizer)
+
+        _ = try await client.login()
+        try await client.link()
+        _ = try await client.reauthenticateForAccountDeletion()
+
+        XCTAssertEqual(authorizer.requests.map(\.requestsFullName), [true, false, false])
+    }
+
+    @MainActor
+    func testLoginExchangeCarriesTheFormattedAppleNameIntoTheSignupOutcome() async throws {
+        let recorder = AppleRequestRecorder()
+        recorder.loginResponse = #"{"signupRequired":true,"signupUuid":"signup-uuid","expiresIn":300,"reauthProof":null}"#
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        let client = AppleSignInClient(client: makeClient(), authorizer: AppleAuthorizerStub())
+        let attempt = try AppleSignInAttempt.make(
+            nonceBytes: Data(repeating: 2, count: 32),
+            stateBytes: Data(repeating: 3, count: 32)
+        )
+        var fullName = PersonNameComponents()
+        fullName.givenName = "길동"
+        fullName.familyName = "홍"
+
+        let outcome = try await client.exchangeLogin(
+            credential: AppleAuthorizationCredential(
+                identityToken: "token",
+                authorizationCode: "code",
+                state: attempt.state,
+                fullName: fullName
+            ),
+            attempt: attempt
+        )
+
+        XCTAssertEqual(outcome, .signup(uuid: "signup-uuid", suggestedName: "홍길동"))
+        let body = try XCTUnwrap(Self.requestBody(try XCTUnwrap(recorder.requests.first)))
+        XCTAssertFalse(String(decoding: body, as: UTF8.self).contains("길동"))
+    }
+
+    @MainActor
+    func testAuthorizedLoginCarriesTheAppleNameIntoTheSignupOutcome() async throws {
+        let recorder = AppleRequestRecorder()
+        recorder.loginResponse = #"{"signupRequired":true,"signupUuid":"signup-uuid","expiresIn":300,"reauthProof":null}"#
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        var fullName = PersonNameComponents()
+        fullName.givenName = "John"
+        fullName.familyName = "Kim"
+        let client = AppleSignInClient(
+            client: makeClient(),
+            authorizer: AppleAuthorizerStub(fullName: fullName)
+        )
+
+        let outcome = try await client.login()
+
+        XCTAssertEqual(outcome, .signup(uuid: "signup-uuid", suggestedName: "John Kim"))
+    }
+
+    func testCredentialConversionKeepsTheOptionalAppleFullName() throws {
+        var fullName = PersonNameComponents()
+        fullName.givenName = "Jane"
+        let credential = try AppleAuthorizationCredential.decode(
+            identityToken: Data("token".utf8),
+            authorizationCode: Data("code".utf8),
+            state: "state",
+            fullName: fullName
+        )
+
+        XCTAssertEqual(credential.fullName, fullName)
+        XCTAssertNil(try AppleAuthorizationCredential.decode(
+            identityToken: Data("token".utf8),
+            authorizationCode: Data("code".utf8),
+            state: "state"
+        ).fullName)
     }
 
     @MainActor
@@ -538,10 +625,12 @@ private final class AppleAuthorizerStub: AppleAuthorizationPerforming {
     private(set) var requests: [AppleAuthorizationRequest] = []
     private let error: Error?
     private let returnedState: String?
+    private let fullName: PersonNameComponents?
 
-    init(error: Error? = nil, returnedState: String? = nil) {
+    init(error: Error? = nil, returnedState: String? = nil, fullName: PersonNameComponents? = nil) {
         self.error = error
         self.returnedState = returnedState
+        self.fullName = fullName
     }
 
     func authorize(request: AppleAuthorizationRequest) async throws -> AppleAuthorizationCredential {
@@ -550,7 +639,8 @@ private final class AppleAuthorizerStub: AppleAuthorizationPerforming {
         return AppleAuthorizationCredential(
             identityToken: "identity-token",
             authorizationCode: "authorization-code",
-            state: returnedState ?? request.state
+            state: returnedState ?? request.state,
+            fullName: fullName
         )
     }
 }

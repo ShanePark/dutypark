@@ -1271,6 +1271,229 @@ struct SettingsFeatureTests {
         )
     }
 
+    @Test
+    func nameChangeSendsTheTrimmedNameAndAdoptsTheServerMember() async throws {
+        defer { SettingsURLProtocolStub.handler = nil }
+        let recorder = SettingsRequestRecorder()
+        let haptics = DPHapticCenter()
+        let model = await nameChangeModel(recorder: recorder, haptics: haptics, renameStatus: 200)
+
+        let updated = await model.updateName("  새 이름  ")
+
+        #expect(updated)
+        let request = try #require(recorder.requests.last)
+        #expect(request.httpMethod == "PUT")
+        #expect(request.url?.path == "/api/members/me/name")
+        let body = try #require(recorder.requestBodies.last ?? nil)
+        #expect(Self.jsonBody(body)?["name"] as? String == "새 이름")
+        #expect(model.member?.name == "새 이름")
+        #expect(model.member?.profilePhotoVersion == 4)
+        #expect(model.noticeKey == "settings.name.updated")
+        #expect(!model.noticeIsError)
+        #expect(haptics.event?.kind == .success)
+        #expect(!model.isWorking)
+    }
+
+    @Test
+    func nameChangeRejectsBlankOrTooLongNamesWithoutAnyRequest() async {
+        defer { SettingsURLProtocolStub.handler = nil }
+        for invalid in ["   ", "12345678901", "가나다라마바사아자😀"] {
+            let recorder = SettingsRequestRecorder()
+            let haptics = DPHapticCenter()
+            let model = await nameChangeModel(recorder: recorder, haptics: haptics, renameStatus: 200)
+            recorder.reset()
+
+            let updated = await model.updateName(invalid)
+
+            #expect(!updated)
+            #expect(recorder.requests.isEmpty)
+            #expect(model.noticeKey == "settings.name.invalid")
+            #expect(model.noticeIsError)
+            #expect(haptics.event?.kind == .warning)
+            #expect(model.member?.name == "Owner")
+        }
+    }
+
+    @Test
+    func nameChangeBlockedByTheContentFilterWarnsWithoutAnyRequest() async {
+        defer { SettingsURLProtocolStub.handler = nil }
+        let defaults = UserDefaults(suiteName: "settings-name-content-filter-\(UUID().uuidString)")!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        let recorder = SettingsRequestRecorder()
+        let haptics = DPHapticCenter()
+        let model = await nameChangeModel(
+            recorder: recorder,
+            haptics: haptics,
+            renameStatus: 200,
+            contentFilter: ContentFilterStore(defaults: defaults)
+        )
+        recorder.reset()
+
+        let updated = await model.updateName("시발")
+
+        #expect(!updated)
+        #expect(recorder.requests.isEmpty)
+        #expect(model.noticeKey == "settings.error.contentFilter")
+        #expect(haptics.event?.kind == .warning)
+    }
+
+    @Test
+    func unchangedNameIsASilentNoOp() async {
+        defer { SettingsURLProtocolStub.handler = nil }
+        let recorder = SettingsRequestRecorder()
+        let haptics = DPHapticCenter()
+        let model = await nameChangeModel(recorder: recorder, haptics: haptics, renameStatus: 200)
+        recorder.reset()
+        let eventBefore = haptics.event
+
+        let updated = await model.updateName(" Owner ")
+
+        #expect(!updated)
+        #expect(recorder.requests.isEmpty)
+        #expect(model.noticeKey == nil)
+        #expect(haptics.event == eventBefore)
+    }
+
+    @Test
+    func nameChangeServerRejectionKeepsTheMemberAndReportsAnError() async {
+        defer { SettingsURLProtocolStub.handler = nil }
+        let recorder = SettingsRequestRecorder()
+        let haptics = DPHapticCenter()
+        let model = await nameChangeModel(recorder: recorder, haptics: haptics, renameStatus: 400)
+
+        let updated = await model.updateName("Renamed")
+
+        #expect(!updated)
+        #expect(recorder.requests.last?.url?.path == "/api/members/me/name")
+        #expect(model.member?.name == "Owner")
+        #expect(model.noticeKey == "settings.name.failed")
+        #expect(model.noticeIsError)
+        #expect(haptics.event?.kind == .error)
+        #expect(!model.isWorking)
+    }
+
+    @Test
+    func clearNoticeDropsAStaleErrorNotice() async {
+        defer { SettingsURLProtocolStub.handler = nil }
+        let recorder = SettingsRequestRecorder()
+        let haptics = DPHapticCenter()
+        let model = await nameChangeModel(recorder: recorder, haptics: haptics, renameStatus: 400)
+        _ = await model.updateName("Renamed")
+        #expect(model.noticeIsError)
+
+        model.clearNotice()
+
+        #expect(model.noticeKey == nil)
+        #expect(!model.noticeIsError)
+    }
+
+    @Test
+    func myInfoNameChangeModalClearsStaleNoticesAndMeasuresUTF16() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let myInfo = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Settings/MyInfoView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(myInfo.contains("model.clearNotice()\n                                withoutPresentationAnimation { showNameChange = true }"))
+        let start = try #require(myInfo.range(of: "private struct ProfileNameChangeModal"))
+        let end = try #require(myInfo.range(of: "private struct AuxiliaryAccountModal"))
+        let modal = myInfo[start.upperBound..<end.lowerBound]
+        #expect(modal.contains("name = SsoSignupNamePolicy.truncated(value)"))
+        #expect(modal.contains("SsoSignupNamePolicy.length(of: name)"))
+        #expect(modal.contains("SsoSignupNamePolicy.fits(trimmedName)"))
+        #expect(!modal.contains("prefix("))
+    }
+
+    @Test
+    func nameChangeCopyResolvesInEverySupportedLocale() throws {
+        let keys = [
+            "settings.name.change",
+            "settings.name.description",
+            "settings.name.updated",
+            "settings.name.invalid",
+            "settings.name.failed",
+        ]
+        for locale in ["en", "ko"] {
+            let url = try #require(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try #require(Bundle(url: url))
+            for key in keys {
+                #expect(
+                    bundle.localizedString(forKey: key, value: key, table: "Settings") != key,
+                    "Missing \(key) for \(locale)"
+                )
+            }
+        }
+    }
+
+    @Test
+    func myInfoNameChangeUpdatesTheSessionAndRefreshesHomeAfterSuccess() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let myInfo = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Settings/MyInfoView.swift"),
+            encoding: .utf8
+        )
+        let rootTab = try String(
+            contentsOf: root.appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(myInfo.contains("guard await model.updateName(name) else { return }"))
+        #expect(myInfo.contains("await session.applyCurrentMemberName("))
+        #expect(myInfo.contains("onProfileNameChanged()"))
+        #expect(rootTab.contains("onProfileNameChanged: {"))
+    }
+
+    private func nameChangeModel(
+        recorder: SettingsRequestRecorder,
+        haptics: DPHapticCenter,
+        renameStatus: Int,
+        contentFilter: ContentFilterStore = ContentFilterStore(
+            defaults: UserDefaults(suiteName: "settings-name-\(UUID().uuidString)")!
+        )
+    ) async -> SettingsViewModel {
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            let body: String
+            let status: Int
+            switch (request.httpMethod, request.url?.path) {
+            case ("GET", "/api/members/me"):
+                body = #"{"id":1,"name":"Owner","email":"owner@example.com","teamId":7,"team":"Team","calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":"apple","hasPassword":false,"hasProfilePhoto":true,"profilePhotoVersion":4}"#
+                status = 200
+            case ("PUT", "/api/members/me/name") where renameStatus == 200:
+                body = #"{"id":1,"name":"새 이름","email":"owner@example.com","teamId":7,"team":"Team","calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":"apple","hasPassword":false,"hasProfilePhoto":true,"profilePhotoVersion":4}"#
+                status = 200
+            case ("PUT", "/api/members/me/name"):
+                body = #"{"status":400,"code":"member.name.invalid"}"#
+                status = renameStatus
+            default:
+                body = ""
+                status = 404
+            }
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!,
+                Data(body.utf8)
+            )
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SettingsURLProtocolStub.self]
+        let service = SettingsService(client: APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        ))
+        let model = SettingsViewModel(
+            service: service,
+            contentFilter: contentFilter,
+            hapticCenter: haptics
+        )
+        await model.reloadMember()
+        return model
+    }
+
     private func loadedSettingsModel(
         recorder: SettingsRequestRecorder
     ) async throws -> SettingsViewModel {
