@@ -5,12 +5,15 @@ Release notes are shown in `/guide` under the changelog section. Their single so
 
 When preparing a human-authored PR that targets `main`:
 
-1. Create the PR first so the PR number is known.
+1. Open the PR as a draft (`gh pr create --draft`) so the PR number is known. CI skips the
+   release note check on draft PRs, so the PR does not show a failed check while the entry is missing.
 2. Add one metadata item to `release-notes.json` with `id: "pr-<number>"`.
 3. Use the PR date in Asia/Seoul as the version: `YYYY.MM.DD`.
 4. If multiple PRs share a date, keep the first as `YYYY.MM.DD` and append `.02`, `.03`, and so on.
 5. Add the same entry id under both `locales.en.entries` and `locales.ko.entries`.
 6. Run `npm run release-notes:check` and `npm run type-check`.
+7. Commit and push the entry, then mark the PR ready with `gh pr ready <number>`. The
+   `ready_for_review` event runs the release note check with the entry in place.
 
 Do not add or edit a `contentVersion` field. The backend derives the API `contentVersion` and ETag
 automatically from the canonical JSON file's SHA-256 digest.
