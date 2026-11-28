@@ -876,13 +876,17 @@ final class CalendarViewModel: ObservableObject {
     }
 
     /// Reads an adjacent month for the swipe preview without changing the active
-    /// month request or its loading state. The in-memory preview store comes
-    /// first; the account owner falls back to the offline cache when it has no
-    /// preview (offline, still unavailable, or failed).
+    /// month request or its loading state. A ready in-memory preview comes first,
+    /// then the account owner's offline snapshot; only without either does it wait
+    /// for the in-flight preview fetch, so a slow network never holds the swipe on
+    /// date-only cells the cache could fill.
     func cachedMonthPreview(year: Int, month: Int) async -> [CalendarDayContent]? {
-        if let preview = await memberMonthPreview(key: OfflineMonthKey(year: year, month: month)) {
-            return preview
-        }
+        if let ready = readyMonthPreview(year: year, month: month) { return ready }
+        if let offline = await offlineMonthPreview(year: year, month: month) { return offline }
+        return await memberMonthPreview(key: OfflineMonthKey(year: year, month: month))
+    }
+
+    private func offlineMonthPreview(year: Int, month: Int) async -> [CalendarDayContent]? {
         guard let memberID = targetMemberID,
               isMyCalendar,
               let accountID = cacheAccountID,

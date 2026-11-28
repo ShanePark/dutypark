@@ -147,14 +147,30 @@ struct CalendarMemberMonthPreviewTests {
         #expect(Self.dutyColor(in: following, on: "2026-10-12") == MemberMonthPreviewRepository.color(member: 1, month: 10))
     }
 
-    @Test func ownCalendarPrefersTheFetchedPreviewOverAStaleOfflineSnapshot() async {
+    @Test func ownCalendarPrefersAReadyPreviewOverAStaleOfflineSnapshot() async {
         let cache = MemberMonthPreviewCache(months: [Self.staleOwnSnapshot(year: 2026, month: 9)])
         let model = Self.model(repository: MemberMonthPreviewRepository(), memberID: 1, cache: cache)
 
         await model.load()
+        #expect(await Self.readyPreview(in: model, year: 2026, month: 9) != nil)
 
         let next = await model.cachedMonthPreview(year: 2026, month: 9)
         #expect(Self.dutyColor(in: next, on: "2026-09-12") == MemberMonthPreviewRepository.color(member: 1, month: 9))
+    }
+
+    @Test func ownCalendarSwipeUsesTheOfflineSnapshotWithoutWaitingForASlowPreview() async {
+        let window = OfflineCacheRangePolicy.rollingThirteenMonths.months(around: OfflineMonthKey(year: 2026, month: 8))
+        let cache = MemberMonthPreviewCache(months: window.map {
+            Self.ownSnapshot(year: $0.year, month: $0.month, storedAt: Date())
+        })
+        let repository = MemberMonthPreviewRepository(slowMonths: [OfflineMonthKey(year: 2026, month: 9)])
+        let model = Self.model(repository: repository, memberID: 1, cache: cache)
+
+        await model.load()
+
+        let next = await model.cachedMonthPreview(year: 2026, month: 9)
+        #expect(Self.dutyColor(in: next, on: "2026-09-12") == Self.staleColor)
+        #expect(model.readyMonthPreview(year: 2026, month: 9) == nil)
     }
 
     @Test func ownCalendarFallsBackToTheOfflineSnapshotWhenThePreviewFails() async {
@@ -213,12 +229,13 @@ struct CalendarMemberMonthPreviewTests {
         let repository = MemberMonthPreviewRepository()
         let model = Self.model(repository: repository, memberID: 1, cache: cache)
         await model.load()
-        _ = await model.cachedMonthPreview(year: 2026, month: 9)
+        // The fresh snapshot answers the swipe at once, so wait on the fetch itself.
+        #expect(await Self.readyPreview(in: model, year: 2026, month: 9) != nil)
         let requestsBefore = await repository.dutyRequestCount(year: 2026, month: 9)
 
         #expect(await model.deleteSchedule(MemberMonthPreviewRepository.schedule(year: 2026, month: 8)))
 
-        _ = await model.cachedMonthPreview(year: 2026, month: 9)
+        #expect(await Self.readyPreview(in: model, year: 2026, month: 9) != nil)
         #expect(await repository.dutyRequestCount(year: 2026, month: 9) > requestsBefore)
     }
 
@@ -262,6 +279,15 @@ struct CalendarMemberMonthPreviewTests {
         )
     }
 
+    /// Waits for the background preview fetch to land in memory.
+    private static func readyPreview(in model: CalendarViewModel, year: Int, month: Int) async -> [CalendarDayContent]? {
+        for _ in 0..<200 {
+            if let ready = model.readyMonthPreview(year: year, month: month) { return ready }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return nil
+    }
+
     private static func day(in days: [CalendarDayContent]?, on date: String) -> CalendarDayContent? {
         days?.first { $0.cell.date.rawValue == date }
     }
@@ -277,6 +303,7 @@ struct CalendarMemberMonthPreviewTests {
 
 private actor MemberMonthPreviewRepository: CalendarRepositoryProtocol {
     private let failingMonths: Set<OfflineMonthKey>
+    private let slowMonths: Set<OfflineMonthKey>
     private let emptyMonths: Set<OfflineMonthKey>
     private let includesAdjacentMonthDuties: Bool
     private let friendTeamID: TeamID?
@@ -284,11 +311,13 @@ private actor MemberMonthPreviewRepository: CalendarRepositoryProtocol {
 
     init(
         failingMonths: Set<OfflineMonthKey> = [],
+        slowMonths: Set<OfflineMonthKey> = [],
         emptyMonths: Set<OfflineMonthKey> = [],
         includesAdjacentMonthDuties: Bool = false,
         friendTeamID: TeamID? = nil
     ) {
         self.failingMonths = failingMonths
+        self.slowMonths = slowMonths
         self.emptyMonths = emptyMonths
         self.includesAdjacentMonthDuties = includesAdjacentMonthDuties
         self.friendTeamID = friendTeamID
@@ -346,6 +375,8 @@ private actor MemberMonthPreviewRepository: CalendarRepositoryProtocol {
         let key = OfflineMonthKey(year: year, month: month)
         dutyRequests[key, default: 0] += 1
         if failingMonths.contains(key) { throw APIError.transport }
+        // Long enough that a caller waiting on it is plainly not using the cache.
+        if slowMonths.contains(key) { try await Task.sleep(for: .seconds(2)) }
         var duties = emptyMonths.contains(key) ? [] : [Self.duty(member: memberID, year: year, month: month)]
         if includesAdjacentMonthDuties,
            let cell = CalendarDateSupport.placeholderCells(year: year, month: month).first(where: { !$0.isCurrentMonth }) {
