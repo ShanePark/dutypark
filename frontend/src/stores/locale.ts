@@ -13,6 +13,12 @@ import {
 } from '@/i18n'
 import { syncServiceWorkerLocale } from '@/utils/serviceWorkerLocale'
 
+// Service worker sync is best effort: it must neither block the locale choice (without a registered
+// worker, `navigator.serviceWorker.ready` never settles) nor surface a failure as an unhandled rejection.
+function syncServiceWorkerLocaleInBackground(locale: SupportedLocale) {
+  syncServiceWorkerLocale(locale).catch(() => {})
+}
+
 export const useLocaleStore = defineStore('locale', () => {
   const locale = ref<SupportedLocale>(DEFAULT_LOCALE)
   const explicitLocale = ref<SupportedLocale | null>(null)
@@ -36,20 +42,20 @@ export const useLocaleStore = defineStore('locale', () => {
       explicitLocale.value ?? detectedLocale.value,
       { persist: explicitLocale.value !== null },
     )
-    void syncServiceWorkerLocale(locale.value)
+    syncServiceWorkerLocaleInBackground(locale.value)
   }
 
-  async function setLocale(
+  function setLocale(
     nextLocale: SupportedLocale,
   ) {
     explicitLocale.value = nextLocale
     clearHandledLocaleSuggestion()
     handledSuggestionLocale.value = null
     locale.value = setI18nLanguage(nextLocale, { persist: true })
-    await syncServiceWorkerLocale(nextLocale)
+    syncServiceWorkerLocaleInBackground(nextLocale)
   }
 
-  async function confirmDetectedLocale(
+  function confirmDetectedLocale(
   ) {
     if (explicitLocale.value !== null) {
       return
@@ -59,7 +65,7 @@ export const useLocaleStore = defineStore('locale', () => {
     clearHandledLocaleSuggestion()
     handledSuggestionLocale.value = null
     locale.value = setI18nLanguage(detectedLocale.value, { persist: true })
-    await syncServiceWorkerLocale(detectedLocale.value)
+    syncServiceWorkerLocaleInBackground(detectedLocale.value)
   }
 
   function dismissLocaleSuggestion() {
