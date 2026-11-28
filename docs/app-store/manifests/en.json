@@ -9,11 +9,13 @@
     "marketingVersion": "1.3.3",
     "buildNumber": "1",
     "account": "demo.en.emma@dutypark.local",
+    "teamAccount": "demo.en.noah@dutypark.local",
+    "statusBar": "simctl override 9:41, full bars, charged",
     "source": "actual local app capture",
-    "sourceCommit": "1b32b603",
-    "sourceState": "working tree with 2026-11-28 demo seed date shift and capture-test tab lookup fallback",
+    "sourceCommit": "c1f92fef",
+    "sourceState": "working tree with office/ward demo teams, soft duty palette, and ward-account Team capture",
     "testResult": "2 PASS / 0 FAIL / 0 SKIP",
-    "resultBundle": "/tmp/dutypark-appstore-capture-20261128.xcresult",
+    "resultBundle": "/tmp/dutypark-appstore-capture.xcresult",
     "apiEndpoint": "http://localhost:8081/api/"
   },
   "output": {
