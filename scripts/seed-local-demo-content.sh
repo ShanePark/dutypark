@@ -25,7 +25,7 @@ readonly KO_TEAM_NAME="Dutypark Demo 2026"
 readonly EN_TEAM_NAME="Dutypark English Demo 2026"
 readonly KO_OWNER_EMAIL="demo.seoa@dutypark.local"
 readonly EN_OWNER_EMAIL="demo.en.emma@dutypark.local"
-readonly CAPTURE_DATE="2026-08-29"
+readonly CAPTURE_DATE="2026-11-28"
 readonly ENGLISH_CALENDAR_MONTH="2026-11"
 
 readonly -a KO_MEMBERS=(
@@ -51,12 +51,16 @@ readonly -a EN_MEMBERS=(
 )
 
 readonly -a KO_DATES=(
-    "2026-08-24" "2026-08-25" "2026-08-26" "2026-08-27"
-    "2026-08-28" "2026-08-29" "2026-08-30" "2026-08-31"
+    "2026-11-01" "2026-11-02" "2026-11-03" "2026-11-04"
+    "2026-11-05" "2026-11-06" "2026-11-07" "2026-11-08"
+    "2026-11-09" "2026-11-10" "2026-11-11" "2026-11-12"
+    "2026-11-13" "2026-11-14" "2026-11-15" "2026-11-16"
+    "2026-11-17" "2026-11-18" "2026-11-19" "2026-11-20"
+    "2026-11-21" "2026-11-22" "2026-11-23" "2026-11-24"
+    "2026-11-25" "2026-11-26" "2026-11-27" "2026-11-28"
+    "2026-11-29" "2026-11-30"
 )
 readonly -a EN_DATES=(
-    "2026-08-24" "2026-08-25" "2026-08-26" "2026-08-27"
-    "2026-08-28" "2026-08-29" "2026-08-30" "2026-08-31"
     "2026-11-01" "2026-11-02" "2026-11-03" "2026-11-04"
     "2026-11-05" "2026-11-06" "2026-11-07" "2026-11-08"
     "2026-11-09" "2026-11-10" "2026-11-11" "2026-11-12"
@@ -523,29 +527,37 @@ populate_locale() {
         upload_avatar "$email" "$avatar" "$friend_cookie"
         login "$email" "$friend_cookie"
         if [[ "$locale" == "ko" ]]; then
-            schedule_id=$(create_schedule "$id" "$friend_cookie" '오늘의 집중 시간' '하루의 중요한 흐름을 가볍게 정리해요.' '2026-08-26T09:00:00' '2026-08-26T10:00:00' 'FRIENDS')
-            create_schedule "$id" "$friend_cookie" '점심 산책과 리프레시' '잠시 화면을 내려놓고 산책해요.' '2026-08-26T12:30:00' '2026-08-26T13:15:00' 'FRIENDS' >/dev/null
-            create_schedule "$id" "$friend_cookie" '저녁 약속 준비' '오늘의 약속을 차분히 준비해요.' '2026-08-26T18:30:00' '2026-08-26T19:30:00' 'PUBLIC' >/dev/null
-            create_schedule "$id" "$friend_cookie" '내일을 위한 메모' '내일 해야 할 일을 미리 적어두어요.' '2026-08-27T09:30:00' '2026-08-27T10:00:00' 'FRIENDS' >/dev/null
-            create_schedule "$id" "$friend_cookie" '친구와 함께하는 시간' '서로의 일정을 확인하고 약속을 맞춰요.' '2026-08-28T14:00:00' '2026-08-28T15:00:00' 'FRIENDS' >/dev/null
-            create_schedule "$id" "$friend_cookie" '주말 루틴 점검' '이번 주를 돌아보고 다음 주를 준비해요.' '2026-08-29T11:00:00' '2026-08-29T11:45:00' 'PUBLIC' >/dev/null
-            create_schedule "$id" "$friend_cookie" '마음 챙김 시간' '조금 느리게 쉬어가는 시간이에요.' '2026-08-30T16:00:00' '2026-08-30T17:00:00' 'FRIENDS' >/dev/null
-            create_schedule "$id" "$friend_cookie" '월말 계획 정리' '새로운 한 주의 계획을 정리해요.' '2026-08-31T20:00:00' '2026-08-31T21:00:00' 'FRIENDS' >/dev/null
-            create_todo "$friend_cookie" '이번 주 우선순위 정리' '가장 중요한 일 세 가지를 골라요.' 'TODO' '2026-08-28' >/dev/null
-            todo_id=$(create_todo "$friend_cookie" '진행 중인 일정 확인' '친구들과 공유한 약속을 확인해요.' 'IN_PROGRESS' '2026-08-29')
-            create_todo "$friend_cookie" '완료한 일 돌아보기' '이번 주에 해낸 일을 기록해요.' 'DONE' '2026-08-25' >/dev/null
-            create_todo "$friend_cookie" '다음 주 준비하기' '새로운 주를 가볍게 시작할 준비를 해요.' 'TODO' '2026-08-31' >/dev/null
-            create_dday_if_missing "$id" "$friend_cookie" '가을 휴가 시작' '2026-09-14' false
-            create_dday_if_missing "$id" "$friend_cookie" '새로운 계절을 맞이하는 날' '2026-09-01' false
+            schedule_id=$(create_schedule "$id" "$friend_cookie" '오늘의 집중 시간' '하루의 중요한 흐름을 가볍게 정리해요.' '2026-11-25T09:00:00' '2026-11-25T10:00:00' 'FRIENDS')
+            create_schedule "$id" "$friend_cookie" '점심 산책과 리프레시' '잠시 화면을 내려놓고 산책해요.' '2026-11-25T12:30:00' '2026-11-25T13:15:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" '저녁 약속 준비' '오늘의 약속을 차분히 준비해요.' '2026-11-25T18:30:00' '2026-11-25T19:30:00' 'PUBLIC' >/dev/null
+            create_schedule "$id" "$friend_cookie" '내일을 위한 메모' '내일 해야 할 일을 미리 적어두어요.' '2026-11-26T09:30:00' '2026-11-26T10:00:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" '친구와 함께하는 시간' '서로의 일정을 확인하고 약속을 맞춰요.' '2026-11-27T14:00:00' '2026-11-27T15:00:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" '주말 루틴 점검' '이번 주를 돌아보고 다음 주를 준비해요.' '2026-11-28T11:00:00' '2026-11-28T11:45:00' 'PUBLIC' >/dev/null
+            create_schedule "$id" "$friend_cookie" '마음 챙김 시간' '조금 느리게 쉬어가는 시간이에요.' '2026-11-29T16:00:00' '2026-11-29T17:00:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" '월말 계획 정리' '새로운 한 주의 계획을 정리해요.' '2026-11-30T20:00:00' '2026-11-30T21:00:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" '11월 집중 스프린트' '11월 계획을 위한 집중 시간이에요.' '2026-11-03T09:00:00' '2026-11-03T10:00:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" '11월 팀 싱크' '다음 목표를 함께 맞춰요.' '2026-11-05T14:00:00' '2026-11-05T15:00:00' 'PUBLIC' >/dev/null
+            create_schedule "$id" "$friend_cookie" '창작 스튜디오 시간' '아이디어를 차근차근 키워가요.' '2026-11-08T16:00:00' '2026-11-08T17:00:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" '월 중간 점검' '잘 되고 있는 것과 바꿀 것을 살펴봐요.' '2026-11-12T10:00:00' '2026-11-12T10:30:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" '친구들과 저녁 식사' '따뜻한 저녁을 함께 보내요.' '2026-11-15T18:00:00' '2026-11-15T20:00:00' 'PUBLIC' >/dev/null
+            create_schedule "$id" "$friend_cookie" '배움의 시간' '유용한 것을 배우는 시간을 가져요.' '2026-11-18T19:00:00' '2026-11-18T20:00:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" '11월 산책' '계절을 느끼며 천천히 걸어요.' '2026-11-21T11:00:00' '2026-11-21T12:00:00' 'PUBLIC' >/dev/null
+            create_schedule "$id" "$friend_cookie" '월말 돌아보기' '12월이 오기 전에 이번 달을 기록해요.' '2026-11-25T20:00:00' '2026-11-25T21:00:00' 'FRIENDS' >/dev/null
+            create_todo "$friend_cookie" '이번 주 우선순위 정리' '가장 중요한 일 세 가지를 골라요.' 'TODO' '2026-11-27' >/dev/null
+            todo_id=$(create_todo "$friend_cookie" '진행 중인 일정 확인' '친구들과 공유한 약속을 확인해요.' 'IN_PROGRESS' '2026-11-28')
+            create_todo "$friend_cookie" '완료한 일 돌아보기' '이번 주에 해낸 일을 기록해요.' 'DONE' '2026-11-24' >/dev/null
+            create_todo "$friend_cookie" '다음 주 준비하기' '새로운 주를 가볍게 시작할 준비를 해요.' 'TODO' '2026-11-30' >/dev/null
+            create_dday_if_missing "$id" "$friend_cookie" '겨울 휴가 시작' '2026-12-14' false
+            create_dday_if_missing "$id" "$friend_cookie" '새로운 계절을 맞이하는 날' '2026-12-01' false
         else
-            schedule_id=$(create_schedule "$id" "$friend_cookie" 'Morning focus block' 'Plan the most important part of the day.' '2026-08-26T09:00:00' '2026-08-26T10:00:00' 'FRIENDS')
-            create_schedule "$id" "$friend_cookie" 'Lunch walk and reset' 'A short walk to reset before the afternoon.' '2026-08-26T12:30:00' '2026-08-26T13:15:00' 'FRIENDS' >/dev/null
-            create_schedule "$id" "$friend_cookie" 'Evening plans' 'Leave room for a calm evening.' '2026-08-26T18:30:00' '2026-08-26T19:30:00' 'PUBLIC' >/dev/null
-            create_schedule "$id" "$friend_cookie" 'Plan tomorrow' 'Write down the next small step.' '2026-08-27T09:30:00' '2026-08-27T10:00:00' 'FRIENDS' >/dev/null
-            create_schedule "$id" "$friend_cookie" 'Shared coffee break' 'Make space for a friendly check-in.' '2026-08-28T14:00:00' '2026-08-28T15:00:00' 'FRIENDS' >/dev/null
-            create_schedule "$id" "$friend_cookie" 'Weekend reset' 'Review the week and prepare for the next one.' '2026-08-29T11:00:00' '2026-08-29T11:45:00' 'PUBLIC' >/dev/null
-            create_schedule "$id" "$friend_cookie" 'Mindful pause' 'A quiet hour to recharge.' '2026-08-30T16:00:00' '2026-08-30T17:00:00' 'FRIENDS' >/dev/null
-            create_schedule "$id" "$friend_cookie" 'Month-end planning' 'Close the month with a clear plan.' '2026-08-31T20:00:00' '2026-08-31T21:00:00' 'FRIENDS' >/dev/null
+            schedule_id=$(create_schedule "$id" "$friend_cookie" 'Morning focus block' 'Plan the most important part of the day.' '2026-11-25T09:00:00' '2026-11-25T10:00:00' 'FRIENDS')
+            create_schedule "$id" "$friend_cookie" 'Lunch walk and reset' 'A short walk to reset before the afternoon.' '2026-11-25T12:30:00' '2026-11-25T13:15:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" 'Evening plans' 'Leave room for a calm evening.' '2026-11-25T18:30:00' '2026-11-25T19:30:00' 'PUBLIC' >/dev/null
+            create_schedule "$id" "$friend_cookie" 'Plan tomorrow' 'Write down the next small step.' '2026-11-26T09:30:00' '2026-11-26T10:00:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" 'Shared coffee break' 'Make space for a friendly check-in.' '2026-11-27T14:00:00' '2026-11-27T15:00:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" 'Weekend reset' 'Review the week and prepare for the next one.' '2026-11-28T11:00:00' '2026-11-28T11:45:00' 'PUBLIC' >/dev/null
+            create_schedule "$id" "$friend_cookie" 'Mindful pause' 'A quiet hour to recharge.' '2026-11-29T16:00:00' '2026-11-29T17:00:00' 'FRIENDS' >/dev/null
+            create_schedule "$id" "$friend_cookie" 'Month-end planning' 'Close the month with a clear plan.' '2026-11-30T20:00:00' '2026-11-30T21:00:00' 'FRIENDS' >/dev/null
             create_schedule "$id" "$friend_cookie" 'November focus sprint' 'A focused block for the November plan.' '2026-11-03T09:00:00' '2026-11-03T10:00:00' 'FRIENDS' >/dev/null
             create_schedule "$id" "$friend_cookie" 'November team sync' 'Align on the next milestone.' '2026-11-05T14:00:00' '2026-11-05T15:00:00' 'PUBLIC' >/dev/null
             create_schedule "$id" "$friend_cookie" 'Creative studio hour' 'Make steady progress on a creative idea.' '2026-11-08T16:00:00' '2026-11-08T17:00:00' 'FRIENDS' >/dev/null
@@ -554,12 +566,12 @@ populate_locale() {
             create_schedule "$id" "$friend_cookie" 'Learning hour' 'Set aside time to learn something useful.' '2026-11-18T19:00:00' '2026-11-18T20:00:00' 'FRIENDS' >/dev/null
             create_schedule "$id" "$friend_cookie" 'November walk' 'Take a breath and enjoy the season.' '2026-11-21T11:00:00' '2026-11-21T12:00:00' 'PUBLIC' >/dev/null
             create_schedule "$id" "$friend_cookie" 'Month-end reflection' 'Capture the highlights before December.' '2026-11-25T20:00:00' '2026-11-25T21:00:00' 'FRIENDS' >/dev/null
-            create_todo "$friend_cookie" 'Plan this week' 'Choose the three tasks that matter most.' 'TODO' '2026-08-28' >/dev/null
-            todo_id=$(create_todo "$friend_cookie" 'Review shared plans' 'Check the plans shared with friends.' 'IN_PROGRESS' '2026-08-29')
-            create_todo "$friend_cookie" 'Celebrate completed work' 'Write down what went well this week.' 'DONE' '2026-08-25' >/dev/null
-            create_todo "$friend_cookie" 'Prepare next week' 'Start the next week with a light plan.' 'TODO' '2026-08-31' >/dev/null
-            create_dday_if_missing "$id" "$friend_cookie" 'Autumn getaway' '2026-09-14' false
-            create_dday_if_missing "$id" "$friend_cookie" 'New season begins' '2026-09-01' false
+            create_todo "$friend_cookie" 'Plan this week' 'Choose the three tasks that matter most.' 'TODO' '2026-11-27' >/dev/null
+            todo_id=$(create_todo "$friend_cookie" 'Review shared plans' 'Check the plans shared with friends.' 'IN_PROGRESS' '2026-11-28')
+            create_todo "$friend_cookie" 'Celebrate completed work' 'Write down what went well this week.' 'DONE' '2026-11-24' >/dev/null
+            create_todo "$friend_cookie" 'Prepare next week' 'Start the next week with a light plan.' 'TODO' '2026-11-30' >/dev/null
+            create_dday_if_missing "$id" "$friend_cookie" 'Winter getaway' '2026-12-14' false
+            create_dday_if_missing "$id" "$friend_cookie" 'New season begins' '2026-12-01' false
         fi
         if [[ "$id" == "$owner_id" ]]; then
             owner_primary_schedule_id="$schedule_id"
@@ -581,14 +593,15 @@ populate_locale() {
 
     login "$owner_email" "$owner_cookie"
     if [[ "$locale" == "ko" ]]; then
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '데모팀 전체 회의' '모두가 함께 확인하는 주간 회의예요.' '2026-08-26T15:00:00' '2026-08-26T16:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '팀 점심 시간' '함께 쉬며 다음 계획을 이야기해요.' '2026-08-27T12:00:00' '2026-08-27T13:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '월말 회고' '이번 달의 배움과 다음 목표를 나눠요.' '2026-08-31T17:00:00' '2026-08-31T18:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '다음 달 준비' '새로운 달의 일정을 함께 준비해요.' '2026-09-01T10:00:00' '2026-09-01T11:00:00'
+        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '데모팀 전체 회의' '모두가 함께 확인하는 주간 회의예요.' '2026-11-25T15:00:00' '2026-11-25T16:00:00'
+        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '팀 점심 시간' '함께 쉬며 다음 계획을 이야기해요.' '2026-11-26T12:00:00' '2026-11-26T13:00:00'
+        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '월말 회고' '이번 달의 배움과 다음 목표를 나눠요.' '2026-11-30T17:00:00' '2026-11-30T18:00:00'
+        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '다음 달 준비' '새로운 달의 일정을 함께 준비해요.' '2026-12-01T10:00:00' '2026-12-01T11:00:00'
+        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '11월 킥오프' '새로운 달의 공동 계획으로 시작해요.' '2026-11-01T10:00:00' '2026-11-01T11:00:00'
     else
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'Demo team all-hands' 'A weekly sync for everyone on the team.' '2026-08-26T15:00:00' '2026-08-26T16:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'Team lunch break' 'A shared pause to talk through the next plan.' '2026-08-27T12:00:00' '2026-08-27T13:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'Month-end retro' 'Share the lessons and goals for next month.' '2026-08-31T17:00:00' '2026-08-31T18:00:00'
+        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'Demo team all-hands' 'A weekly sync for everyone on the team.' '2026-11-25T15:00:00' '2026-11-25T16:00:00'
+        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'Team lunch break' 'A shared pause to talk through the next plan.' '2026-11-26T12:00:00' '2026-11-26T13:00:00'
+        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'Month-end retro' 'Share the lessons and goals for next month.' '2026-11-30T17:00:00' '2026-11-30T18:00:00'
         create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'November kickoff' 'Start the next month with a clear shared plan.' '2026-11-01T10:00:00' '2026-11-01T11:00:00'
     fi
 
@@ -620,13 +633,17 @@ insert_duties() {
     local duties_sql=$(mktemp "${TMPDIR:-/tmp}/dutypark-demo-duties.XXXXXX.sql")
     cleanup_file "$duties_sql"
     local member_index date_index date type_id
+    local duty_offset=0
+    [[ "$locale" == "en" ]] && duty_offset=1
     {
         echo "SET SESSION time_zone = '+00:00';"
         echo "START TRANSACTION;"
         for member_index in "${!ids[@]}"; do
             for date_index in "${!dates[@]}"; do
                 date="${dates[date_index]}"
-                type_id="${type_ids[$((date_index % ${#type_ids[@]}))]}"
+                # Offset the English rotation by one day so the capture date (index 27)
+                # lands on Morning instead of Off on the Home screen.
+                type_id="${type_ids[$(((date_index + duty_offset) % ${#type_ids[@]}))]}"
                 echo "INSERT INTO duty (duty_type_id, member_id, duty_date, team_id, manual_override) SELECT ${type_id}, ${ids[member_index]}, '${date}', ${team_id}, 0 WHERE NOT EXISTS (SELECT 1 FROM duty WHERE member_id = ${ids[member_index]} AND duty_date = '${date}');"
             done
         done
@@ -695,8 +712,8 @@ ko_schedule_count=$(run_sql "SELECT COUNT(*) FROM schedule WHERE member_id IN (S
 en_schedule_count=$(run_sql "SELECT COUNT(*) FROM schedule WHERE member_id IN (SELECT id FROM member WHERE team_id = ${EN_TEAM_ID});")
 ko_todo_count_db=$(run_sql "SELECT COUNT(*) FROM todo WHERE member_id IN (SELECT id FROM member WHERE team_id = ${KO_TEAM_ID});")
 en_todo_count_db=$(run_sql "SELECT COUNT(*) FROM todo WHERE member_id IN (SELECT id FROM member WHERE team_id = ${EN_TEAM_ID});")
-ko_duty_count=$(run_sql "SELECT COUNT(*) FROM duty WHERE team_id = ${KO_TEAM_ID} AND duty_date BETWEEN '2026-08-24' AND '2026-08-31';")
-en_duty_count=$(run_sql "SELECT COUNT(*) FROM duty WHERE team_id = ${EN_TEAM_ID} AND (duty_date BETWEEN '2026-08-24' AND '2026-08-31' OR duty_date BETWEEN '2026-11-01' AND '2026-11-30');")
+ko_duty_count=$(run_sql "SELECT COUNT(*) FROM duty WHERE team_id = ${KO_TEAM_ID} AND duty_date BETWEEN '2026-11-01' AND '2026-11-30';")
+en_duty_count=$(run_sql "SELECT COUNT(*) FROM duty WHERE team_id = ${EN_TEAM_ID} AND duty_date BETWEEN '2026-11-01' AND '2026-11-30';")
 
 jq -n \
     --arg database "${DB_HOST}:${DB_PORT}/${DB_NAME}" \

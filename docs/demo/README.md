@@ -68,7 +68,7 @@ The English fixture uses the same local-only password, `demo1234!`, and the
 same eight generated avatar files. Its schedules, Todo cards, duties, D-Day,
 friend relationships, tags, and notifications are generated through the local
 application flow with English titles, descriptions, and notification content.
-The source for the English capture set is the real local app on `2026-08-29`,
+The source for the English capture set is the real local app on `2026-11-28`,
 stored under `docs/app-store/raw/en/`; it is not translated or fabricated by
 the image-generation step.
 
@@ -76,15 +76,19 @@ The complete content workflow is checked in as
 [`scripts/seed-local-demo-content.sh`](../../scripts/seed-local-demo-content.sh).
 It first runs the Korean account seed, creates the English marker team and
 accounts, uploads these avatars, then creates all API-backed content. It also
-inserts only the marker members' capture-date duty rows in a guarded
+inserts only the marker members' November 2026 duty rows in a guarded
 transaction, because the application has no bulk duty-create endpoint. After
 the API identity guard succeeds, it clears only the two marker teams' prior
 capture schedules, Todos, D-Days, duties, team schedules, friendships, tags,
 and notifications before recreating the deterministic fixture. This prevents
 older fixture revisions from accumulating in a refreshed screenshot set. The
-English fixture additionally has November 2026 schedules and duties so the
-English Calendar, Team, and D-Day captures can show a populated,
-holiday-free month.
+fixture is pinned to the `2026-11-28` (Asia/Seoul) capture date: both locales
+get duties for every day of November 2026, schedules across the month with the
+densest week ending on the capture date, Todos due around it, and D-Days on
+`2026-12-01` and `2026-12-14`. November 2026 has no Korean public holidays, so
+the Korean and English Calendar, Team, and D-Day captures both show a
+populated, holiday-free month. Move these dates forward before a later
+capture so Home shows the current day and the D-Days stay in the future.
 
 Run it only after the local migrations and a backend connected to
 `dutypark_demo` are running. To preserve a normal development backend on

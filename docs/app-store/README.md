@@ -31,17 +31,18 @@ fixture so the English submission set contains no Korean public-holiday labels.
 Capture metadata for this refresh:
 
 ```text
-Capture date: 2026-08-29 (Asia/Seoul)
+Capture date: 2026-11-28 (Asia/Seoul)
 Device: iPhone 17 Pro Max
-OS: iOS 26.5
-App: 1.0.0 (1)
+OS: iOS 27.0
+Xcode: 27.2
+App: 1.3.3 (1)
 Canvas: 1320x2868 portrait
 Account: local dutypark_demo
-Source commit: 1856c2aa
+Source commit: 1b32b603 (plus working tree)
 Capture API: http://localhost:8081/api/
 Source: actual app capture, not generated UI
 Capture test: 2 PASS / 0 FAIL / 0 SKIP
-Result bundle: /private/tmp/dutypark-appstore-capture-final3-20260829.xcresult
+Result bundle: /tmp/dutypark-appstore-capture-20261128.xcresult
 ```
 
 The same per-locale provenance is recorded in each checked-in manifest's

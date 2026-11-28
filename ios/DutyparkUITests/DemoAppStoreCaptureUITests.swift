@@ -47,7 +47,7 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
 
-        signOutIfNeeded(in: app)
+        signOutIfNeeded(language: language, in: app)
         signIn(in: app, email: email)
 
         let home = app.descendants(matching: .any)["screen.home"]
@@ -55,7 +55,7 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         waitForHomeContent(in: app)
         capture("appstore-\(language)-01-home-demo")
 
-        openPrimaryTab("tab.calendar", screen: "screen.calendar", in: app)
+        openPrimaryTab("tab.calendar", screen: "screen.calendar", language: language, in: app)
         waitForSettledContent(in: app, loadingIdentifier: nil)
         if language == "en" {
             selectEnglishCaptureMonth(in: app)
@@ -63,18 +63,18 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         capture("appstore-\(language)-02-calendar-demo")
         captureCalendarDDay(language: language, in: app)
 
-        openPrimaryTab("tab.todo", screen: "screen.todo", in: app)
+        openPrimaryTab("tab.todo", screen: "screen.todo", language: language, in: app)
         waitForSettledContent(in: app, loadingIdentifier: nil)
         capture("appstore-\(language)-03-todo-demo")
 
-        openPrimaryTab("tab.team", screen: "screen.team", in: app)
+        openPrimaryTab("tab.team", screen: "screen.team", language: language, in: app)
         waitForSettledContent(in: app, loadingIdentifier: nil)
         if language == "en" {
             selectEnglishTeamCaptureMonth(in: app)
         }
         capture("appstore-\(language)-04-team-demo")
 
-        openPrimaryTab("tab.more", screen: "screen.more", in: app)
+        openPrimaryTab("tab.more", screen: "screen.more", language: language, in: app)
         waitForSettledContent(in: app, loadingIdentifier: nil)
         capture("appstore-\(language)-05-more-demo")
 
@@ -112,7 +112,7 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
     }
 
     @MainActor
-    private func signOutIfNeeded(in app: XCUIApplication) {
+    private func signOutIfNeeded(language: String, in app: XCUIApplication) {
         let home = app.descendants(matching: .any)["screen.home"]
         let guestLogin = app.buttons["guest.login"]
         let settledAuthentication = XCTNSPredicateExpectation(
@@ -129,8 +129,8 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
             return
         }
 
-        let more = app.buttons["tab.more"]
-        XCTAssertTrue(more.waitForExistence(timeout: 10), "More tab did not load for account reset")
+        let more = primaryTabButton("tab.more", language: language, in: app, timeout: 10)
+        XCTAssertTrue(more.exists, "More tab did not load for account reset")
         more.tap()
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10),
@@ -154,13 +154,48 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
     private func openPrimaryTab(
         _ tabIdentifier: String,
         screen screenIdentifier: String,
+        language: String,
         in app: XCUIApplication
     ) {
-        let tab = app.buttons[tabIdentifier]
-        XCTAssertTrue(tab.waitForExistence(timeout: 20), "Missing primary tab: \(tabIdentifier)")
+        let tab = primaryTabButton(tabIdentifier, language: language, in: app, timeout: 20)
+        XCTAssertTrue(tab.exists, "Missing primary tab: \(tabIdentifier)")
         tab.tap()
         let screen = app.descendants(matching: .any)[screenIdentifier]
         XCTAssertTrue(screen.waitForExistence(timeout: 20), "Missing screen: \(screenIdentifier)")
+    }
+
+    /// The SwiftUI tab bar does not always expose the `tab.*` identifiers (for example after a
+    /// relaunch that restores a signed-in session), so fall back to the localized tab bar label.
+    @MainActor
+    private func primaryTabButton(
+        _ tabIdentifier: String,
+        language: String,
+        in app: XCUIApplication,
+        timeout: TimeInterval
+    ) -> XCUIElement {
+        let identifiedTab = app.buttons.matching(identifier: tabIdentifier).firstMatch
+        let deadline = Date().addingTimeInterval(timeout)
+        if identifiedTab.waitForExistence(timeout: min(timeout, 1)) {
+            return identifiedTab
+        }
+        guard let label = primaryTabLabel(for: tabIdentifier, language: language) else {
+            return identifiedTab
+        }
+        let labeledTab = app.tabBars.buttons[label].firstMatch
+        _ = labeledTab.waitForExistence(timeout: max(0, deadline.timeIntervalSinceNow))
+        return labeledTab
+    }
+
+    private func primaryTabLabel(for tabIdentifier: String, language: String) -> String? {
+        let labels: [String: (ko: String, en: String)] = [
+            "tab.home": ("홈", "Home"),
+            "tab.calendar": ("달력", "Calendar"),
+            "tab.todo": ("할일", "Todo"),
+            "tab.team": ("팀", "Team"),
+            "tab.more": ("더보기", "More")
+        ]
+        guard let label = labels[tabIdentifier] else { return nil }
+        return language == "ko" ? label.ko : label.en
     }
 
     @MainActor
