@@ -584,6 +584,8 @@ struct TeamView: View {
                             ? page.schedules[index]
                             : [],
                         weekdayIndex: index % 7,
+                        isFirstRow: index - firstIndex < 7,
+                        isLastRow: (index - firstIndex) / 7 == (page.visibleIndices.count - 1) / 7,
                         spanLanes: spanLanes[index - firstIndex],
                         weekDays: DPCalendarSpanRibbonDay.week(containing: index - firstIndex, in: ribbonDays),
                         isSelected: day == page.selectedDay
@@ -932,6 +934,8 @@ private struct TeamCalendarDayCell: View {
     let holidays: [HolidayDTO]
     let schedules: [TeamScheduleDTO]
     let weekdayIndex: Int
+    let isFirstRow: Bool
+    let isLastRow: Bool
     let spanLanes: [DPCalendarSpanLanes.Placement<TeamScheduleDTO>?]
     let weekDays: [DPCalendarSpanRibbonDay]
     let isSelected: Bool
@@ -947,7 +951,9 @@ private struct TeamCalendarDayCell: View {
                 isToday: isToday,
                 hasHoliday: !holidays.isEmpty,
                 highlight: isSelected ? DPColor.accent : nil,
-                ribbonColumn: ribbonColumn
+                ribbonColumn: ribbonColumn,
+                isFirstRow: isFirstRow,
+                isLastRow: isLastRow
             ) {
                 EmptyView()
             } content: {
@@ -980,7 +986,8 @@ private struct TeamCalendarDayCell: View {
         // The tile's own layer stays inside the button, so the button carries it into the grid.
         .zIndex(DPCalendarTileRing.zIndex(
             ring: DPCalendarTileRing(hasHighlight: isSelected),
-            ribbonColumn: ribbonColumn
+            ribbonColumn: ribbonColumn,
+            isToday: isToday
         ))
         .accessibilityLabel(Text(verbatim: "\(day.year)-\(day.month)-\(day.day)"))
     }

@@ -245,6 +245,30 @@ describe('CalendarGrid multi-day ribbons', () => {
       expect(start + resolve(seam(days)(n), band)).toBeCloseTo(gutterLeft + gap / 2, 9)
     }
   })
+
+  // On a grid edge today's card pulls in from its cell, so a band ends at the
+  // card there instead of running past its halo; inner sides are unchanged.
+  const edge = 'var(--calendar-lift-edge)'
+  const roundEdge = 'max(var(--calendar-span-inset), var(--calendar-lift-edge))'
+  it.each([
+    { name: 'continued band from a left-column today', today: 8, first: 7, days: 2, isStart: false, isEnd: true, ends: { '--calendar-span-start': edge } },
+    { name: 'band starting on a left-column today', today: 8, first: 7, days: 2, isStart: true, isEnd: true, ends: { '--calendar-span-start': roundEdge } },
+    { name: 'continuing band onto a right-column today', today: 28, first: 25, days: 3, isStart: true, isEnd: false, ends: { '--calendar-span-end': edge } },
+    { name: 'band ending on a right-column today', today: 28, first: 25, days: 3, isStart: true, isEnd: true, ends: { '--calendar-span-end': roundEdge } },
+    { name: 'band starting on an inner today', today: 4, first: 3, days: 2, isStart: true, isEnd: true, ends: {} },
+    { name: 'band off today in a left-column week', today: 10, first: 7, days: 2, isStart: false, isEnd: true, ends: {} },
+  ])('ends a band at today\'s card on a grid edge ($name)', async ({ today, first, days, isStart, isEnd, ends }) => {
+    const lanes = Array.from({ length: 35 }, (_, index) => index >= first && index < first + days
+      ? [{ segment: { item: 'trip', days, isStart, isEnd }, isFirstDay: index === first }]
+      : [])
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays({ month: 11, day: today }), currentYear: 2026, currentMonth: 11, spanLanes: lanes,
+    })))
+    await nextTick()
+    const style = findHostNodes(mounted.root, node => hasClass(node, 'calendar-span'))[0]!.props.style as Record<string, unknown>
+    const own = Object.fromEntries(Object.entries(style).filter(([key]) => key === '--calendar-span-start' || key === '--calendar-span-end'))
+    expect(own).toEqual(ends)
+  })
 })
 
 describe('CalendarGrid day states', () => {
@@ -252,34 +276,71 @@ describe('CalendarGrid day states', () => {
     return findHostNodes(cell, node => node.type === 'span' && hasClass(node, className))
   }
 
-  // Today is marked by a red date strip, not a ring: only a plain white numeral
-  // sits in the date row, whatever the weekday ink would be. Screen readers get
-  // today from aria-current instead of a visible word.
-  it('marks today with the date strip instead of a ring or a date circle', async () => {
+  // Today is a lifted card with a red date circle; there is no ring or label.
+  // Screen readers get today from aria-current instead of a visible word.
+  it('lifts today as a card and circles its date', async () => {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
       days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
     })))
     await nextTick()
-    const today = dayCells(mounted.root)[0]!
+    const [today, other] = dayCells(mounted.root) as [HostNode, HostNode]
     expect(hasClass(today, 'calendar-day--today')).toBe(true)
     expect(today.props['aria-current']).toBe('date')
+    expect(cellsWithBorder(today, 'calendar-day-lift')).toHaveLength(1)
+    expect(cellsWithBorder(other, 'calendar-day-lift')).toHaveLength(0)
     expect(cellsWithBorder(today, 'calendar-day-today-border')).toHaveLength(0)
-    expect(findHostNodes(today, node => hasClass(node, 'calendar-day-today-circle'))).toHaveLength(0)
     const number = findHostNodes(today, node => hasClass(node, 'calendar-day-number'))[0]!
-    // Sunday ink would vanish on the red strip, so today's numeral takes the strip's ink.
-    expect(number.props.style).toMatchObject({ color: 'var(--calendar-ink)' })
+    const circles = findHostNodes(number, node => node.type === 'span' && hasClass(node, 'calendar-day-today-circle'))
+    expect(circles.map(hostText)).toEqual(['1'])
     expect(hostText(number)).toBe('1')
+    expect(findHostNodes(other, node => hasClass(node, 'calendar-day-today-circle'))).toHaveLength(0)
     expect(findHostNodes(today, node => hasClass(node, 'calendar-day-today-label'))).toHaveLength(0)
   })
 
-  it('redraws the selection border above the strip when today is selected', async () => {
+  // Only the card paints today's tile, so the gap it leaves at a grid edge shows
+  // the gutter rather than a sliver of the tile.
+  it.each([
+    { name: 'a duty fill', color: '#9DDBDE', today: { month: 11, day: 12 }, index: 11, fill: '#9DDBDE' },
+    { name: 'an empty in-month tile', color: null, today: { month: 11, day: 12 }, index: 11, fill: 'var(--dp-calendar-cell-bg)' },
+    { name: 'an empty outside tile', color: null, today: { month: 12, day: 2 }, index: 31, fill: 'var(--calendar-surface)' },
+  ])('paints today\'s tile on the card only ($name)', async ({ color, today, index, fill }) => {
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays(today), currentYear: 2026, currentMonth: 11, getDutyColor: () => color,
+    })))
+    await nextTick()
+    expect(dayCells(mounted.root)[index]!.props.style)
+      .toMatchObject({ backgroundColor: 'transparent', '--calendar-lift-fill': fill })
+  })
+
+  // The grid clips its rounded edges, so on a grid edge the card pulls in to keep
+  // its halo clear of the clip, and grows outward only on its inner sides.
+  const E = 'var(--calendar-lift-edge)'
+  const G = 'var(--calendar-lift-grow)'
+  it.each([
+    { name: 'first row, left column', today: { month: 11, day: 1 }, index: 0, inset: [E, G, G, E] },
+    { name: 'inner day', today: { month: 11, day: 12 }, index: 11, inset: [G, G, G, G] },
+    { name: 'right column', today: { month: 11, day: 28 }, index: 27, inset: [G, E, G, G] },
+    { name: 'last row', today: { month: 11, day: 30 }, index: 29, inset: [G, G, E, G] },
+    { name: 'last row, right column', today: { month: 12, day: 5 }, index: 34, inset: [G, E, E, G] },
+  ])('keeps today\'s card inside the grid edges ($name)', async ({ today, index, inset }) => {
+    const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
+      days: novemberDays(today), currentYear: 2026, currentMonth: 11,
+    })))
+    await nextTick()
+    const cells = dayCells(mounted.root)
+    expect(cells[index]!.props.style).toMatchObject({ '--calendar-lift-inset': inset.join(' ') })
+    expect(cells.filter(cell => '--calendar-lift-inset' in (cell.props.style as object))).toHaveLength(1)
+  })
+
+  it('redraws the selection border on the lifted card when today is selected', async () => {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
       days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
       selectedDay: { year: 2026, month: 11, day: 1 },
     })))
     await nextTick()
     const today = dayCells(mounted.root)[0]!
-    expect(hasClass(today, 'ring-dp-accent')).toBe(true)
+    // The cell's own inset ring would show in the gap the card leaves at a grid edge.
+    expect(hasClass(today, 'ring-dp-accent')).toBe(false)
     expect(hasClass(today, 'calendar-day--today')).toBe(true)
     expect(cellsWithBorder(today, 'calendar-day-selection-border')).toHaveLength(1)
   })
@@ -316,8 +377,7 @@ describe('CalendarGrid day states', () => {
     expect(cellsWithBorder(today(), 'calendar-day-selection-border')).toHaveLength(1)
   })
 
-  // The pin label must be a direct child of the date row so it shares today's
-  // strip, right of the date.
+  // The pin label must be a direct child of the date row, right of the date.
   it('renders the day-header slot as a direct child of the date row', async () => {
     const mounted = mountHost(createHostWrapper(() => h(CalendarGrid, {
       days: novemberDays({ month: 11, day: 1 }), currentYear: 2026, currentMonth: 11,
@@ -434,8 +494,12 @@ describe('CalendarGrid transient date spotlight', () => {
     }
 
     // The grid's padding box starts inside its 1px border at (101, 201).
-    function startSpotlight(root: HostNode, cellRect: Rect) {
-      const cell = { rect: cellRect, getBoundingClientRect: () => boxOf(cell.rect), scrollIntoView: vi.fn() }
+    function startSpotlight(root: HostNode, cellRect: Rect, liftRect?: Rect) {
+      const lift = liftRect && { getBoundingClientRect: () => boxOf(liftRect) }
+      const cell = {
+        rect: cellRect, getBoundingClientRect: () => boxOf(cell.rect), scrollIntoView: vi.fn(),
+        querySelector: vi.fn(() => lift ?? null),
+      }
       const querySelector = vi.fn(() => cell)
       const grid = { clientLeft: 1, clientTop: 1, getBoundingClientRect: () => boxOf({ left: 100, top: 200, width: 377, height: 500 }), querySelector }
       triggerHost(spotlights(root)[0]!, 'onAnimationstart', { currentTarget: { parentElement: grid } })
@@ -457,6 +521,19 @@ describe('CalendarGrid transient date spotlight', () => {
         'polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, '
         + '53.5px 160px, 53.5px 224px, 107px 224px, 107px 160px, 53.5px 160px)',
       )
+    })
+
+    // A lifted today card overhangs its cell, so the hole follows the card.
+    it('cuts today\'s lifted card out of the dim', async () => {
+      const { root } = await mountHighlighted()
+      const { cell } = startSpotlight(
+        root,
+        { left: 154.5, top: 361, width: 53.5, height: 64 },
+        { left: 152.5, top: 359, width: 57.5, height: 68 },
+      )
+      await nextTick()
+      expect(cell.querySelector).toHaveBeenCalledWith('.calendar-day-lift')
+      expect(clipPath(root)).toContain('51.5px 158px, 51.5px 226px, 109px 226px, 109px 158px, 51.5px 158px)')
     })
 
     it('re-measures the hole when the grid or the day resizes, and stops once the spotlight ends', async () => {

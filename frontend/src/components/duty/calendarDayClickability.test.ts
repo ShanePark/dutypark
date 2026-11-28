@@ -25,7 +25,8 @@ describe('calendar cell clickability', () => {
     expect(calendarGrid).not.toContain('hover:brightness-95')
     expect(calendarGrid).not.toContain('opacity: isCurrentMonth(day) ? 1 : 0.5')
     expect(calendarGrid).toContain('calendar-day-hoverable')
-    expect(calendarGrid).toContain('.calendar-day--today .calendar-day-top {')
+    expect(calendarGrid).not.toContain('.calendar-day--today .calendar-day-top {')
+    expect(calendarGrid).toMatch(/v-if="isToday\(day\)"\s*class="calendar-day-lift"/)
     expect(calendarGrid).not.toContain('calendar-day-today-label')
     expect(calendarGrid).toMatch(
       /v-if="hasTodaySelectionBorder\(day\)"[\s\S]*class="calendar-day-selection-border"/
@@ -35,7 +36,7 @@ describe('calendar cell clickability', () => {
     )
     expect(calendarGrid).not.toContain('calendar-day-highlight-flash')
     expect(calendarGrid).toContain(":aria-current=\"isToday(day) ? 'date' : undefined\"")
-    expect(calendarGrid).toContain("'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isHighlighted(day)")
+    expect(calendarGrid).toContain("'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isHighlighted(day) && !isToday(day)")
     expect(calendarGrid).toContain('@media (hover: hover) and (pointer: fine)')
     expect(calendarGrid).toContain('.calendar-day-hoverable:hover::before')
     expect(calendarGrid).not.toContain('--dp-warning')

@@ -604,14 +604,19 @@ final class CalendarFeatureTests: XCTestCase {
         )
         XCTAssertFalse(dayCell.contains("opacity(0.45)"), "Out-of-month days are faded by colour, not opacity")
         XCTAssertTrue(
-            tile.contains(".background(DPCalendarCellStyle.cellBackground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth))"),
+            tile.contains("DPCalendarCellStyle.cellBackground(dutyColor: dutyColor, isCurrentMonth: isCurrentMonth)"),
             "The duty fill stays the tile's source of truth"
         )
         XCTAssertTrue(
             tile.contains("DPCalendarTileRing(hasHighlight: highlight != nil)"),
             "The tile draws only a selection ring; today has none"
         )
-        XCTAssertTrue(tile.contains("DPCalendarTodayStrip.Band()"), "Today is marked by the red date strip")
+        XCTAssertTrue(tile.contains("DPCalendarTodayLift"), "Today is marked by the lifted card")
+        XCTAssertFalse(tile.contains("DPCalendarTodayStrip"), "Today's red date strip is gone")
+        XCTAssertTrue(
+            dayCell.contains("CalendarDateSpotlightTarget(bounds: $0, lift: showsToday ? liftPlacement : nil)"),
+            "A spotlit today reports its lift so the spotlight hole follows the lifted card"
+        )
         XCTAssertFalse(tile.contains("DPCalendarTodayRing"), "Today no longer draws a ring")
     }
 

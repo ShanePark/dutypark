@@ -236,44 +236,201 @@ struct CalendarFlatDesignTests {
         #expect(DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: 6) > 1, "A ribbon tile is above a selection ring")
     }
 
-    /// Today is marked by its red header strip, so the only ring a tile draws is a selection.
+    /// Today is marked by its lifted card, so the only ring a tile draws is a selection.
     @Test
     func todayDrawsNoRingAndOnlyASelectionDrawsOne() throws {
         #expect(DPCalendarTileRing(hasHighlight: true) == .highlight)
         #expect(DPCalendarTileRing(hasHighlight: false) == .none)
         let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
         #expect(!style.contains("DPCalendarTodayRing"), "Today's ring is gone")
-        #expect(!style.contains("Circle().fill(DPCalendarCellStyle.todayColor)"), "Today's numeral has no red circle")
+        #expect(!style.contains("DPCalendarTodayStrip"), "Today's red strip is gone")
         let tile = try declaration(
             named: "nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View",
             in: style
         )
-        // The selection stroke is the tile's overlay, so it is drawn over today's strip.
-        let strip = try #require(tile.range(of: "DPCalendarTodayStrip.Band()"))
+        // The selection stroke is drawn inside the lift, so it follows the lifted card.
         let stroke = try #require(tile.range(of: "strokeBorder(highlight"))
-        #expect(strip.lowerBound < stroke.lowerBound)
+        let lift = try #require(tile.range(of: ".modifier(DPCalendarTodayLift.Effect("))
+        #expect(stroke.lowerBound < lift.lowerBound)
     }
 
-    /// E2: today's date row is a full-width red strip, the same red in light and dark, with a
-    /// white numeral and a faint dark hairline beneath it.
+    /// F: today is a lifted card: scaled up, rounded, shadowed and ringed by a halo in the
+    /// page colour, so no fill colour is reserved for it.
     @Test
-    func todaysHeaderIsAWhiteOnRedStrip() {
-        #expect(DPCalendarTodayStrip.background == DPCalendarCellStyle.todayColor)
-        #expect(DPCalendarTodayStrip.ink == Color.white)
-        #expect(DPCalendarTodayStrip.hairlineWidth == 1)
-        #expect(DPCalendarTodayStrip.hairlineOpacity == 0.2)
-        // The strip reaches the tile's top, left and right edges.
-        #expect(DPCalendarTodayStrip.bleed == EdgeInsets(
-            top: DPCalendarCellStyle.cellTopPadding,
-            leading: DPCalendarCellStyle.cellHorizontalPadding,
-            bottom: 0,
-            trailing: DPCalendarCellStyle.cellHorizontalPadding
-        ))
+    func todayIsALiftedCard() {
+        #expect(DPCalendarTodayLift.scale == 1.07)
+        #expect(DPCalendarTodayLift.cornerRadius == 8)
+        #expect(DPCalendarTodayLift.shadowOpacity == 0.35)
+        #expect(DPCalendarTodayLift.shadowRadius == 10)
+        #expect(DPCalendarTodayLift.shadowY == 4)
+        #expect(DPCalendarTodayLift.haloWidth == 1.5)
+        #expect(rgba(DPCalendarTodayLift.haloColor, .light) == rgba(hex: 0xFFFFFF))
+        #expect(rgba(DPCalendarTodayLift.haloColor, .dark) == rgba(hex: 0x111827))
     }
 
-    /// The strip carries only the numeral (and a pinned D-Day label): no visible today word.
+    /// A card on the grid's edge grows inward and stands in by its halo, so the halo sits
+    /// flush on the edge and the grid's clip never cuts it.
     @Test
-    func todaysStripShowsNoTodayWord() throws {
+    func theLiftGrowsInwardFromTheGridEdges() {
+        func placement(_ column: Int, first: Bool = false, last: Bool = false) -> DPCalendarTodayLift.Placement {
+            DPCalendarTodayLift.placement(column: column, isFirstRow: first, isLastRow: last)
+        }
+        let inset = DPCalendarTodayLift.edgeInset
+        #expect(inset == DPCalendarTodayLift.haloWidth)
+        #expect(placement(3) == .init(anchor: .center, shift: .zero))
+        #expect(placement(0) == .init(anchor: .leading, shift: CGSize(width: inset, height: 0)))
+        #expect(placement(6) == .init(anchor: .trailing, shift: CGSize(width: -inset, height: 0)))
+        #expect(placement(3, first: true) == .init(anchor: .top, shift: CGSize(width: 0, height: inset)))
+        #expect(placement(3, last: true) == .init(anchor: .bottom, shift: CGSize(width: 0, height: -inset)))
+        #expect(placement(0, last: true) == .init(anchor: .bottomLeading, shift: CGSize(width: inset, height: -inset)))
+        #expect(placement(6, first: true) == .init(anchor: .topTrailing, shift: CGSize(width: -inset, height: inset)))
+
+        let tile = CGRect(x: 10, y: 20, width: 100, height: 50)
+        #expect(
+            DPCalendarTodayLift.liftedFrame(tile, placement: placement(0, first: true))
+                == CGRect(x: 10 + inset, y: 20 + inset, width: 107, height: 53.5)
+        )
+        let centred = DPCalendarTodayLift.liftedFrame(tile, placement: placement(3))
+        #expect(abs(centred.midX - tile.midX) < 0.0001)
+        #expect(abs(centred.midY - tile.midY) < 0.0001)
+        #expect(abs(centred.width - 107) < 0.0001)
+    }
+
+    /// Wherever today falls in a month grid, its card, halo and rounded corners stay inside
+    /// the grid's rounded clip, the halo flush on each edge it meets, and the card still
+    /// grows past its tile on every side that faces another day.
+    @Test
+    func aLiftedCardKeepsItsHaloClearOfEveryGridEdge() {
+        let gutter = DPCalendarCellStyle.gutterWidth
+        let tolerance: CGFloat = 0.001
+        let halo = DPCalendarTodayLift.haloWidth
+        let rows = 5
+        for (width, height) in [(CGFloat(52.4), CGFloat(64)), (47, 140)] {
+            let grid = CGRect(x: 0, y: 0, width: width * 7 + gutter * 6, height: height * CGFloat(rows) + gutter * CGFloat(rows - 1))
+            for row in 0..<rows {
+                for column in 0..<7 {
+                    let tile = CGRect(
+                        x: CGFloat(column) * (width + gutter),
+                        y: CGFloat(row) * (height + gutter),
+                        width: width,
+                        height: height
+                    )
+                    let placement = DPCalendarTodayLift.placement(
+                        column: column,
+                        isFirstRow: row == 0,
+                        isLastRow: row == rows - 1
+                    )
+                    let card = DPCalendarTodayLift.liftedFrame(tile, placement: placement)
+                    let ring = card.insetBy(dx: -halo, dy: -halo)
+                    let at = "column \(column), row \(row), \(width)x\(height)"
+                    #expect(grid.insetBy(dx: -tolerance, dy: -tolerance).contains(ring), "\(at): \(ring)")
+                    if column == 0 { #expect(abs(ring.minX - grid.minX) < tolerance, "\(at) is flush on the leading edge") }
+                    if column == 6 { #expect(abs(ring.maxX - grid.maxX) < tolerance, "\(at) is flush on the trailing edge") }
+                    if row == 0 { #expect(abs(ring.minY - grid.minY) < tolerance, "\(at) is flush on the top edge") }
+                    if row == rows - 1 { #expect(abs(ring.maxY - grid.maxY) < tolerance, "\(at) is flush on the bottom edge") }
+                    #expect(abs(card.width - width * DPCalendarTodayLift.scale) < 0.0001)
+                    if column > 0 { #expect(card.minX < tile.minX, "\(at) grows toward the previous day") }
+                    if column < 6 { #expect(card.maxX > tile.maxX, "\(at) grows toward the next day") }
+                    if row > 0 { #expect(card.minY < tile.minY, "\(at) grows toward the week above") }
+                    if row < rows - 1 { #expect(card.maxY > tile.maxY, "\(at) grows toward the week below") }
+                    expectRoundedCorners(of: ring, inside: grid, at)
+                }
+            }
+        }
+    }
+
+    /// Every point of the halo's rounded outline that sits in one of the grid's corner
+    /// squares lies inside the grid's corner arc.
+    private func expectRoundedCorners(of ring: CGRect, inside grid: CGRect, _ at: String) {
+        let radius = DPCalendarTodayLift.cornerRadius + DPCalendarTodayLift.haloWidth
+        let gridRadius = DPCalendarCellStyle.cornerRadius
+        let corners: [(CGPoint, CGPoint, CGFloat, CGFloat)] = [
+            (CGPoint(x: ring.minX + radius, y: ring.minY + radius), CGPoint(x: grid.minX + gridRadius, y: grid.minY + gridRadius), -1, -1),
+            (CGPoint(x: ring.maxX - radius, y: ring.minY + radius), CGPoint(x: grid.maxX - gridRadius, y: grid.minY + gridRadius), 1, -1),
+            (CGPoint(x: ring.minX + radius, y: ring.maxY - radius), CGPoint(x: grid.minX + gridRadius, y: grid.maxY - gridRadius), -1, 1),
+            (CGPoint(x: ring.maxX - radius, y: ring.maxY - radius), CGPoint(x: grid.maxX - gridRadius, y: grid.maxY - gridRadius), 1, 1),
+        ]
+        for (centre, gridCentre, dx, dy) in corners {
+            for step in 0...16 {
+                let angle = Double(step) / 16 * .pi / 2
+                let point = CGPoint(x: centre.x + dx * radius * cos(angle), y: centre.y + dy * radius * sin(angle))
+                let inCornerSquare = (point.x - gridCentre.x) * dx > 0 && (point.y - gridCentre.y) * dy > 0
+                guard inCornerSquare else { continue }
+                let distance = hypot(point.x - gridCentre.x, point.y - gridCentre.y)
+                #expect(distance <= gridRadius + 0.001, "\(at): corner point \(point)")
+            }
+        }
+    }
+
+    /// Today sits above every tile, ribbon tiles included, so its shadow falls on its
+    /// neighbours; it redraws the stretch of any ribbon crossing it, so the ribbon stays whole.
+    @Test
+    func todaySitsAboveEveryOtherTile() {
+        let today = DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: nil, isToday: true)
+        #expect(today > DPCalendarTileRing.zIndex(ring: .highlight, ribbonColumn: nil))
+        for column in 0..<7 {
+            #expect(today > DPCalendarTileRing.zIndex(ring: .none, ribbonColumn: column))
+        }
+        #expect(DPCalendarTileRing.zIndex(ring: .highlight, ribbonColumn: 0, isToday: true) == today)
+    }
+
+    /// A ribbon that crosses today is redrawn by today from the segment's first tile, one
+    /// tile pitch (tile plus gutter) further left per column.
+    @Test
+    func todayRedrawsACrossingRibbonFromItsFirstTile() throws {
+        let stack = try declaration(
+            named: "struct DPCalendarSpanLaneStack<Item, Ribbon: View>: View",
+            in: source("Dutypark/Components/DPCalendarSpanRibbon.swift")
+        )
+        #expect(stack.contains("@Environment(\\.dpCalendarTodayLift)"))
+        // The ribbon undoes the card's shift off the grid edge as well as its scale.
+        #expect(stack.contains(".offset(x: -lift.shift.width, y: -lift.shift.height)"))
+
+        // Today redraws a ribbon over its card only: a ribbon starting today runs on over the
+        // next days, but never past a card standing off the grid's edge.
+        let card = CGRect(x: -4, y: 0, width: 56, height: 80)
+        func slice(_ column: Int, startsHere: Bool) -> DPCalendarSpanRibbon.TodaySlice {
+            DPCalendarSpanRibbon.todaySlice(
+                card: card,
+                startsHere: startsHere,
+                lift: DPCalendarTodayLift.placement(column: column, isFirstRow: false, isLastRow: false)
+            )
+        }
+        #expect(slice(3, startsHere: false) == .init(minX: card.minX, maxX: card.maxX))
+        #expect(slice(3, startsHere: true) == .init(minX: -.infinity, maxX: .infinity))
+        #expect(slice(0, startsHere: true) == .init(minX: card.minX, maxX: .infinity))
+        #expect(slice(6, startsHere: true) == .init(minX: -.infinity, maxX: card.maxX))
+        #expect(slice(6, startsHere: false) == .init(minX: card.minX, maxX: card.maxX))
+        let slot: CGFloat = 48
+        let pitch = slot + DPCalendarCellStyle.cellHorizontalPadding * 2 + DPCalendarCellStyle.gutterWidth
+        #expect(DPCalendarSpanRibbon.segmentOrigin(slotWidth: slot, columnsFromStart: 0) == 0)
+        #expect(DPCalendarSpanRibbon.segmentOrigin(slotWidth: slot, columnsFromStart: 2) == -2 * pitch)
+    }
+
+    /// Today's weekday header keeps the header surface: strong ink and a 2pt ink underline
+    /// instead of a red fill.
+    @Test
+    func todaysWeekdayHeaderIsInkWithAnUnderline() throws {
+        for index in 0..<7 {
+            let ink = DPCalendarCellStyle.weekdayHeaderInk(index, isToday: true)
+            #expect(rgba(ink, .light) == rgba(hex: 0x111827))
+            #expect(rgba(ink, .dark) == rgba(hex: 0xF9FAFB))
+            let plain = DPCalendarCellStyle.weekdayHeaderInk(index, isToday: false)
+            #expect(rgba(plain, .light) == rgba(DPCalendarCellStyle.weekdayColor(index), .light))
+        }
+        #expect(DPCalendarCellStyle.todayWeekdayUnderlineWidth == 2)
+        let header = try declaration(
+            named: "nonisolated struct DPCalendarWeekdayHeaderCell: View",
+            in: source("Dutypark/Components/DPCalendarCellStyle.swift")
+        )
+        #expect(header.contains(".background(DPCalendarCellStyle.weekdayHeaderBackground)"))
+        #expect(!header.contains("Color.white"))
+    }
+
+    /// The date row carries only the numeral (and a pinned D-Day label): no visible today
+    /// word, and no inset for today.
+    @Test
+    func todaysDateRowHasNoTodayWord() throws {
         let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
         let tile = try declaration(
             named: "nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View",
@@ -284,16 +441,38 @@ struct CalendarFlatDesignTests {
             #expect(!part.contains("calendar.today"))
             #expect(!part.contains("오늘"))
         }
+        #expect(!tile.contains(".padding(.horizontal, isToday"), "Today's date row is not inset")
     }
 
-    /// Today's pinned D-Day label is white inside the strip.
+    /// Today's numeral is white in the filled red circle it had before the strip, on top
+    /// of the lifted card.
     @Test
-    func todaysPinnedDDayLabelIsWhiteInsideTheStrip() throws {
+    func todaysNumeralSitsInTheRedCircle() throws {
+        #expect(DPCalendarCellStyle.todayCircleDiameter == 20)
+        #expect(rgba(DPCalendarCellStyle.todayColor, .light) == rgba(DPColor.dangerHover, .light))
+        #expect(rgba(DPCalendarCellStyle.todayColor, .dark) == rgba(DPColor.dangerHover, .dark))
+        let style = try source("Dutypark/Components/DPCalendarCellStyle.swift")
+        let number = try declaration(named: "nonisolated struct DPCalendarDayNumber: View", in: style)
+        #expect(number.contains(".background(Circle().fill(DPCalendarCellStyle.todayColor))"))
+        #expect(number.contains(".foregroundStyle(Color.white)"))
+        #expect(number.contains(".font(DPFont.bold(size: 12, relativeTo: .caption))"))
+        #expect(number.contains(".padding(.vertical, -1)"), "The circle keeps the date row's height")
+        let tile = try declaration(
+            named: "nonisolated struct DPCalendarDayTile<Accessory: View, Content: View>: View",
+            in: style
+        )
+        #expect(tile.contains("isCurrentMonth: isCurrentMonth,\n                    isToday: isToday\n"))
+        #expect(tile.contains("DPCalendarTodayLift.Card("), "The circle sits on the lifted card")
+    }
+
+    /// Today's pinned D-Day label keeps the tile's normal ink.
+    @Test
+    func todaysPinnedDDayLabelUsesTheNormalInk() throws {
         let cell = try declaration(
             named: "private struct CalendarDayCell: View",
             in: source("Dutypark/Features/Calendar/CalendarView.swift")
         )
-        #expect(cell.contains("DPCalendarTodayStrip.ink"))
+        #expect(!cell.contains("DPCalendarTodayStrip"))
     }
 
     @Test

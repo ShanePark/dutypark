@@ -131,6 +131,29 @@ nonisolated enum DPCalendarSpanRibbon {
         return (leading, trailing - leading)
     }
 
+    /// Where a segment's first lane slot lies, seen from the slot of the tile
+    /// `columnsFromStart` columns into the segment.
+    static func segmentOrigin(slotWidth: CGFloat, columnsFromStart: Int) -> CGFloat {
+        let tileWidth = slotWidth + DPCalendarCellStyle.cellHorizontalPadding * 2
+        return -CGFloat(columnsFromStart) * (tileWidth + DPCalendarCellStyle.gutterWidth)
+    }
+
+    /// The horizontal stretch of a ribbon that today's lifted tile redraws.
+    struct TodaySlice: Equatable {
+        let minX: CGFloat
+        let maxX: CGFloat
+    }
+
+    /// An earlier tile's ribbon runs on beside today, so only its stretch over the card is
+    /// redrawn. A ribbon starting today runs on over the next days, but stops at a card
+    /// that stands off the grid's edge.
+    static func todaySlice(card: CGRect, startsHere: Bool, lift: DPCalendarTodayLift.Placement) -> TodaySlice {
+        TodaySlice(
+            minX: startsHere && lift.shift.width <= 0 ? -.infinity : card.minX,
+            maxX: startsHere && lift.shift.width >= 0 ? .infinity : card.maxX
+        )
+    }
+
     /// The stretch of a band each covered day owns, in the band's own coordinates: its
     /// tile and half of the gutter on either side, so the band changes colour in the
     /// middle of a gutter, under the centre of that gutter's divider.
@@ -197,10 +220,15 @@ nonisolated struct DPCalendarSpanRibbonDay: Equatable {
 /// A tile's ribbon lanes, drawn first under its date number. Only a segment's first tile
 /// draws the ribbon, reaching over the rest of the segment; the other tiles keep the lane
 /// empty. The ribbon takes no touches, so a tap opens the day under the finger.
+///
+/// Today's lifted tile sits above every other tile, so it also draws its own stretch of a
+/// ribbon that crosses it, and keeps every ribbon it draws out of its lift: the ribbon
+/// stays where the unlifted grid puts it, straight and whole across today.
 struct DPCalendarSpanLaneStack<Item, Ribbon: View>: View {
     let lanes: [DPCalendarSpanLanes.Placement<Item>?]
     let column: Int
     @ViewBuilder let ribbon: (DPCalendarSpanLanes.Placement<Item>) -> Ribbon
+    @Environment(\.dpCalendarTodayLift) private var lift
 
     var body: some View {
         if !lanes.isEmpty {
@@ -210,7 +238,12 @@ struct DPCalendarSpanLaneStack<Item, Ribbon: View>: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: DPCalendarSpanRibbon.height)
                         .overlay(alignment: .topLeading) {
-                            if let placement = lanes[lane], placement.columns.lowerBound == column {
+                            if let lift, let placement = lanes[lane] {
+                                GeometryReader { proxy in
+                                    liftedRibbon(placement, lift: lift, in: proxy)
+                                }
+                                .allowsHitTesting(false)
+                            } else if let placement = lanes[lane], placement.columns.lowerBound == column {
                                 GeometryReader { proxy in
                                     let extent = DPCalendarSpanRibbon.extent(
                                         slotWidth: proxy.size.width,
@@ -229,6 +262,55 @@ struct DPCalendarSpanLaneStack<Item, Ribbon: View>: View {
             }
             .padding(.bottom, DPCalendarSpanRibbon.laneGap)
         }
+    }
+
+    /// The ribbon drawn by today's tile, in its lane slot's coordinates: the whole segment
+    /// placed from its first tile, cut to today's card, then moved and scaled back by the lift so it lands where the unlifted grid draws it.
+    private func liftedRibbon(
+        _ placement: DPCalendarSpanLanes.Placement<Item>,
+        lift: DPCalendarTodayLift.Placement,
+        in proxy: GeometryProxy
+    ) -> some View {
+        let slot = proxy.size
+        let tile = proxy.bounds(of: .named(DPCalendarTodayLift.tileSpace)) ?? CGRect(origin: .zero, size: slot)
+        let anchor = lift.anchor
+        let pivot = CGPoint(x: tile.minX + tile.width * anchor.x, y: tile.minY + tile.height * anchor.y)
+        let card = DPCalendarTodayLift.liftedFrame(tile, placement: lift)
+        let startsHere = placement.columns.lowerBound == column
+        let extent = DPCalendarSpanRibbon.extent(
+            slotWidth: slot.width,
+            columnCount: placement.columns.count,
+            isTrueStart: placement.isTrueStart,
+            isTrueEnd: placement.isTrueEnd
+        )
+        let origin = DPCalendarSpanRibbon.segmentOrigin(
+            slotWidth: slot.width,
+            columnsFromStart: column - placement.columns.lowerBound
+        )
+        return ribbon(placement)
+            .frame(width: extent.width, height: DPCalendarSpanRibbon.height)
+            .offset(x: origin + extent.x)
+            .frame(width: slot.width, height: slot.height, alignment: .topLeading)
+            .clipShape(DPCalendarRibbonSlice(
+                slice: DPCalendarSpanRibbon.todaySlice(card: card, startsHere: startsHere, lift: lift)
+            ))
+            .offset(x: -lift.shift.width, y: -lift.shift.height)
+            .scaleEffect(
+                1 / DPCalendarTodayLift.scale,
+                anchor: UnitPoint(x: pivot.x / max(slot.width, 1), y: pivot.y / max(slot.height, 1))
+            )
+    }
+}
+
+/// A vertical band of the plane between two x positions, unbounded above and below.
+private struct DPCalendarRibbonSlice: Shape {
+    let slice: DPCalendarSpanRibbon.TodaySlice
+
+    nonisolated func path(in rect: CGRect) -> Path {
+        let reach: CGFloat = 100_000
+        let lower = max(slice.minX, -reach)
+        let upper = min(slice.maxX, reach)
+        return Path(CGRect(x: lower, y: -reach, width: max(upper - lower, 0), height: reach * 2))
     }
 }
 

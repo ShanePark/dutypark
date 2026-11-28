@@ -322,6 +322,8 @@ struct GuestPublicCalendarView: View {
                 GuestCalendarDayCell(
                     day: day,
                     weekday: index % 7,
+                    isFirstRow: index < 7,
+                    isLastRow: index / 7 == (visibleCalendarDays.count - 1) / 7,
                     spanLanes: spanLanes[index],
                     weekDays: DPCalendarSpanRibbonDay.week(containing: index, in: ribbonDays)
                 )
@@ -514,6 +516,8 @@ private struct GuestReportLoginPrompt: View {
 private struct GuestCalendarDayCell: View {
     let day: GuestCalendarDay
     let weekday: Int
+    let isFirstRow: Bool
+    let isLastRow: Bool
     let spanLanes: [DPCalendarSpanLanes.Placement<ScheduleDTO>?]
     let weekDays: [DPCalendarSpanRibbonDay]
 
@@ -525,7 +529,9 @@ private struct GuestCalendarDayCell: View {
             isCurrentMonth: isCurrentMonth,
             isToday: isToday,
             hasHoliday: !day.holidays.isEmpty,
-            ribbonColumn: DPCalendarSpanLanes.startsRibbon(spanLanes, column: weekday) ? weekday : nil
+            ribbonColumn: DPCalendarSpanLanes.startsRibbon(spanLanes, column: weekday) ? weekday : nil,
+            isFirstRow: isFirstRow,
+            isLastRow: isLastRow
         ) {
             EmptyView()
         } content: {

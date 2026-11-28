@@ -93,20 +93,19 @@ struct CalendarScheduleTitleLayoutTests {
         #expect(abs(rowWidth - expected) < 0.01, "Row is \(rowWidth)pt")
     }
 
-    /// The selection ring stays lighter than a 2pt line beside the 1pt gutters, and today's
-    /// strip hairline is no heavier than a gutter.
+    /// The selection ring stays lighter than a 2pt line beside the 1pt gutters.
     @Test
     func tileRingsStayLightBesideOnePointGutters() {
         #expect(DPCalendarCellStyle.gutterWidth == 1)
         #expect(DPCalendarTileRing.highlightWidth == 1.5)
-        #expect(DPCalendarTodayStrip.hairlineWidth == DPCalendarCellStyle.gutterWidth)
     }
 
-    /// Today's strip, with or without a pinned D-Day label, keeps the date row as tall as
-    /// every other tile's, so content starts level across the week.
+    /// Today's tile, with or without a pinned D-Day label, keeps the date row as tall as
+    /// every other tile's, so content starts level across the week; only the lift moves it.
     @Test
-    func todaysStripKeepsTheDateRowHeight() {
+    func todaysTileKeepsTheDateRowHeight() throws {
         let tops = TitleHeights()
+        let middles = TitleHeights()
         let grid = CalendarMonthCellGrid(items: (0..<7).map { TileID(id: $0) }) { index, _ in
             DPCalendarDayTile(
                 day: 20 + index,
@@ -129,6 +128,11 @@ struct CalendarScheduleTitleLayoutTests {
                         }
                     }
             }
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.onAppear { middles.values[index] = proxy.frame(in: .global).midY }
+                }
+            }
         }
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, DPSpacing.small)
@@ -146,9 +150,14 @@ struct CalendarScheduleTitleLayoutTests {
         host.view.layoutIfNeeded()
 
         #expect(tops.values.count == 7)
-        let plain = tops.values[0]
+        let plain = try #require(tops.values[0])
         for index in 1..<7 {
-            #expect(tops.values[index] == plain, "Tile \(index) content starts at \(String(describing: tops.values[index]))")
+            let top = try #require(tops.values[index])
+            // A lone row's today is lifted about its middle.
+            let expected = index <= 3
+                ? try #require(middles.values[index]).lifted(from: plain)
+                : plain
+            #expect(abs(top - expected) < 0.5, "Tile \(index) content starts at \(top), not \(expected)")
         }
     }
 
@@ -291,5 +300,12 @@ struct CalendarScheduleTitleLayoutTests {
         .lineSpacing(1)
         .lineLimit(2)
         .truncationMode(.tail)
+    }
+}
+
+private extension CGFloat {
+    /// Where a point at `y` is drawn once today's tile is scaled about this middle.
+    func lifted(from y: CGFloat) -> CGFloat {
+        self + (y - self) * DPCalendarTodayLift.scale
     }
 }
