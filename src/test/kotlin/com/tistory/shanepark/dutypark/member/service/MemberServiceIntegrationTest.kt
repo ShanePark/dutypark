@@ -4,6 +4,8 @@ import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import org.assertj.core.api.Assertions.assertThat
+import org.hibernate.SessionFactory
+import org.hibernate.stat.Statistics
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.PageRequest
@@ -13,6 +15,9 @@ class MemberServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var blockService: BlockService
+
+    @Autowired
+    lateinit var sessionFactory: SessionFactory
 
     @Test
     fun `Search member with sorting and filtering`() {
@@ -88,6 +93,73 @@ class MemberServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(result.totalElements).isEqualTo(1)
         assertThat(result.totalPages).isEqualTo(1)
         assertThat(result.content.map { it.id }).containsExactly(visible.id)
+    }
+
+    @Test
+    fun `managed members load with their teams without a query per member`() {
+        val manager = TestData.member
+        val managedMembers = createMembersAcrossTeams("xmanaged")
+        managedMembers.forEach { makeManagerRelation(manager = manager, managed = it) }
+        em.flush()
+        em.clear()
+
+        val statistics = startCountingStatements()
+        val result = memberService.findManagedMembers(loginMember(manager))
+
+        assertThat(result.map { it.id to it.team }).containsExactlyInAnyOrderElementsOf(
+            managedMembers.map { it.id to it.team?.name }
+        )
+        assertThat(statistics.prepareStatementCount)
+            .describedAs("manager lookup + one managed-relation query with members and teams")
+            .isLessThanOrEqualTo(2)
+    }
+
+    @Test
+    fun `managers load with their teams without a query per manager`() {
+        val managed = TestData.member
+        val managers = createMembersAcrossTeams("xmanager")
+        managers.forEach { makeManagerRelation(manager = it, managed = managed) }
+        em.flush()
+        em.clear()
+
+        val statistics = startCountingStatements()
+        val result = memberService.findAllManagers(loginMember(managed))
+
+        assertThat(result.map { it.id to it.team }).containsExactlyInAnyOrderElementsOf(
+            managers.map { it.id to it.team?.name }
+        )
+        assertThat(statistics.prepareStatementCount)
+            .describedAs("member lookup + one manager-relation query with members and teams")
+            .isLessThanOrEqualTo(2)
+    }
+
+    @Test
+    fun `my info loads the member together with the team`() {
+        val member = TestData.member
+
+        val statistics = startCountingStatements()
+        val result = memberService.findById(member.id!!)
+
+        assertThat(result.team).isEqualTo(TestData.team.name)
+        assertThat(statistics.prepareStatementCount)
+            .describedAs("member with team + social accounts")
+            .isLessThanOrEqualTo(2)
+    }
+
+    private fun createMembersAcrossTeams(prefix: String): List<Member> {
+        val teams = listOf(TestData.team, TestData.team2, TestData.team, TestData.team2, null)
+        return teams.mapIndexed { index, team ->
+            val member = Member("$prefix$index", "$prefix${index}_email", "pass")
+            team?.let { teamRepository.findById(it.id!!).orElseThrow().addMember(member) }
+            memberRepository.save(member)
+        }
+    }
+
+    private fun startCountingStatements(): Statistics {
+        val statistics = sessionFactory.statistics
+        statistics.isStatisticsEnabled = true
+        statistics.clear()
+        return statistics
     }
 
     private fun search(page: PageRequest, name: String, viewerId: Long) =

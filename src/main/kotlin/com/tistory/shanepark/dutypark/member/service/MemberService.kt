@@ -47,7 +47,7 @@ class MemberService(
 
     @Transactional(readOnly = true)
     fun findById(memberId: Long): MemberDto {
-        val member = memberRepository.findById(memberId).orElseThrow()
+        val member = memberRepository.findMemberWithTeam(memberId).orElseThrow()
         return memberDtoAssembler.toDto(member)
     }
 
