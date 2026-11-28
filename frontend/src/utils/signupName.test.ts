@@ -3,6 +3,7 @@ import {
   buildSsoSignupNameState,
   formatAppleDisplayName,
   generateDefaultSignupName,
+  MEMBER_NAME_MAX_LENGTH,
   readSsoSignupNameState,
 } from './signupName'
 
@@ -36,17 +37,23 @@ describe('formatAppleDisplayName', () => {
     expect(formatAppleDisplayName({ firstName: ' 길동 ' })).toBe('길동')
   })
 
-  it('falls back to the first name when the full name exceeds 10 characters', () => {
-    expect(formatAppleDisplayName({ firstName: 'Johnathan', lastName: 'Smith' })).toBe('Johnathan')
+  it('keeps a full name of up to MEMBER_NAME_MAX_LENGTH characters', () => {
+    expect(MEMBER_NAME_MAX_LENGTH).toBe(20)
+    expect(formatAppleDisplayName({ firstName: 'Johnathan', lastName: 'Smith' })).toBe('Johnathan Smith')
+    expect(formatAppleDisplayName({ firstName: 'Christopher', lastName: 'Johnson' })).toBe('Christopher Johnson')
   })
 
-  it('truncates to 10 characters when the first name alone is still too long', () => {
-    expect(formatAppleDisplayName({ firstName: 'Maximiliano', lastName: 'Rodriguez' })).toBe('Maximilian')
-    expect(formatAppleDisplayName({ lastName: 'Wolfeschlegelstein' })).toBe('Wolfeschle')
+  it('falls back to the first name when the full name exceeds 20 characters', () => {
+    expect(formatAppleDisplayName({ firstName: 'Maximiliano', lastName: 'Rodriguez Garcia' })).toBe('Maximiliano')
+  })
+
+  it('truncates to 20 characters when the first name alone is still too long', () => {
+    expect(formatAppleDisplayName({ firstName: 'Wolfeschlegelsteinhausen', lastName: 'Smith' })).toBe('Wolfeschlegelsteinha')
+    expect(formatAppleDisplayName({ lastName: 'Wolfeschlegelsteinhausen' })).toBe('Wolfeschlegelsteinha')
   })
 
   it('does not leave trailing whitespace after truncation', () => {
-    expect(formatAppleDisplayName({ firstName: 'Ann Marie Lee', lastName: 'X' })).toBe('Ann Marie')
+    expect(formatAppleDisplayName({ firstName: 'Anna Maria Elisabet Lee', lastName: 'X' })).toBe('Anna Maria Elisabet')
   })
 
   it('returns an empty string when Apple shared no usable name', () => {
@@ -67,6 +74,7 @@ describe('SSO signup name navigation state', () => {
     expect(readSsoSignupNameState(null)).toBe('')
     expect(readSsoSignupNameState({ back: '/auth/login' })).toBe('')
     expect(readSsoSignupNameState({ ssoSignupName: 42 })).toBe('')
-    expect(readSsoSignupNameState({ ssoSignupName: 'Wolfeschlegelstein' })).toBe('Wolfeschle')
+    expect(readSsoSignupNameState({ ssoSignupName: 'Wolfeschlegelstein' })).toBe('Wolfeschlegelstein')
+    expect(readSsoSignupNameState({ ssoSignupName: 'Wolfeschlegelsteinhausen' })).toBe('Wolfeschlegelsteinha')
   })
 })

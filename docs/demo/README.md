@@ -15,8 +15,11 @@ The account base seed is deliberately restricted to:
 Provision and migrate that database locally before running the seed. Do not
 change the constants in the script to point at `dutypark` or any shared/remote
 database. The workflow requires `nc`, `jq`, and either a host `mysql` client or
-the local Docker database container. The seed script creates or refreshes the marker team, eight loginable
-members, and three team duty types. It does not create profile-photo files,
+the local Docker database container. The seed script creates or refreshes two
+marker teams, eight loginable members, and their duty types: the office team
+`Dutypark Demo 2026` (`출근`, default `OFF`) for the owner and one friend, and the
+ward team `Dutypark Ward Demo 2026` (`데이`, `이브`, `나이트`, default `OFF`) for
+six nurse friends. It does not create profile-photo files,
 schedules, Todos, duties, friend relationships, tags, or notifications.
 
 ```sh
@@ -29,40 +32,52 @@ explicit confirmation variable is present, prints the team/member/duty-type
 IDs as JSON, and refuses to continue when a marker email belongs to another
 team. The shared demo password is `demo1234!`; it is intentionally local-only
 and must not be reused in production or committed to a real account. Re-running
-the seed updates only its marker team and accounts. An older marker revision is
+the seed updates only its marker teams and accounts. An older marker revision is
 removed only when the script finds no references to those members; otherwise
 the run stops without deleting application data.
 
 The roster is:
 
-| Role | Name | Login email | Avatar |
-|:-----|:-----|:------------|:-------|
-| Owner/admin | 윤서아 | `demo.seoa@dutypark.local` | [`seoa-moon-rabbit.png`](avatars/seoa-moon-rabbit.png) |
-| Friend | 한지우 | `demo.jiwoo@dutypark.local` | [`jiwoo-coral-bear.png`](avatars/jiwoo-coral-bear.png) |
-| Friend | 김도윤 | `demo.doyoon@dutypark.local` | [`doyoon-night-owl.png`](avatars/doyoon-night-owl.png) |
-| Friend | 박하린 | `demo.harin@dutypark.local` | [`harin-sunny-puppy.png`](avatars/harin-sunny-puppy.png) |
-| Friend | 이민준 | `demo.minjun@dutypark.local` | [`minjun-teal-fox.png`](avatars/minjun-teal-fox.png) |
-| Friend | 최유나 | `demo.yuna@dutypark.local` | [`yuna-mint-cat.png`](avatars/yuna-mint-cat.png) |
-| Friend | 정태오 | `demo.taeo@dutypark.local` | [`taeo-lavender-otter.png`](avatars/taeo-lavender-otter.png) |
-| Friend | 오나리 | `demo.nari@dutypark.local` | [`nari-peach-red-panda.png`](avatars/nari-peach-red-panda.png) |
+| Role | Team | Name | Login email | Avatar |
+|:-----|:-----|:-----|:------------|:-------|
+| Owner/admin | Office | 윤서아 | `demo.seoa@dutypark.local` | [`seoa-moon-rabbit.png`](avatars/seoa-moon-rabbit.png) |
+| Friend | Office | 한지우 | `demo.jiwoo@dutypark.local` | [`jiwoo-coral-bear.png`](avatars/jiwoo-coral-bear.png) |
+| Friend, ward admin | Ward | 김도윤 | `demo.doyoon@dutypark.local` | [`doyoon-night-owl.png`](avatars/doyoon-night-owl.png) |
+| Friend | Ward | 박하린 | `demo.harin@dutypark.local` | [`harin-sunny-puppy.png`](avatars/harin-sunny-puppy.png) |
+| Friend | Ward | 이민준 | `demo.minjun@dutypark.local` | [`minjun-teal-fox.png`](avatars/minjun-teal-fox.png) |
+| Friend | Ward | 최유나 | `demo.yuna@dutypark.local` | [`yuna-mint-cat.png`](avatars/yuna-mint-cat.png) |
+| Friend | Ward | 정태오 | `demo.taeo@dutypark.local` | [`taeo-lavender-otter.png`](avatars/taeo-lavender-otter.png) |
+| Friend | Ward | 오나리 | `demo.nari@dutypark.local` | [`nari-peach-red-panda.png`](avatars/nari-peach-red-panda.png) |
 
 ## Reproducible Korean and English content fixture
 
-English App Store captures use a separate local-only team and dataset so that
-the captured user-generated content is English throughout. The team is
-`Dutypark English Demo 2026`, with owner `demo.en.emma@dutypark.local` and the
-following friends:
+English App Store captures use separate local-only teams and dataset so that
+the captured user-generated content is English throughout. The office team is
+`Dutypark English Demo 2026` (`Work`, default `OFF`), with owner
+`demo.en.emma@dutypark.local`. The ward team is
+`Dutypark English Ward Demo 2026` (`Day`, `Evening`, `Night`, default `OFF`),
+with admin `demo.en.noah@dutypark.local`. Every member is the owner's friend:
 
-| Role | Name | Avatar reused from |
-|:-----|:-----|:-------------------|
-| Owner/admin | Emma | `seoa-moon-rabbit.png` |
-| Friend | Jamie Bear | `jiwoo-coral-bear.png` |
-| Friend | Noah Owl | `doyoon-night-owl.png` |
-| Friend | Chloe Sunny | `harin-sunny-puppy.png` |
-| Friend | Liam Fox | `minjun-teal-fox.png` |
-| Friend | Sophia Cat | `yuna-mint-cat.png` |
-| Friend | Ethan Otter | `taeo-lavender-otter.png` |
-| Friend | Ava Panda | `nari-peach-red-panda.png` |
+| Role | Team | Name | Avatar reused from |
+|:-----|:-----|:-----|:-------------------|
+| Owner/admin | Office | Emma Moon | `seoa-moon-rabbit.png` |
+| Friend | Office | Jamie Bear | `jiwoo-coral-bear.png` |
+| Friend, ward admin | Ward | Noah Owl | `doyoon-night-owl.png` |
+| Friend | Ward | Chloe Sunny | `harin-sunny-puppy.png` |
+| Friend | Ward | Liam Fox | `minjun-teal-fox.png` |
+| Friend | Ward | Sophia Cat | `yuna-mint-cat.png` |
+| Friend | Ward | Ethan Otter | `taeo-lavender-otter.png` |
+| Friend | Ward | Ava Panda | `nari-peach-red-panda.png` |
+
+Both locales use the same soft duty palette: office `출근`/`Work` `#9DDBDE` with
+default `OFF` `#ECC2C9`, and ward `데이`/`Day` `#F0F8FF`, `이브`/`Evening`
+`#98FB98`, `나이트`/`Night` `#9370DB` with default `OFF` `#FFB3BA`. Office
+members work weekdays and are `OFF` on weekends; the owner also takes one day
+of annual leave on `2026-11-13`. The six nurses follow staggered three-shift
+rotations from `DUTY_ROSTERS` in the content script: shifts come in blocks,
+every night block ends with at least two `OFF` days, nobody goes from Evening
+to Day or Day to Night, each nurse has 8-9 `OFF` days in November, and every
+day has Day >= Evening >= Night coverage.
 
 The English fixture uses the same local-only password, `demo1234!`, and the
 same eight generated avatar files. Its schedules, Todo cards, duties, D-Day,
@@ -74,16 +89,18 @@ the image-generation step.
 
 The complete content workflow is checked in as
 [`scripts/seed-local-demo-content.sh`](../../scripts/seed-local-demo-content.sh).
-It first runs the Korean account seed, creates the English marker team and
+It first runs the Korean account seed, creates the English marker teams and
 accounts, uploads these avatars, then creates all API-backed content. It also
-inserts only the marker members' November 2026 duty rows in a guarded
+inserts only the marker members' duty rows from 2026-11-01 through 2026-12-05
+(the calendar's trailing December cells) in a guarded
 transaction, because the application has no bulk duty-create endpoint. After
-the API identity guard succeeds, it clears only the two marker teams' prior
+the API identity guard succeeds, it clears only the four marker teams' prior
 capture schedules, Todos, D-Days, duties, team schedules, friendships, tags,
 and notifications before recreating the deterministic fixture. This prevents
 older fixture revisions from accumulating in a refreshed screenshot set. The
 fixture is pinned to the `2026-11-28` (Asia/Seoul) capture date: both locales
-get duties for every day of November 2026, schedules across the month with the
+get office and ward duties across November 2026, ward team schedules,
+schedules across the month with the
 densest week ending on the capture date, Todos due around it, and D-Days on
 `2026-12-01` and `2026-12-14`. November 2026 has no Korean public holidays, so
 the Korean and English Calendar, Team, and D-Day captures both show a
@@ -110,7 +127,7 @@ files before writing, and authenticates both local owner accounts to verify
 that the backend's `/api/members/me` response has the exact local member ID,
 email, name, and marker team ID/name. If the backend is accidentally pointed
 at a shared or production database, the script stops before its first API
-mutation. It never deletes or updates data outside the two marker teams.
+mutation. It never deletes or updates data outside the four marker teams.
 The reset is allowed only after both local owner identities match the exact
 database member and marker-team IDs. Avatars are uploaded on every run so an
 isolated backend storage root cannot reuse stale database metadata without the
@@ -157,8 +174,10 @@ the crop-free 660x1434 Korean reductions in `docs/screenshots/readme/`.
 
 Every screenshot-harness invocation resets the session first: it logs out any
 currently authenticated account, waits for the guest login screen, and signs
-in with the selected Korean or English demo owner. This prevents cookies or
-cached account state from leaking between localized capture sets.
+in with the selected Korean or English demo owner. After the owner screens, it
+relaunches, signs out, and signs in as the ward admin (`demo.doyoon` or
+`demo.en.noah`) to capture the Team screen. This prevents cookies or cached
+account state from leaking between localized capture sets.
 
 ## ImageGen provenance
 

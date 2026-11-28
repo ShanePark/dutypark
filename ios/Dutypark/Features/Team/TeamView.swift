@@ -886,7 +886,7 @@ struct TeamView: View {
     private func memberCard(_ member: MemberPreviewDTO) -> some View {
         VStack(spacing: DPSpacing.extraSmall) {
             TeamMemberAvatar(member: member, size: 28)
-            Text(verbatim: member.name)
+            DPFittedMemberName(name: member.name)
                 .font(DPTypography.caption)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)

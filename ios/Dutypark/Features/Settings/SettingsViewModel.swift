@@ -50,7 +50,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
     }
 }
 
-enum SettingsLoadedSection: Hashable {
+nonisolated enum SettingsLoadedSection: Hashable, Sendable {
     case dutyPattern
     case family
     case friends
@@ -82,6 +82,18 @@ nonisolated struct SettingsLoadPlan: Equatable, Sendable {
         dutyPattern: true
     )
 
+    var sections: Set<SettingsLoadedSection> {
+        var sections: Set<SettingsLoadedSection> = []
+        if familyMembers { sections.insert(.family) }
+        if friends { sections.insert(.friends) }
+        if managers { sections.insert(.managers) }
+        if managedAccounts { sections.insert(.managedAccounts) }
+        if self.sessions { sections.insert(.sessions) }
+        if policies { sections.insert(.policies) }
+        if dutyPattern { sections.insert(.dutyPattern) }
+        return sections
+    }
+
     /// Policies back the terms and privacy pages that deep links open from Settings.
     static let settings = SettingsLoadPlan(policies: true)
 
@@ -101,6 +113,7 @@ final class SettingsViewModel: ObservableObject {
     private let service: SettingsService
     private let contentFilter: ContentFilterStore
     private let hapticCenter: DPHapticCenter
+    private let snapshotStore: MyInfoSnapshotStore
 
     @Published private(set) var member: MemberDTO?
     @Published private(set) var familyMembers: [MemberPreviewDTO] = []
@@ -116,17 +129,22 @@ final class SettingsViewModel: ObservableObject {
     @Published private(set) var isWorking = false
     @Published private(set) var didAttemptMemberLoad = false
     @Published private(set) var loadedSections: Set<SettingsLoadedSection> = []
+    @Published private(set) var loadingSections: Set<SettingsLoadedSection> = []
+    @Published private(set) var isLoadingMember = false
     @Published var noticeKey: String?
     @Published var noticeIsError = false
+    private var snapshotScopeForUpdates: MyInfoSnapshotScope?
 
     init(
         service: SettingsService = SettingsService(),
         contentFilter: ContentFilterStore = .shared,
-        hapticCenter: DPHapticCenter = .shared
+        hapticCenter: DPHapticCenter = .shared,
+        snapshotStore: MyInfoSnapshotStore = .shared
     ) {
         self.service = service
         self.contentFilter = contentFilter
         self.hapticCenter = hapticCenter
+        self.snapshotStore = snapshotStore
     }
 
     var availableManagers: [MemberPreviewDTO] {
@@ -136,7 +154,11 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    func load(_ plan: SettingsLoadPlan = .all) async {
+    /// Each section is applied as soon as its own request finishes, so the screen can render
+    /// once the member arrives instead of waiting for the slowest request. With a
+    /// `snapshotScope`, the last snapshot for the same signed-in session is shown first while
+    /// everything refreshes in the background.
+    func load(_ plan: SettingsLoadPlan = .all, snapshotScope: MyInfoSnapshotScope? = nil) async {
         guard !isLoading else { return }
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
@@ -146,79 +168,102 @@ final class SettingsViewModel: ObservableObject {
 #endif
         isLoading = true
         defer { isLoading = false }
+        if member == nil, let snapshotScope, let snapshot = snapshotStore.snapshot(for: snapshotScope) {
+            apply(snapshot)
+        }
 
-        async let loadedMember = try? service.member()
-        async let loadedFamily: [MemberPreviewDTO]? = plan.familyMembers
-            ? try? service.familyMembers()
-            : nil
-        async let loadedFriends: [FriendDTO]? = plan.friends ? try? service.friends() : nil
-        async let loadedManagers: [MemberDTO]? = plan.managers ? try? service.managers() : nil
-        async let loadedManaged: [MemberDTO]? = plan.managedAccounts
-            ? try? service.managedMembers()
-            : nil
-        async let loadedSessions: [SettingsRefreshToken]? = plan.sessions
-            ? try? service.sessions()
-            : nil
-        async let loadedPolicies: CurrentPoliciesDTO? = plan.policies
-            ? try? service.policies()
-            : nil
-        async let loadedPattern: DutyPatternDTO? = plan.dutyPattern
-            ? try? service.dutyPattern()
-            : nil
-        let values = await (
-            loadedMember,
-            loadedFamily,
-            loadedFriends,
-            loadedManagers,
-            loadedManaged,
-            loadedSessions,
-            loadedPolicies,
-            loadedPattern
-        )
+        snapshotScopeForUpdates = snapshotScope
+        isLoadingMember = true
+        loadingSections = plan.sections
+        let service = service
+        await withTaskGroup(of: SettingsLoadResult.self) { group in
+            group.addTask { await SettingsLoadResult.loadMember(from: service) }
+            for section in plan.sections {
+                group.addTask { await SettingsLoadResult.load(section, from: service) }
+            }
+            for await result in group {
+                apply(result)
+            }
+        }
+        if let snapshotScope { storeSnapshot(for: snapshotScope) }
+    }
+
+    private func apply(_ result: SettingsLoadResult) {
+        switch result {
+        case .member(let value):
+            isLoadingMember = false
+            didAttemptMemberLoad = true
+            if let value {
+                member = value
+            } else if member != nil {
+                showError("settings.error.load")
+                hapticCenter.emit(.error)
+            }
+        case .family(let value):
+            if let value { familyMembers = value }
+            finish(.family, loaded: value != nil)
+        case .friends(let value):
+            if let value { friends = value }
+            finish(.friends, loaded: value != nil)
+        case .managers(let value):
+            if let value { managers = value }
+            finish(.managers, loaded: value != nil)
+        case .managedAccounts(let value):
+            if let value { managedMembers = value }
+            finish(.managedAccounts, loaded: value != nil)
+        case .sessions(let value):
+            if let value { sessions = value }
+            finish(.sessions, loaded: value != nil)
+        case .policies(let value):
+            if let value { policies = value }
+            policyLoadFailed = value == nil
+            finish(.policies, loaded: value != nil)
+        case .dutyPattern(let value):
+            if let value { dutyPattern = value }
+            dutyPatternLoadFailed = value == nil
+            finish(.dutyPattern, loaded: value != nil)
+        }
+    }
+
+    private func finish(_ section: SettingsLoadedSection, loaded: Bool) {
+        loadingSections.remove(section)
+        if loaded { loadedSections.insert(section) }
+    }
+
+    private func apply(_ snapshot: MyInfoSnapshot) {
+        member = snapshot.member
+        familyMembers = snapshot.familyMembers
+        friends = snapshot.friends
+        managers = snapshot.managers
+        managedMembers = snapshot.managedMembers
+        sessions = snapshot.sessions
+        dutyPattern = snapshot.dutyPattern
+        loadedSections.formUnion(snapshot.loadedSections)
         didAttemptMemberLoad = true
-        if let value = values.0 { member = value }
-        if let value = values.1 {
-            familyMembers = value
-            loadedSections.insert(.family)
-        }
-        if let value = values.2 {
-            friends = value
-            loadedSections.insert(.friends)
-        }
-        if let value = values.3 {
-            managers = value
-            loadedSections.insert(.managers)
-        }
-        if let value = values.4 {
-            managedMembers = value
-            loadedSections.insert(.managedAccounts)
-        }
-        if let value = values.5 {
-            sessions = value
-            loadedSections.insert(.sessions)
-        }
-        if plan.policies {
-            if let value = values.6 {
-                policies = value
-                loadedSections.insert(.policies)
-                policyLoadFailed = false
-            } else {
-                policyLoadFailed = true
-            }
-        }
-        if plan.dutyPattern {
-            if let value = values.7 {
-                dutyPattern = value
-                dutyPatternLoadFailed = false
-                loadedSections.insert(.dutyPattern)
-            } else {
-                dutyPatternLoadFailed = true
-            }
-        }
-        if values.0 == nil, member != nil {
-            showError("settings.error.load")
-            hapticCenter.emit(.error)
-        }
+    }
+
+    /// Only a member that matches the scope is stored, so a response that raced an account
+    /// switch can never be shown to a different member.
+    private func storeSnapshot(for scope: MyInfoSnapshotScope) {
+        guard let member, member.id == scope.memberID else { return }
+        snapshotStore.store(
+            MyInfoSnapshot(
+                member: member,
+                familyMembers: familyMembers,
+                friends: friends,
+                managers: managers,
+                managedMembers: managedMembers,
+                sessions: sessions,
+                dutyPattern: dutyPattern,
+                loadedSections: loadedSections.subtracting([.policies])
+            ),
+            for: scope
+        )
+    }
+
+    private func refreshSnapshot() {
+        guard let snapshotScopeForUpdates else { return }
+        storeSnapshot(for: snapshotScopeForUpdates)
     }
 
     func profilePhotoData() async -> Data? {
@@ -229,6 +274,7 @@ final class SettingsViewModel: ObservableObject {
     func reloadMember() async {
         do {
             member = try await service.member()
+            refreshSnapshot()
         } catch {
             showError("settings.error.load")
         }
@@ -282,6 +328,7 @@ final class SettingsViewModel: ObservableObject {
         guard assigned else { return }
         if let refreshedManagers = try? await service.managers() {
             managers = refreshedManagers
+            refreshSnapshot()
         }
     }
 
@@ -403,6 +450,7 @@ final class SettingsViewModel: ObservableObject {
         do {
             dutyPattern = try await service.dutyPattern()
             loadedSections.insert(.dutyPattern)
+            refreshSnapshot()
         } catch {
             dutyPatternLoadFailed = true
             showError("settings.pattern.loadFailed")
@@ -456,6 +504,7 @@ final class SettingsViewModel: ObservableObject {
         defer { isWorking = false }
         do {
             try await operation()
+            refreshSnapshot()
             showNotice(success)
             hapticCenter.emit(.success)
             return true
@@ -579,6 +628,74 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 #endif
+}
+
+/// Identifies one signed-in session. Every login, account switch and impersonation change
+/// starts a new session generation, so a snapshot can never outlive the session it came from.
+nonisolated struct MyInfoSnapshotScope: Hashable, Sendable {
+    let memberID: MemberID
+    let sessionGeneration: UInt64
+}
+
+nonisolated struct MyInfoSnapshot: Equatable, Sendable {
+    var member: MemberDTO
+    var familyMembers: [MemberPreviewDTO]
+    var friends: [FriendDTO]
+    var managers: [MemberDTO]
+    var managedMembers: [MemberDTO]
+    var sessions: [SettingsRefreshToken]
+    var dutyPattern: DutyPatternDTO?
+    var loadedSections: Set<SettingsLoadedSection>
+}
+
+/// Keeps only the latest My Info snapshot in memory for instant re-entry.
+final class MyInfoSnapshotStore {
+    static let shared = MyInfoSnapshotStore()
+
+    private var entry: (scope: MyInfoSnapshotScope, snapshot: MyInfoSnapshot)?
+
+    func snapshot(for scope: MyInfoSnapshotScope) -> MyInfoSnapshot? {
+        guard let entry else { return nil }
+        guard entry.scope == scope else {
+            // Another session or member must never see this data, so drop it.
+            self.entry = nil
+            return nil
+        }
+        return entry.snapshot
+    }
+
+    func store(_ snapshot: MyInfoSnapshot, for scope: MyInfoSnapshotScope) {
+        entry = (scope, snapshot)
+    }
+}
+
+/// Fetches one My Info resource off the main actor. Sessions are sorted here, once, so the
+/// view never sorts or parses dates while rendering.
+nonisolated enum SettingsLoadResult: Sendable {
+    case member(MemberDTO?)
+    case family([MemberPreviewDTO]?)
+    case friends([FriendDTO]?)
+    case managers([MemberDTO]?)
+    case managedAccounts([MemberDTO]?)
+    case sessions([SettingsRefreshToken]?)
+    case policies(CurrentPoliciesDTO?)
+    case dutyPattern(DutyPatternDTO?)
+
+    static func loadMember(from service: SettingsService) async -> Self {
+        .member(try? await service.member())
+    }
+
+    static func load(_ section: SettingsLoadedSection, from service: SettingsService) async -> Self {
+        switch section {
+        case .family: .family(try? await service.familyMembers())
+        case .friends: .friends(try? await service.friends())
+        case .managers: .managers(try? await service.managers())
+        case .managedAccounts: .managedAccounts(try? await service.managedMembers())
+        case .sessions: .sessions((try? await service.sessions()).map(SettingsSessionFormatter.sorted))
+        case .policies: .policies(try? await service.policies())
+        case .dutyPattern: .dutyPattern(try? await service.dutyPattern())
+        }
+    }
 }
 
 #if DEBUG

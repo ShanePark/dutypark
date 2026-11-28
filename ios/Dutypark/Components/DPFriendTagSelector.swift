@@ -406,7 +406,7 @@ struct DPFriendTagSelector: View {
                 // No `minimumScaleFactor` on either line: a shrunk `Text` also shrinks its
                 // line box, so a long name or team name would produce a shorter card.
                 // Truncation keeps every line — and so every card — the same height.
-                Text(item.name)
+                DPFittedMemberName(name: item.name)
                     .font(DPFont.bold(size: 12, relativeTo: .caption))
                     .foregroundStyle(selected ? DPColor.accent : DPColor.textPrimary)
                     .lineLimit(1)

@@ -8,13 +8,15 @@ import {
   type CalendarSpanTagFitInput,
 } from './calendarSpanTagFit'
 
-// Seven 50px chips, 18px avatars overlapping by 5px, a 24px "+N" pill, a 30px
-// compact pill and a 22px lone avatar whose "+N" badge overhangs it by 4px,
-// 2px apart. Only `available` changes between most cases.
+// Seven 50px chips whose full names would need 1000px each, 18px avatars
+// overlapping by 5px, a 24px "+N" pill, a 30px compact pill and a 22px lone
+// avatar whose "+N" badge overhangs it by 4px, 2px apart. Only `available`
+// changes between most cases.
 function input(overrides: Partial<CalendarSpanTagFitInput> = {}): CalendarSpanTagFitInput {
   return {
     available: 1000,
     titleMin: 40,
+    nameChipWidths: Array.from({ length: 7 }, () => 1000),
     chipWidths: Array.from({ length: 7 }, () => 50),
     avatarSize: 18,
     avatarStep: 13,
@@ -29,7 +31,24 @@ function input(overrides: Partial<CalendarSpanTagFitInput> = {}): CalendarSpanTa
 
 describe('fitCalendarSpanTags', () => {
   it('shows nothing for a schedule without display tags', () => {
-    expect(fitCalendarSpanTags(input({ chipWidths: [] }))).toEqual({ level: 'none', shown: 0 })
+    expect(fitCalendarSpanTags(input({ nameChipWidths: [], chipWidths: [] }))).toEqual({ level: 'none', shown: 0 })
+  })
+
+  // Like iOS: full names for N chips, then the short labels for the same N,
+  // and only then fewer chips with "+N".
+  it('shows full-name chips when they fit, before the short labels', () => {
+    const tags = { nameChipWidths: [80, 80], chipWidths: [30, 30] }
+    // Two full names: 80 + 2 + 80 = 162 (+40 title).
+    expect(fitCalendarSpanTags(input({ ...tags, available: 202 }))).toEqual({ level: 'names', shown: 2 })
+    // Two short labels before one full name and "+1".
+    expect(fitCalendarSpanTags(input({ ...tags, available: 201 }))).toEqual({ level: 'chips', shown: 2 })
+    // One full name and "+1": 80 + 2 + 24 = 106; two short labels need 62.
+    expect(fitCalendarSpanTags(input({ ...tags, nameChipWidths: [60, 80], available: 40 + 106 })))
+      .toEqual({ level: 'chips', shown: 2 })
+    // Two short labels no longer fit, one full name and "+1" does.
+    expect(fitCalendarSpanTags(input({ ...tags, chipWidths: [90, 90], nameChipWidths: [60, 80], available: 40 + 86 })))
+      .toEqual({ level: 'names', shown: 1 })
+    expect(fitCalendarSpanTags(input({ ...tags, available: 40 + 61 }))).toEqual({ level: 'chips', shown: 1 })
   })
 
   it('shows every name chip when they all fit next to the title minimum', () => {
@@ -82,29 +101,31 @@ describe('fitCalendarSpanTags', () => {
   // The lone avatar's "+N" badge overhangs it, and that overhang needs room too.
   it('counts the lone badge overhang in the lone width', () => {
     expect(fitCalendarSpanTags(input({ available: 21 }))).toEqual({ level: 'none', shown: 0 })
-    expect(fitCalendarSpanTags(input({ available: 18, chipWidths: [50], loneWidth: 18 })))
+    expect(fitCalendarSpanTags(input({ available: 18, nameChipWidths: [50], chipWidths: [50], loneWidth: 18 })))
       .toEqual({ level: 'lone', shown: 1 })
   })
 
   it('hides the tags only when the band cannot hold even one avatar', () => {
     expect(fitCalendarSpanTags(input({ available: 17 }))).toEqual({ level: 'none', shown: 0 })
-    expect(fitCalendarSpanTags(input({ available: 17, chipWidths: [50], loneWidth: 18 })))
+    expect(fitCalendarSpanTags(input({ available: 17, nameChipWidths: [50], chipWidths: [50], loneWidth: 18 })))
       .toEqual({ level: 'none', shown: 0 })
   })
 
   it('needs no "+N" pill when every tag is shown', () => {
     // One 50px chip fits without a pill; its avatar alone fits in 18.
-    expect(fitCalendarSpanTags(input({ chipWidths: [50], available: 40 + 50 }))).toEqual({ level: 'chips', shown: 1 })
-    expect(fitCalendarSpanTags(input({ chipWidths: [50], available: 40 + 18 }))).toEqual({ level: 'avatars', shown: 1 })
+    const one = { nameChipWidths: [1000], chipWidths: [50] }
+    expect(fitCalendarSpanTags(input({ ...one, available: 40 + 50 }))).toEqual({ level: 'chips', shown: 1 })
+    expect(fitCalendarSpanTags(input({ ...one, available: 40 + 18 }))).toEqual({ level: 'avatars', shown: 1 })
     // Two avatars without a pill: 18 + 13.
-    expect(fitCalendarSpanTags(input({ chipWidths: [50, 50], available: 40 + 31, scale: 'mobile' })))
+    expect(fitCalendarSpanTags(input({ nameChipWidths: [1000, 1000], chipWidths: [50, 50], available: 40 + 31, scale: 'mobile' })))
       .toEqual({ level: 'avatars', shown: 2 })
   })
 
   it('uses each chip at its own measured width', () => {
-    expect(fitCalendarSpanTags(input({ chipWidths: [30, 80, 30], available: 40 + 30 + 2 + 24 })))
+    const three = { nameChipWidths: [1000, 1000, 1000], chipWidths: [30, 80, 30] }
+    expect(fitCalendarSpanTags(input({ ...three, available: 40 + 30 + 2 + 24 })))
       .toEqual({ level: 'chips', shown: 1 })
-    expect(fitCalendarSpanTags(input({ chipWidths: [30, 80, 30], available: 40 + 144 })))
+    expect(fitCalendarSpanTags(input({ ...three, available: 40 + 144 })))
       .toEqual({ level: 'chips', shown: 3 })
   })
 

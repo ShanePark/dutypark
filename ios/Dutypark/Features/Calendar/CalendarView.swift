@@ -851,7 +851,7 @@ struct CalendarView: View {
                 profilePhotoVersion: model.targetProfilePhotoVersion,
                 size: memberBackAction == nil ? Self.barAvatarSize : Self.barAvatarSizeBesideBack
             )
-            Text(model.targetName)
+            DPFittedMemberName(name: model.targetName)
                 .font(DPFont.bold(size: 12, relativeTo: .caption))
                 .foregroundStyle(DPColor.textPrimary)
                 .lineLimit(1)

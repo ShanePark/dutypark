@@ -80,4 +80,28 @@ class UserAgentInfoTest {
     fun `fromJson with invalid json should return null`() {
         assertThat(UserAgentInfo.fromJson("invalid json")).isNull()
     }
+
+    @Test
+    fun `warmUp builds the analyzer ahead of the first parse`() {
+        UserAgentInfo.warmUp()
+
+        assertThat(UserAgentInfo.isAnalyzerInitialized()).isTrue()
+    }
+
+    @Test
+    fun `fromStoredValue parses raw user agent values`() {
+        val ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+        val result = UserAgentInfo.fromStoredValue(ua)
+
+        assertThat(result).isEqualTo(UserAgentInfo.parse(ua))
+    }
+
+    @Test
+    fun `fromStoredValue decodes stored json even with leading whitespace`() {
+        val stored = UserAgentInfo(os = "iOS", browser = "Dutypark", device = "Apple iPhone")
+
+        assertThat(UserAgentInfo.fromStoredValue(stored.toJson())).isEqualTo(stored)
+        assertThat(UserAgentInfo.fromStoredValue("  \n" + stored.toJson())).isEqualTo(stored)
+    }
 }

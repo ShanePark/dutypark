@@ -27,6 +27,10 @@ the six-screen App Store set. Both localized final sets are current: the
 English raw captures use the Emma Moon demo account and English sample data.
 Its Calendar, Team, and D-Day screens select the holiday-free November 2026
 fixture so the English submission set contains no Korean public-holiday labels.
+Home, Calendar, Todo, Social, and D-Day come from the office-worker owner
+account. The Team screen comes from the ward admin account
+(`demo.doyoon@dutypark.local` or `demo.en.noah@dutypark.local`), so it shows a
+three-shift nurse rotation; see `docs/demo/README.md` for the duty palette.
 
 Capture metadata for this refresh:
 
@@ -37,12 +41,13 @@ OS: iOS 27.0
 Xcode: 27.2
 App: 1.3.3 (1)
 Canvas: 1320x2868 portrait
-Account: local dutypark_demo
-Source commit: 1b32b603 (plus working tree)
+Account: local dutypark_demo (Team: ward admin)
+Source commit: c1f92fef (plus working tree)
 Capture API: http://localhost:8081/api/
 Source: actual app capture, not generated UI
+Status bar: simctl override, 9:41, full bars, charged
 Capture test: 2 PASS / 0 FAIL / 0 SKIP
-Result bundle: /tmp/dutypark-appstore-capture-20261128.xcresult
+Result bundle: /tmp/dutypark-appstore-capture.xcresult
 ```
 
 The same per-locale provenance is recorded in each checked-in manifest's
@@ -79,12 +84,19 @@ and UUID suffix such as `_0_<UUID>.png`; the extractor normalizes that suffix
 back to the base name while still rejecting duplicate base names. After an
 explicitly requested UI-test run, point the Debug simulator build at the
 isolated demo backend and then extract the attachments with the repository
-script:
+script. Boot the capture simulator first and override its status bar so every
+capture shows the same clean status bar:
 
 ```sh
+CAPTURE_SIM=<UDID of the iPhone 17 Pro Max capture simulator>
+xcrun simctl boot "$CAPTURE_SIM"
+xcrun simctl status_bar "$CAPTURE_SIM" override --time 9:41 \
+  --dataNetwork wifi --wifiMode active --wifiBars 3 \
+  --cellularMode active --cellularBars 4 --operatorName '' \
+  --batteryState charged --batteryLevel 100
 xcodebuild -project ios/Dutypark.xcodeproj \
   -scheme Dutypark \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+  -destination "platform=iOS Simulator,id=$CAPTURE_SIM" \
   -derivedDataPath /tmp/dutypark-appstore-capture-derived \
   -resultBundlePath /tmp/dutypark-appstore-capture.xcresult \
   CODE_SIGNING_ALLOWED=NO \

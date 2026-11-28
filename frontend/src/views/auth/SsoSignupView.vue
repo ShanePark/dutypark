@@ -12,7 +12,7 @@ import PolicyModal from '@/components/common/PolicyModal.vue'
 import { renderPolicyMarkdown } from '@/utils/policyMarkdown'
 import { getSafeRedirect } from '@/utils/redirect'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
-import { generateDefaultSignupName, readSsoSignupNameState } from '@/utils/signupName'
+import { MEMBER_NAME_MAX_LENGTH, generateDefaultSignupName, readSsoSignupNameState } from '@/utils/signupName'
 
 const route = useRoute()
 const router = useRouter()
@@ -57,7 +57,7 @@ const hasStartedFormInput = computed(() => {
 })
 
 const isUsernameMissing = computed(() => trimmedUsername.value.length === 0)
-const isUsernameTooLong = computed(() => trimmedUsername.value.length > 10)
+const isUsernameTooLong = computed(() => trimmedUsername.value.length > MEMBER_NAME_MAX_LENGTH)
 const missingRequiredItems = computed(() => {
   const items: string[] = []
 
@@ -114,7 +114,7 @@ const isSubmitDisabled = computed(() => {
 const isFormValid = computed(() => {
   return (
     trimmedUsername.value.length >= 1 &&
-    trimmedUsername.value.length <= 10 &&
+    trimmedUsername.value.length <= MEMBER_NAME_MAX_LENGTH &&
     termAgree.value &&
     privacyAgree.value &&
     uuid.value &&
@@ -199,7 +199,7 @@ async function handleSubmit() {
           <div>
             <label for="username" class="block text-sm font-medium mb-1 text-dp-text-secondary">
               {{ t('auth.ssoSignup.username.label') }}
-              <CharacterCounter :current="username.length" :max="10" />
+              <CharacterCounter :current="username.length" :max="MEMBER_NAME_MAX_LENGTH" />
             </label>
             <input
               id="username"
@@ -207,7 +207,7 @@ async function handleSubmit() {
               v-model="username"
               type="text"
               required
-              maxlength="10"
+              :maxlength="MEMBER_NAME_MAX_LENGTH"
               :disabled="isLoading"
               :aria-invalid="shouldHighlightUsername"
               class="w-full px-3 py-3 rounded-lg focus:ring-2 focus:ring-dp-accent focus:border-transparent disabled:cursor-not-allowed"

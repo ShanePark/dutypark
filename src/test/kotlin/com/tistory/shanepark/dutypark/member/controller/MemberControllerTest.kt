@@ -171,6 +171,24 @@ class MemberControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `createAuxiliaryAccount rejects a name one character over the signup limit`() {
+        val member = TestData.member
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/members/auxiliary")
+                .accept("application/json")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(mapOf("name" to "Christopher Alexander")))
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("sso.username.length"))
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("name"))
+
+        assertThat(memberRepository.findAll().none { it.name == "Christopher Alexander" }).isTrue
+    }
+
+    @Test
     fun `createAuxiliaryAccount accepts a name at the signup limit`() {
         val member = TestData.member
 
@@ -178,11 +196,11 @@ class MemberControllerTest : RestDocsTest() {
             RestDocumentationRequestBuilders.post("/api/members/auxiliary")
                 .accept("application/json")
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(mapOf("name" to "가나다라마바사아자차")))
+                .content(objectMapper.writeValueAsString(mapOf("name" to "Alexandra Montgomery")))
                 .withAuth(member)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.name").value("가나다라마바사아자차"))
+            .andExpect(jsonPath("$.name").value("Alexandra Montgomery"))
     }
 
     @Test
@@ -301,13 +319,13 @@ class MemberControllerTest : RestDocsTest() {
             RestDocumentationRequestBuilders.put("/api/members/me/name")
                 .accept("application/json")
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(mapOf("name" to "  가나다라마바사아자차　")))
+                .content(objectMapper.writeValueAsString(mapOf("name" to "  Alexandra Montgomery　")))
                 .withAuth(member)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.name").value("가나다라마바사아자차"))
+            .andExpect(jsonPath("$.name").value("Alexandra Montgomery"))
 
-        assertThat(memberRepository.findById(member.id!!).orElseThrow().name).isEqualTo("가나다라마바사아자차")
+        assertThat(memberRepository.findById(member.id!!).orElseThrow().name).isEqualTo("Alexandra Montgomery")
     }
 
     @Test
@@ -332,7 +350,7 @@ class MemberControllerTest : RestDocsTest() {
             RestDocumentationRequestBuilders.put("/api/members/me/name")
                 .accept("application/json")
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(mapOf("name" to "가나다라마바사아자차카")))
+                .content(objectMapper.writeValueAsString(mapOf("name" to "Christopher Alexander")))
                 .withAuth(member)
         )
             .andExpect(status().isBadRequest)
@@ -348,11 +366,11 @@ class MemberControllerTest : RestDocsTest() {
             RestDocumentationRequestBuilders.put("/api/members/me/name")
                 .accept("application/json")
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(mapOf("name" to "가나다라마바사아자차")))
+                .content(objectMapper.writeValueAsString(mapOf("name" to "Alexandra Montgomery")))
                 .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.name").value("가나다라마바사아자차"))
+            .andExpect(jsonPath("$.name").value("Alexandra Montgomery"))
     }
 
     @Test

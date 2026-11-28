@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, reactive } from 'vue'
 import { findHostNode, hostText, mountHost, triggerHost, type HostNode } from '@/test/hostRenderer'
+import { MEMBER_NAME_MAX_LENGTH } from '@/utils/signupName'
 
 const mocks = vi.hoisted(() => ({
   getMyInfo: vi.fn(),
   updateMyName: vi.fn(),
+  createAuxiliaryAccount: vi.fn(),
   setUser: vi.fn(),
   showError: vi.fn(),
   toastSuccess: vi.fn(),
@@ -33,6 +35,7 @@ vi.mock('@/api/member', () => ({
   memberApi: {
     getMyInfo: mocks.getMyInfo,
     updateMyName: mocks.updateMyName,
+    createAuxiliaryAccount: mocks.createAuxiliaryAccount,
     getFamilyMembers: async () => ({ data: [] }),
     getManagers: async () => ({ data: [] }),
     getManagedMembers: async () => ({ data: [] }),
@@ -157,7 +160,7 @@ describe('MemberView name change', () => {
     const input = await openNameModal(root)
 
     expect(input.value).toBe('Tester')
-    expect(input.props.maxlength).toBe('10')
+    expect(input.props.maxlength).toBe(MEMBER_NAME_MAX_LENGTH)
     expect(saveButton(root).props.disabled).toBe(true)
 
     type(input, '   ')
@@ -214,5 +217,75 @@ describe('MemberView name change', () => {
 
     expect(mocks.showError).toHaveBeenCalledExactlyOnceWith('contentFilter.blocked')
     expect(mocks.updateMyName).not.toHaveBeenCalled()
+  })
+
+  it('accepts a 20-character name and limits the input to the member name maximum', async () => {
+    mocks.updateMyName.mockResolvedValue({ data: { ...member, name: 'Christopher Johnsons' } })
+    const root = await mountMember()
+    const input = await openNameModal(root)
+
+    type(input, 'Christopher Johnsonss')
+    await flush()
+    expect(saveButton(root).props.disabled).toBe(true)
+
+    type(input, 'Christopher Johnsons')
+    await flush()
+    expect(saveButton(root).props.disabled).toBe(false)
+    triggerHost(saveButton(root), 'onClick')
+    await flush()
+    expect(mocks.updateMyName).toHaveBeenCalledExactlyOnceWith('Christopher Johnsons')
+  })
+})
+
+describe('MemberView auxiliary account name', () => {
+  const apps: ReturnType<typeof mountHost>['app'][] = []
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getMyInfo.mockResolvedValue({ data: { ...member } })
+    mocks.isBlocked.mockReturnValue(false)
+    mocks.createAuxiliaryAccount.mockResolvedValue({ data: {} })
+  })
+
+  afterEach(() => {
+    apps.splice(0).forEach((app) => app.unmount())
+  })
+
+  async function openAuxiliaryModal() {
+    const mounted = mountHost(MemberView, {}, [{
+      install(app: ReturnType<typeof mountHost>['app']) {
+        app.component('RouterLink', defineComponent({ setup: () => () => null }))
+      },
+    }])
+    apps.push(mounted.app)
+    await flush()
+    triggerHost(button(mounted.root, (node) => hostText(node).includes('member.manager.addAuxiliary'))!, 'onClick')
+    await flush()
+    const input = findHostNode(mounted.root, (node) => node.type === 'input' && node.props.placeholder === 'member.auxiliary.namePlaceholder')!
+    const submit = button(mounted.root, (node) => node.props.onClick !== undefined && hostText(node).includes('member.auxiliary.submit'))
+    return { root: mounted.root, input, submit }
+  }
+
+  it('limits the input to the member name maximum and accepts 20 characters', async () => {
+    const { input, submit } = await openAuxiliaryModal()
+    expect(input.props.maxlength).toBe(MEMBER_NAME_MAX_LENGTH)
+
+    triggerHost(input, 'onInput', { target: { value: 'Christopher Johnsons' } })
+    await flush()
+    triggerHost(submit!, 'onClick')
+    await flush()
+    expect(mocks.showError).not.toHaveBeenCalled()
+    expect(mocks.createAuxiliaryAccount).toHaveBeenCalledExactlyOnceWith('Christopher Johnsons')
+  })
+
+  it('rejects a 21-character name without calling the API', async () => {
+    const { input, submit } = await openAuxiliaryModal()
+
+    triggerHost(input, 'onInput', { target: { value: 'Christopher Johnsonss' } })
+    await flush()
+    triggerHost(submit!, 'onClick')
+    await flush()
+    expect(mocks.showError).toHaveBeenCalledExactlyOnceWith('member.auxiliary.validation.max')
+    expect(mocks.createAuxiliaryAccount).not.toHaveBeenCalled()
   })
 })

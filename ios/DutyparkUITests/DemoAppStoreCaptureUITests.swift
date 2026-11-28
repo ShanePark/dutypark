@@ -8,6 +8,9 @@ import XCTest
 final class DemoAppStoreCaptureUITests: XCTestCase {
     private let koreanDemoEmail = "demo.seoa@dutypark.local"
     private let englishDemoEmail = "demo.en.emma@dutypark.local"
+    /// The owner works in an office team; the Team screen shows a ward nurse's team.
+    private let koreanWardEmail = "demo.doyoon@dutypark.local"
+    private let englishWardEmail = "demo.en.noah@dutypark.local"
     private let demoPassword = "demo1234!"
     /// `ENGLISH_CALENDAR_MONTH` in `scripts/seed-local-demo-content.sh` fills 2026-11.
     private let englishCaptureYear = 2026
@@ -21,7 +24,8 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         try captureDemoScreens(
             language: "ko",
             locale: "ko_KR",
-            email: koreanDemoEmail
+            email: koreanDemoEmail,
+            wardEmail: koreanWardEmail
         )
     }
 
@@ -30,12 +34,18 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         try captureDemoScreens(
             language: "en",
             locale: "en_US",
-            email: englishDemoEmail
+            email: englishDemoEmail,
+            wardEmail: englishWardEmail
         )
     }
 
     @MainActor
-    private func captureDemoScreens(language: String, locale: String, email: String) throws {
+    private func captureDemoScreens(
+        language: String,
+        locale: String,
+        email: String,
+        wardEmail: String
+    ) throws {
         let app = XCUIApplication()
         app.launchArguments += [
             "-dp-theme", "light",
@@ -67,13 +77,6 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         waitForSettledContent(in: app, loadingIdentifier: nil)
         capture("appstore-\(language)-03-todo-demo")
 
-        openPrimaryTab("tab.team", screen: "screen.team", language: language, in: app)
-        waitForSettledContent(in: app, loadingIdentifier: nil)
-        if language == "en" {
-            selectEnglishTeamCaptureMonth(in: app)
-        }
-        capture("appstore-\(language)-04-team-demo")
-
         openPrimaryTab("tab.more", screen: "screen.more", language: language, in: app)
         waitForSettledContent(in: app, loadingIdentifier: nil)
         capture("appstore-\(language)-05-more-demo")
@@ -85,6 +88,21 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         XCTAssertTrue(social.waitForExistence(timeout: 20), "Friend list did not load")
         waitForSettledContent(in: app, loadingIdentifier: "social.loading")
         capture("appstore-\(language)-06-social-demo")
+
+        // Relaunch to leave the pushed friend list, then switch to the ward account.
+        app.terminate()
+        app.launch()
+        signOutIfNeeded(language: language, in: app)
+        signIn(in: app, email: wardEmail)
+        XCTAssertTrue(home.waitForExistence(timeout: 30), "Ward account did not reach Home")
+        waitForHomeContent(in: app)
+
+        openPrimaryTab("tab.team", screen: "screen.team", language: language, in: app)
+        waitForSettledContent(in: app, loadingIdentifier: nil)
+        if language == "en" {
+            selectEnglishTeamCaptureMonth(in: app)
+        }
+        capture("appstore-\(language)-04-team-demo")
     }
 
     @MainActor

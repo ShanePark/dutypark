@@ -1,4 +1,4 @@
-export const MEMBER_NAME_MAX_LENGTH = 10
+export const MEMBER_NAME_MAX_LENGTH = 20
 
 export interface AppleUserName {
   firstName?: string | null
@@ -12,7 +12,7 @@ export function generateDefaultSignupName(prefix: string, random: () => number =
   return `${prefix}${digits}`
 }
 
-// Length follows the same UTF-16 `.length` rule as the 10-character counter, without
+// Length follows the same UTF-16 `.length` rule as the name character counter, without
 // splitting a surrogate pair.
 function truncateName(name: string): string {
   let result = ''

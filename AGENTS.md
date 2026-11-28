@@ -106,7 +106,7 @@ Each booted simulator uses a lot of memory. The shared `Dutypark` scheme runs bo
 
 ### Release Notes
 
-- Every human-authored PR to `main` requires exactly one release note. Follow `frontend/src/releaseNotes/README.md`, obtain the real PR number before adding its entry, and never guess the PR number.
+- Every human-authored PR to `main` requires exactly one release note. Follow `frontend/src/releaseNotes/README.md`, obtain the real PR number before adding its entry, and never guess the PR number. Open the PR as a draft, push the entry, then mark it ready, so CI does not fail on the missing note.
 
 ## Communication
 

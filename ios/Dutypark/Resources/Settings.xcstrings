@@ -268,13 +268,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Create a name-only account for a separate schedule. Up to 10 characters."
+            "value": "Create a name-only account for a separate schedule. Up to 20 characters."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "별도 시간표에 사용할 이름 전용 계정을 생성합니다. 최대 10자입니다."
+            "value": "별도 시간표에 사용할 이름 전용 계정을 생성합니다. 최대 20자입니다."
           }
         }
       }
@@ -2177,9 +2177,9 @@
     "settings.aiConsent.enableFailed": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "AI consent could not be saved. Automatic recognition stays off." } }, "ko": { "stringUnit": { "state": "translated", "value": "AI 동의를 저장하지 못했습니다. 자동 인식은 꺼진 상태로 유지됩니다." } } } },
     "settings.aiConsent.disableFailed": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "AI consent could not be withdrawn. Please try again." } }, "ko": { "stringUnit": { "state": "translated", "value": "AI 동의를 철회하지 못했습니다. 다시 시도해 주세요." } } } },
     "settings.name.change": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Change name" } }, "ko": { "stringUnit": { "state": "translated", "value": "이름 변경" } } } },
-    "settings.name.description": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Enter a new name of 1–10 characters." } }, "ko": { "stringUnit": { "state": "translated", "value": "새 이름을 1자 이상 10자 이하로 입력해주세요." } } } },
+    "settings.name.description": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Enter a new name of 1–20 characters." } }, "ko": { "stringUnit": { "state": "translated", "value": "새 이름을 1자 이상 20자 이하로 입력해주세요." } } } },
     "settings.name.updated": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Name changed." } }, "ko": { "stringUnit": { "state": "translated", "value": "이름을 변경했습니다." } } } },
-    "settings.name.invalid": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Enter a name of 1–10 characters." } }, "ko": { "stringUnit": { "state": "translated", "value": "이름은 1자 이상 10자 이하로 입력해주세요." } } } },
+    "settings.name.invalid": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Enter a name of 1–20 characters." } }, "ko": { "stringUnit": { "state": "translated", "value": "이름은 1자 이상 20자 이하로 입력해주세요." } } } },
     "settings.name.failed": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Could not change the name. Please try again." } }, "ko": { "stringUnit": { "state": "translated", "value": "이름을 변경하지 못했습니다. 다시 시도해 주세요." } } } }
   },
   "version": "1.0"

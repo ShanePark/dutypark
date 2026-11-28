@@ -1,18 +1,20 @@
 export type CalendarSpanTagScale = 'pc' | 'mobile'
 
 /**
- * Richest first: name chips, an avatar stack, one pill with the first avatar
+ * Richest first: full-name chips, short-label chips, an avatar stack, one pill with the first avatar
  * and "+N", or the first avatar alone with a tiny "+N" badge on it. 'none'
  * means no tags or no room at all.
  */
-export type CalendarSpanTagLevel = 'chips' | 'avatars' | 'compact' | 'lone' | 'none'
+export type CalendarSpanTagLevel = 'names' | 'chips' | 'avatars' | 'compact' | 'lone' | 'none'
 
 export interface CalendarSpanTagFitInput {
   /** Width the title and the tag cluster share once the times, chevron and gaps are placed. */
   available: number
   /** Width the title keeps before any tag but the lone avatar is shown. */
   titleMin: number
-  /** Measured name-chip widths in display order; one per tag. */
+  /** Measured full-name chip widths in display order; one per tag. */
+  nameChipWidths: readonly number[]
+  /** Measured short-label chip widths in display order; one per tag. */
   chipWidths: readonly number[]
   avatarSize: number
   /** Distance from one stacked avatar to the next: its size minus the overlap. */
@@ -30,7 +32,7 @@ export interface CalendarSpanTagFitInput {
 
 export interface CalendarSpanTagFit {
   level: CalendarSpanTagLevel
-  /** Chips or avatars drawn; the rest go into "+N". */
+  /** Name chips, chips or avatars drawn; the rest go into "+N". */
   shown: number
 }
 
@@ -76,21 +78,22 @@ const MAX_STACKED_AVATARS: Record<CalendarSpanTagScale, number> = { pc: 3, mobil
 
 // Picks the richest tag level that fits beside the title's minimum width.
 export function fitCalendarSpanTags(input: CalendarSpanTagFitInput): CalendarSpanTagFit {
-  const { chipWidths, gap } = input
+  const { nameChipWidths, chipWidths, gap } = input
   const total = chipWidths.length
   const space = input.available - input.titleMin
   if (total === 0) return { level: 'none', shown: 0 }
 
   const withMore = (width: number, shown: number) => (shown < total ? width + gap + input.moreWidth : width)
 
-  // Any count short of the total also needs a "+N" pill, so keep the largest count that fits.
-  let chipsShown = 0
-  let chipsWidth = 0
-  for (let shown = 1; shown <= total; shown++) {
-    chipsWidth += chipWidths[shown - 1]! + (shown > 1 ? gap : 0)
-    if (withMore(chipsWidth, shown) <= space) chipsShown = shown
+  const rowWidth = (widths: readonly number[], shown: number) =>
+    widths.slice(0, shown).reduce((sum, width) => sum + width, 0) + (shown - 1) * gap
+
+  // As on iOS: full names for a count, then short labels for the same count,
+  // and only then one chip fewer, which also needs a "+N" pill.
+  for (let shown = total; shown >= 1; shown--) {
+    if (withMore(rowWidth(nameChipWidths, shown), shown) <= space) return { level: 'names', shown }
+    if (withMore(rowWidth(chipWidths, shown), shown) <= space) return { level: 'chips', shown }
   }
-  if (chipsShown > 0) return { level: 'chips', shown: chipsShown }
 
   for (let shown = Math.min(MAX_STACKED_AVATARS[input.scale], total); shown >= 1; shown--) {
     if (withMore(input.avatarSize + (shown - 1) * input.avatarStep, shown) <= space) {

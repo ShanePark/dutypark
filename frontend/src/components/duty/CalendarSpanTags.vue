@@ -71,7 +71,8 @@ function update() {
       titleWidth,
       width(probe.querySelector(`[data-title-prefix="${scale}"]`)) + iconsWidth(title),
     )),
-    chipWidths: Array.from(probe.querySelectorAll('.span-tag-chip'), (chip) => Math.ceil(width(chip))),
+    nameChipWidths: Array.from(probe.querySelectorAll('[data-chip="name"]'), (chip) => Math.ceil(width(chip))),
+    chipWidths: Array.from(probe.querySelectorAll('[data-chip="label"]'), (chip) => Math.ceil(width(chip))),
     avatarSize: Math.ceil(width(firstAvatar)),
     avatarStep: (secondAvatar?.getBoundingClientRect().left ?? 0) - (firstAvatar?.getBoundingClientRect().left ?? 0),
     moreWidth: Math.ceil(width(probe.querySelector('.span-tag-pill:not(.span-tag-pill--compact)'))),
@@ -127,7 +128,7 @@ onUnmounted(() => {
 
 <template>
   <span ref="root" class="calendar-span__tags" aria-hidden="true">
-    <template v-if="fit.level === 'chips'">
+    <template v-if="fit.level === 'names' || fit.level === 'chips'">
       <span
         v-for="(tag, index) in tags.slice(0, fit.shown)"
         :key="tag.key"
@@ -143,7 +144,8 @@ onUnmounted(() => {
           size="xs"
           class="span-tag-avatar"
         />
-        <span class="span-tag-chip__label">{{ formatLabel(tag.name) }}</span>
+        <span v-if="fit.level === 'names'" class="span-tag-chip__label span-tag-chip__label--full">{{ tag.name }}</span>
+        <span v-else class="span-tag-chip__label">{{ formatLabel(tag.name) }}</span>
       </span>
     </template>
     <span v-else-if="fit.level === 'avatars'" class="span-tag-stack">
@@ -193,7 +195,7 @@ onUnmounted(() => {
       <span v-if="tags.length > 1" class="span-tag-pill__more">{{ calendarSpanCompactMore(tags.length) }}</span>
     </span>
     <span
-      v-else-if="(fit.level === 'chips' || fit.level === 'avatars') && hidden > 0"
+      v-else-if="(fit.level === 'names' || fit.level === 'chips' || fit.level === 'avatars') && hidden > 0"
       class="span-tag-pill"
       data-span-tag-item
       :style="itemStyle(fit.shown)"
@@ -201,7 +203,11 @@ onUnmounted(() => {
 
     <!-- Invisible copies of every level, measured to choose the one that fits. -->
     <span ref="measure" class="span-tags-measure">
-      <span v-for="tag in tags" :key="tag.key" class="span-tag-chip">
+      <span v-for="tag in tags" :key="`name-${tag.key}`" class="span-tag-chip" data-chip="name">
+        <span class="span-tag-avatar" />
+        <span class="span-tag-chip__label span-tag-chip__label--full">{{ tag.name }}</span>
+      </span>
+      <span v-for="tag in tags" :key="`label-${tag.key}`" class="span-tag-chip" data-chip="label">
         <span class="span-tag-avatar" />
         <span class="span-tag-chip__label">{{ formatLabel(tag.name) }}</span>
       </span>
@@ -271,6 +277,10 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -0.05em;
+}
+
+.span-tag-chip__label--full {
+  max-width: none;
 }
 
 .span-tag-avatar {

@@ -189,7 +189,7 @@ const apiErrors = {
     },
     username: {
       required: '사용자명은 필수입니다.',
-      length: '사용자명은 1자 이상 10자 이하로 입력해주세요.',
+      length: '사용자명은 1자 이상 20자 이하로 입력해주세요.',
     },
   },
   dday: {
@@ -898,18 +898,18 @@ export default {
       subtitle: 'Dutypark에 오신 것을 환영합니다',
       username: {
         label: '사용자명',
-        placeholder: '사용자명을 입력하세요 (1-10자)',
+        placeholder: '사용자명을 입력하세요 (1-20자)',
         defaultPrefix: '사용자',
         helper: {
           emptyActive: '사용자명을 입력해야 가입할 수 있어요.',
-          emptyIdle: '가입 시 사용할 사용자명을 1-10자로 입력해주세요.',
-          tooLong: '사용자명은 10자 이내로 입력해주세요.',
+          emptyIdle: '가입 시 사용할 사용자명을 1-20자로 입력해주세요.',
+          tooLong: '사용자명은 20자 이내로 입력해주세요.',
           valid: '가입 후 프로필과 일정에 표시될 이름입니다.',
         },
       },
       requiredItems: {
         username: '사용자명 입력',
-        usernameMax: '사용자명 10자 이하 입력',
+        usernameMax: '사용자명 20자 이하 입력',
         terms: '이용약관 동의',
         privacy: '개인정보 처리방침 동의',
       },
@@ -969,7 +969,7 @@ export default {
       nameChange: {
         action: '이름 변경',
         modalTitle: '이름 변경',
-        placeholder: '이름을 입력하세요 (1-10자)',
+        placeholder: '이름을 입력하세요 (1-20자)',
         hint: '프로필과 일정에 표시되는 이름입니다.',
         required: '이름을 입력해주세요.',
         submit: '저장',
@@ -1202,12 +1202,12 @@ export default {
       description: '자녀, 부업 등 별도 시간표 관리용 계정을 만들 수 있습니다.\n이 화면에서 바로 전환하여 사용할 수 있습니다.',
       nameLabel: '계정 이름',
       namePlaceholder: '예: 둘째 아이, 부업',
-      maxLength: '최대 10자',
+      maxLength: '최대 20자',
       submitting: '생성 중...',
       submit: '생성',
       validation: {
         required: '이름을 입력해주세요.',
-        max: '이름은 10자 이내로 입력해주세요.',
+        max: '이름은 20자 이내로 입력해주세요.',
       },
       success: '보조 계정이 생성되었습니다.',
       createFailed: '보조 계정 생성에 실패했습니다.',

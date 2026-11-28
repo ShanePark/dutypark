@@ -14,7 +14,7 @@ data class UserAgentInfo(
     companion object {
         private val jsonMapper = jacksonMapperBuilder().build()
 
-        private val analyzer: UserAgentAnalyzer by lazy {
+        private val analyzerDelegate = lazy {
             UserAgentAnalyzer
                 .newBuilder()
                 .withFields(
@@ -26,6 +26,14 @@ data class UserAgentInfo(
                 .withCache(1000)
                 .build()
         }
+        private val analyzer: UserAgentAnalyzer by analyzerDelegate
+
+        /** Building the analyzer takes about a second, so do it before the first request needs it. */
+        fun warmUp() {
+            analyzer
+        }
+
+        internal fun isAnalyzerInitialized(): Boolean = analyzerDelegate.isInitialized()
 
         fun parse(userAgent: String?): UserAgentInfo? {
             if (userAgent == null) return null
@@ -48,6 +56,8 @@ data class UserAgentInfo(
 
         fun fromStoredValue(value: String?): UserAgentInfo? {
             if (value == null) return null
+            // Stored values are raw user agents today; skip the throwing JSON attempt for them.
+            if (!value.trimStart().startsWith('{')) return parse(value)
             return fromJson(value) ?: parse(value)
         }
     }

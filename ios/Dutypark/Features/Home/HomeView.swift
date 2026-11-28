@@ -953,7 +953,7 @@ private struct HomeFriendCard: View {
             // also shrinks its line box, which would make a long name or team
             // name produce a shorter card. Truncation keeps every line the
             // exact same height.
-            Text(friend.member.name)
+            DPFittedMemberName(name: friend.member.name)
                 .font(DPFont.bold(size: 12, relativeTo: .caption))
                 .foregroundStyle(DPColor.textPrimary)
                 .lineLimit(1)

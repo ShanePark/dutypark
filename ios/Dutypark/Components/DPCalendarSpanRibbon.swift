@@ -382,7 +382,7 @@ nonisolated extension DPCalendarSpanRibbon {
 nonisolated enum DPCalendarSpanTagFit {
     enum Level: Equatable {
         /// The first `shown` members as name chips, then a `+more` pill.
-        case chips(shown: Int, more: Int)
+        case chips(shown: Int, more: Int, abbreviated: Bool = false)
         /// The first `shown` members as overlapping avatars, then a `+more` pill.
         case avatars(shown: Int, more: Int)
         /// One pill: the first member's avatar, then `+more` for the others.
@@ -417,6 +417,18 @@ nonisolated enum DPCalendarSpanTagFit {
         let avatars = (1...min(tagCount, maximumStackedAvatars)).reversed()
             .map { Level.avatars(shown: $0, more: tagCount - $0) }
         return chips + avatars + [.compact(more: tagCount - 1), .lone(more: tagCount - 1), .none]
+    }
+
+    /// `levels(tagCount:)` with each chip count also tried with initials, right after its
+    /// full names, whenever one of the chips shown has initials (`initials[i]` belongs to
+    /// tag `i`). Fewer chips are offered only once the initials do not fit either.
+    static func levels(tagCount: Int, initials: [String?]) -> [Level] {
+        levels(tagCount: tagCount).flatMap { level -> [Level] in
+            guard case let .chips(shown, more, _) = level,
+                  initials.prefix(shown).contains(where: { $0 != nil })
+            else { return [level] }
+            return [level, .chips(shown: shown, more: more, abbreviated: true)]
+        }
     }
 }
 
@@ -512,7 +524,7 @@ struct DPCalendarSpanRibbonBand<Title: View>: View {
             }
             if !tags.isEmpty {
                 ViewThatFits(in: .horizontal) {
-                    ForEach(Array(DPCalendarSpanTagFit.levels(tagCount: tags.count).enumerated()), id: \.offset) { _, level in
+                    ForEach(Array(tagLevels.enumerated()), id: \.offset) { _, level in
                         DPCalendarSpanTagCluster(
                             tags: tags,
                             level: level,
@@ -581,6 +593,13 @@ struct DPCalendarSpanRibbonBand<Title: View>: View {
                 }
             }
         }
+    }
+
+    private var tagLevels: [DPCalendarSpanTagFit.Level] {
+        DPCalendarSpanTagFit.levels(
+            tagCount: tags.count,
+            initials: tags.prefix(DPCalendarSpanTagFit.maximumChips).map { MemberNameInitials.initials(for: $0.name) }
+        )
     }
 
     private func daySpans(width: CGFloat) -> [(day: DPCalendarSpanRibbonDay, range: Range<CGFloat>)] {
@@ -748,9 +767,9 @@ private struct DPCalendarSpanTagCluster: View {
 
     var body: some View {
         switch level {
-        case let .chips(shown, more):
+        case let .chips(shown, more, abbreviated):
             HStack(spacing: 2) {
-                ForEach(tags.prefix(shown)) { chip($0) }
+                ForEach(tags.prefix(shown)) { chip($0, abbreviated: abbreviated) }
                 if more > 0 { pill(Text(verbatim: "+\(more)")) }
             }
         case let .avatars(shown, more):
@@ -773,17 +792,18 @@ private struct DPCalendarSpanTagCluster: View {
         DPCalendarSpanTagItem(days: days, spans: spans, content: content)
     }
 
-    private func chip(_ item: DPMemberTagItem) -> some View {
-        overDay { day in chip(item, ink: DPCalendarSpanRibbon.ink(for: day)) }
+    private func chip(_ item: DPMemberTagItem, abbreviated: Bool) -> some View {
+        overDay { day in chip(item, abbreviated: abbreviated, ink: DPCalendarSpanRibbon.ink(for: day)) }
     }
 
-    private func chip(_ item: DPMemberTagItem, ink: Color) -> some View {
+    private func chip(_ item: DPMemberTagItem, abbreviated: Bool, ink: Color) -> some View {
         HStack(spacing: 2) {
             DPMemberAvatar(item: item, diameter: Self.avatarDiameter)
-            Text(verbatim: item.name)
+            Text(verbatim: abbreviated ? MemberNameInitials.initials(for: item.name) ?? item.name : item.name)
                 .font(DPFont.light(size: 8.5, relativeTo: .caption2))
                 .foregroundStyle(ink.opacity(0.8))
                 .lineLimit(1)
+                .accessibilityLabel(Text(verbatim: item.name))
         }
         .padding(.leading, 1.5)
         .padding(.trailing, 4)

@@ -77,7 +77,8 @@ const { logoutAndRedirect } = useLogout()
 
 // Managed members (accounts I manage)
 const managedMembers = ref<MemberPreviewDto[]>([])
-const managedMembersLoading = ref(false)
+// Tracks only the first load so later refetches keep the current list in place.
+const managedMembersLoading = ref(true)
 const impersonating = ref<number | null>(null)
 
 // Auxiliary account creation
@@ -86,7 +87,6 @@ const auxiliaryName = ref('')
 const creatingAuxiliary = ref(false)
 
 async function fetchManagedMembers() {
-  managedMembersLoading.value = true
   try {
     const response = await memberApi.getManagedMembers()
     managedMembers.value = response.data
@@ -108,7 +108,7 @@ async function createAuxiliaryAccount() {
     showError(t('member.auxiliary.validation.required'))
     return
   }
-  if (name.length > 10) {
+  if (name.length > MEMBER_NAME_MAX_LENGTH) {
     showError(t('member.auxiliary.validation.max'))
     return
   }
@@ -178,9 +178,9 @@ async function prepareAppleLink() {
   }
 }
 
-// Loading states
-const loading = ref(false)
-const tokensLoading = ref(false)
+// Loading states. The page waits only for member info; other sections load on their own.
+const loading = ref(true)
+const tokensLoading = ref(true)
 const savingManager = ref(false)
 type SsoProvider = SocialAccountProvider
 type RedirectConnectableSsoProvider = Exclude<SsoProvider, 'APPLE'>
@@ -192,6 +192,8 @@ const isSsoActionPending = computed(() => !!connectingSso.value || !!unlinkingSs
 // Manager delegation
 const familyMembers = ref<MemberPreviewDto[]>([])
 const managers = ref<MemberPreviewDto[]>([])
+// Tracks only the first load so later refetches keep the current list in place.
+const familyAndManagersLoading = ref(true)
 const selectedManagerToAdd = ref<string>('')
 
 const availableFamilyMembers = computed(() => {
@@ -210,6 +212,8 @@ async function fetchFamilyAndManagers() {
     managers.value = managersResponse.data
   } catch (error) {
     console.error('Failed to fetch family/managers:', error)
+  } finally {
+    familyAndManagersLoading.value = false
   }
 }
 
@@ -726,18 +730,13 @@ async function saveName() {
 
 // Initialize data
 onMounted(async () => {
-  loading.value = true
   void prepareAppleLink()
+  // Secondary sections load independently and show their own loading state.
+  void fetchFamilyAndManagers()
+  void fetchManagedMembers()
+  void fetchTokens()
   try {
-    // Fetch all data in parallel
-    await Promise.all([
-      fetchMemberInfo(),
-      fetchFamilyAndManagers(),
-      fetchManagedMembers(),
-      fetchTokens(),
-    ])
-
-    // Set SSO connections based on user data
+    await fetchMemberInfo()
     ssoConnections.value = buildSsoConnections(memberInfo.value)
   } catch (error) {
     console.error('Failed to initialize:', error)
@@ -875,7 +874,7 @@ onMounted(async () => {
             <select
               v-model="selectedManagerToAdd"
               @change="assignManager"
-              :disabled="savingManager || availableFamilyMembers.length === 0"
+              :disabled="savingManager || familyAndManagersLoading || availableFamilyMembers.length === 0"
               class="flex-1 px-3 py-3 sm:py-2 min-h-11 rounded-lg focus:outline-none focus:ring-2 focus:ring-dp-accent focus:border-transparent disabled:opacity-50"
               :style="{ borderWidth: '1px', borderColor: 'var(--dp-border-primary)', backgroundColor: 'var(--dp-bg-secondary)', color: 'var(--dp-text-primary)' }"
             >
@@ -888,7 +887,10 @@ onMounted(async () => {
           </div>
 
           <!-- Current Managers -->
-          <div v-if="managers.length > 0" class="flex flex-wrap gap-2">
+          <div v-if="familyAndManagersLoading" data-testid="member-managers-loading" class="flex min-h-5 items-center">
+            <Loader2 class="w-5 h-5 animate-spin text-dp-accent" />
+          </div>
+          <div v-else-if="managers.length > 0" class="flex flex-wrap gap-2">
             <div
               v-for="manager in managers"
               :key="manager.id ?? 'none'"
@@ -912,6 +914,9 @@ onMounted(async () => {
               <h3 class="text-sm font-medium text-dp-text-primary">{{ t('member.manager.managedAccountsTitle') }}</h3>
             </div>
             <div class="space-y-2">
+              <div v-if="managedMembersLoading" data-testid="member-managed-loading" class="flex items-center justify-center py-2">
+                <Loader2 class="w-5 h-5 animate-spin text-dp-accent" />
+              </div>
               <div
                 v-for="member in managedMembers"
                 :key="member.id ?? 'unknown'"
@@ -1215,7 +1220,7 @@ onMounted(async () => {
             id="member-name-input"
             v-model="nameDraft"
             type="text"
-            maxlength="10"
+            :maxlength="MEMBER_NAME_MAX_LENGTH"
             autocomplete="name"
             class="form-control-card"
             :disabled="savingName"
@@ -1271,7 +1276,7 @@ onMounted(async () => {
           <input
             v-model="auxiliaryName"
             type="text"
-            maxlength="10"
+            :maxlength="MEMBER_NAME_MAX_LENGTH"
             class="form-control-card"
             :placeholder="t('member.auxiliary.namePlaceholder')"
             @keyup.enter="createAuxiliaryAccount"

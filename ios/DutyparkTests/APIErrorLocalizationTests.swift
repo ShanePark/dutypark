@@ -41,7 +41,7 @@ final class APIErrorLocalizationTests: XCTestCase {
                 fieldErrors: [APIFieldError(field: "username", code: "sso.username.length")],
                 bundle: bundle
             ),
-            "사용자명은 1자 이상 10자 이하로 입력해주세요."
+            "사용자명은 1자 이상 20자 이하로 입력해주세요."
         )
     }
 

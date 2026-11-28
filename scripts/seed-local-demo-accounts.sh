@@ -13,19 +13,23 @@ readonly DB_USER="${DUTYPARK_DEMO_DB_USER:-dutypark}"
 readonly DB_PASSWORD="${DUTYPARK_DEMO_DB_PASSWORD:-PASSWORD_HERE}"
 readonly DB_CONTAINER="${DUTYPARK_DEMO_DOCKER_CONTAINER:-dutypark-dev-db}"
 readonly TEAM_NAME="Dutypark Demo 2026"
+readonly WARD_TEAM_NAME="Dutypark Ward Demo 2026"
 readonly OWNER_EMAIL="demo.seoa@dutypark.local"
+readonly WARD_ADMIN_EMAIL="demo.doyoon@dutypark.local"
 readonly DEMO_PASSWORD="demo1234!"
 readonly BCRYPT_HASH='$2a$10$J6nedueOD3J3OeDW8YDhbOswTZHT9v9GxFLFOEeNSsClA.WFsZUeG'
 
+# The owner and one friend work office hours in the office team. The other
+# friends are nurses in the ward team, whose rotation the Team capture shows.
 readonly -a MEMBERS=(
-    "윤서아|demo.seoa@dutypark.local"
-    "한지우|demo.jiwoo@dutypark.local"
-    "김도윤|demo.doyoon@dutypark.local"
-    "박하린|demo.harin@dutypark.local"
-    "이민준|demo.minjun@dutypark.local"
-    "최유나|demo.yuna@dutypark.local"
-    "정태오|demo.taeo@dutypark.local"
-    "오나리|demo.nari@dutypark.local"
+    "윤서아|demo.seoa@dutypark.local|office"
+    "한지우|demo.jiwoo@dutypark.local|office"
+    "김도윤|demo.doyoon@dutypark.local|ward"
+    "박하린|demo.harin@dutypark.local|ward"
+    "이민준|demo.minjun@dutypark.local|ward"
+    "최유나|demo.yuna@dutypark.local|ward"
+    "정태오|demo.taeo@dutypark.local|ward"
+    "오나리|demo.nari@dutypark.local|ward"
 )
 
 # These are the only accounts that an earlier revision of this local marker
@@ -42,8 +46,8 @@ usage() {
     cat <<'EOF'
 Usage: scripts/seed-local-demo-accounts.sh [--dry-run]
 
-Creates or refreshes only the local demo team's eight loginable accounts and
-three team duty types. The command is restricted to 127.0.0.1:3307/dutypark_demo.
+Creates or refreshes only the local demo office and ward teams, their eight
+loginable accounts, and their duty types. The command is restricted to 127.0.0.1:3307/dutypark_demo.
 
 Required for a real write:
   DUTYPARK_DEMO_CONFIRM=1 scripts/seed-local-demo-accounts.sh
@@ -75,6 +79,7 @@ if (( dry_run )); then
     cat <<EOF
 target=${DB_HOST}:${DB_PORT}/${DB_NAME}
 team=${TEAM_NAME}
+wardTeam=${WARD_TEAM_NAME}
 accounts=${#MEMBERS[@]}
 password=demo1234! (local-only; never use in production)
 write=disabled
@@ -122,11 +127,16 @@ run_mysql() {
 }
 
 member_emails_sql=""
+ward_emails_sql=""
 for member in "${MEMBERS[@]}"; do
-    email=${member#*|}
+    IFS='|' read -r _ email member_team <<<"$member"
     member_emails_sql+="'$email',"
+    if [[ "$member_team" == "ward" ]]; then
+        ward_emails_sql+="'$email',"
+    fi
 done
 member_emails_sql=${member_emails_sql%,}
+ward_emails_sql=${ward_emails_sql%,}
 
 stale_emails_sql=""
 for email in "${STALE_MEMBERS[@]}"; do
@@ -148,7 +158,7 @@ INSERT INTO team (
     default_duty_name, duty_batch_template, default_duty_color
 ) VALUES (
     '${TEAM_NAME}', @seed_now, @seed_now, 'Local-only sample data for screenshots', NULL,
-    'OFF', NULL, '#20B8B0'
+    'OFF', NULL, '#ECC2C9'
 )
 ON DUPLICATE KEY UPDATE
     id = LAST_INSERT_ID(id),
@@ -159,6 +169,22 @@ ON DUPLICATE KEY UPDATE
 
 SET @seed_team_id = (SELECT id FROM team WHERE name = '${TEAM_NAME}' LIMIT 1);
 
+INSERT INTO team (
+    name, created_date, modified_date, description, admin_id,
+    default_duty_name, duty_batch_template, default_duty_color
+) VALUES (
+    '${WARD_TEAM_NAME}', @seed_now, @seed_now, 'Local-only ward sample data for screenshots', NULL,
+    'OFF', NULL, '#FFB3BA'
+)
+ON DUPLICATE KEY UPDATE
+    id = LAST_INSERT_ID(id),
+    description = VALUES(description),
+    modified_date = @seed_now,
+    default_duty_name = VALUES(default_duty_name),
+    default_duty_color = VALUES(default_duty_color);
+
+SET @seed_ward_team_id = (SELECT id FROM team WHERE name = '${WARD_TEAM_NAME}' LIMIT 1);
+
 -- Remove only the previous seed revision's marker accounts. The shell
 -- preflight refuses this transaction when any application row references one.
 DELETE FROM member
@@ -168,7 +194,8 @@ WHERE team_id = @seed_team_id
 -- The marker emails are owned by this local seed. A matching email in another
 -- team is rejected by the shell preflight below before this transaction runs.
 INSERT INTO member (name, password, team_id, email, calendar_visibility, created_date, modified_date, status)
-SELECT seed.name, '${BCRYPT_HASH}', @seed_team_id,
+SELECT seed.name, '${BCRYPT_HASH}',
+       IF(seed.email IN (${ward_emails_sql}), @seed_ward_team_id, @seed_team_id),
        seed.email, 'FRIENDS', @seed_now, @seed_now, 'ACTIVE'
 FROM (
     SELECT '윤서아' AS name, 'demo.seoa@dutypark.local' AS email
@@ -194,7 +221,7 @@ SET name = CASE email
     WHEN 'demo.nari@dutypark.local' THEN '오나리'
 END,
     password = '${BCRYPT_HASH}',
-    team_id = @seed_team_id,
+    team_id = IF(email IN (${ward_emails_sql}), @seed_ward_team_id, @seed_team_id),
     calendar_visibility = 'FRIENDS',
     modified_date = @seed_now,
     status = 'ACTIVE',
@@ -203,30 +230,52 @@ WHERE email IN (${member_emails_sql});
 
 SET @seed_owner_id = (SELECT id FROM member WHERE email = '${OWNER_EMAIL}' AND team_id = @seed_team_id ORDER BY id LIMIT 1);
 UPDATE team SET admin_id = @seed_owner_id, modified_date = @seed_now WHERE id = @seed_team_id;
+SET @seed_ward_admin_id = (SELECT id FROM member WHERE email = '${WARD_ADMIN_EMAIL}' AND team_id = @seed_ward_team_id ORDER BY id LIMIT 1);
+UPDATE team SET admin_id = @seed_ward_admin_id, modified_date = @seed_now WHERE id = @seed_ward_team_id;
+
+-- A member moved to the other marker team keeps no duty row that points at
+-- the previous team's duty types.
+DELETE duty FROM duty JOIN member ON member.id = duty.member_id
+WHERE member.email IN (${member_emails_sql})
+  AND NOT (duty.team_id <=> member.team_id);
+
+-- Remove duty types from an earlier fixture revision, with the marker duty
+-- rows that use them.
+DELETE FROM duty
+WHERE duty_type_id IN (
+    SELECT id FROM duty_type
+    WHERE (team_id = @seed_team_id AND name NOT IN ('출근'))
+       OR (team_id = @seed_ward_team_id AND name NOT IN ('데이', '이브', '나이트'))
+);
+DELETE FROM duty_type WHERE team_id = @seed_team_id AND name NOT IN ('출근');
+DELETE FROM duty_type WHERE team_id = @seed_ward_team_id AND name NOT IN ('데이', '이브', '나이트');
 
 INSERT INTO duty_type (name, position, team_id, color, hidden)
-SELECT seed.name, seed.position, @seed_team_id, seed.color, 0
+SELECT seed.name, seed.position, seed.team_id, seed.color, 0
 FROM (
-    SELECT '오전' AS name, 0 AS position, '#20B8B0' AS color
-    UNION ALL SELECT '오후', 1, '#FFC857'
-    UNION ALL SELECT '야간', 2, '#5865F2'
+    SELECT '출근' AS name, 0 AS position, @seed_team_id AS team_id, '#9DDBDE' AS color
+    UNION ALL SELECT '데이', 0, @seed_ward_team_id, '#F0F8FF'
+    UNION ALL SELECT '이브', 1, @seed_ward_team_id, '#98FB98'
+    UNION ALL SELECT '나이트', 2, @seed_ward_team_id, '#9370DB'
 ) seed
 WHERE NOT EXISTS (
     SELECT 1 FROM duty_type existing
-    WHERE existing.team_id = @seed_team_id AND existing.name = seed.name
+    WHERE existing.team_id = seed.team_id AND existing.name = seed.name
 );
 
-UPDATE duty_type SET position = 0, color = '#20B8B0', hidden = 0
-WHERE team_id = @seed_team_id AND name = '오전';
-UPDATE duty_type SET position = 1, color = '#FFC857', hidden = 0
-WHERE team_id = @seed_team_id AND name = '오후';
-UPDATE duty_type SET position = 2, color = '#5865F2', hidden = 0
-WHERE team_id = @seed_team_id AND name = '야간';
+UPDATE duty_type SET position = 0, color = '#9DDBDE', hidden = 0
+WHERE team_id = @seed_team_id AND name = '출근';
+UPDATE duty_type SET position = 0, color = '#F0F8FF', hidden = 0
+WHERE team_id = @seed_ward_team_id AND name = '데이';
+UPDATE duty_type SET position = 1, color = '#98FB98', hidden = 0
+WHERE team_id = @seed_ward_team_id AND name = '이브';
+UPDATE duty_type SET position = 2, color = '#9370DB', hidden = 0
+WHERE team_id = @seed_ward_team_id AND name = '나이트';
 
 COMMIT;
 
 SELECT id, email, name FROM member
-WHERE team_id = @seed_team_id AND email IN (${member_emails_sql})
+WHERE team_id IN (@seed_team_id, @seed_ward_team_id) AND email IN (${member_emails_sql})
 ORDER BY FIELD(email,
     'demo.seoa@dutypark.local', 'demo.jiwoo@dutypark.local',
     'demo.doyoon@dutypark.local', 'demo.harin@dutypark.local',
@@ -237,21 +286,17 @@ SQL
 
 # Abort before the transaction if a marker email is already attached to an
 # unrelated team. This prevents an accidental account takeover while allowing
-# an interrupted prior seed to be repaired safely. When the marker team does
-# not exist yet, every existing marker email is a conflict.
+# an interrupted prior seed to be repaired safely. When neither marker team
+# exists yet, every existing marker email is a conflict.
 existing_team_id=$(run_mysql -e "SELECT id FROM team WHERE name = '${TEAM_NAME}' LIMIT 1;")
-if [[ -z "$existing_team_id" ]]; then
-    conflict_count=$(run_mysql -e "
-    SELECT COUNT(*) FROM member WHERE email IN (${member_emails_sql});
-    ")
-else
-    conflict_count=$(run_mysql -e "
-    SELECT COUNT(*)
-    FROM member
-    WHERE email IN (${member_emails_sql})
-      AND (team_id IS NULL OR team_id <> ${existing_team_id});
-    ")
-fi
+existing_ward_team_id=$(run_mysql -e "SELECT id FROM team WHERE name = '${WARD_TEAM_NAME}' LIMIT 1;")
+marker_team_ids_sql="${existing_team_id:-0},${existing_ward_team_id:-0}"
+conflict_count=$(run_mysql -e "
+SELECT COUNT(*)
+FROM member
+WHERE email IN (${member_emails_sql})
+  AND (team_id IS NULL OR team_id NOT IN (${marker_team_ids_sql}));
+")
 if [[ "$conflict_count" != "0" ]]; then
     echo "Refusing to update marker email(s) owned by another team." >&2
     exit 1
@@ -315,9 +360,10 @@ if (( ${#row_lines[@]} != ${#MEMBERS[@]} )); then
 fi
 
 team_id=$(run_mysql -e "SELECT id FROM team WHERE name = '${TEAM_NAME}' LIMIT 1;")
+ward_team_id=$(run_mysql -e "SELECT id FROM team WHERE name = '${WARD_TEAM_NAME}' LIMIT 1;")
 duty_types=$(run_mysql -e "
-SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'name', name, 'position', position))
-FROM duty_type WHERE team_id = (SELECT id FROM team WHERE name = '${TEAM_NAME}' LIMIT 1);
+SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'teamId', team_id, 'name', name, 'position', position))
+FROM duty_type WHERE team_id IN (${team_id}, ${ward_team_id});
 ")
 
 members_json='[]'
@@ -331,7 +377,9 @@ jq -n \
     --arg database "${DB_HOST}:${DB_PORT}/${DB_NAME}" \
     --arg teamName "$TEAM_NAME" \
     --arg teamId "$team_id" \
+    --arg wardTeamName "$WARD_TEAM_NAME" \
+    --arg wardTeamId "$ward_team_id" \
     --arg password "$DEMO_PASSWORD" \
     --argjson members "$members_json" \
     --argjson dutyTypes "${duty_types:-[]}" \
-    '{database: $database, team: {id: ($teamId | tonumber), name: $teamName}, credentials: {password: $password, localOnly: true}, members: $members, dutyTypes: $dutyTypes}'
+    '{database: $database, team: {id: ($teamId | tonumber), name: $teamName}, wardTeam: {id: ($wardTeamId | tonumber), name: $wardTeamName}, credentials: {password: $password, localOnly: true}, members: $members, dutyTypes: $dutyTypes}'

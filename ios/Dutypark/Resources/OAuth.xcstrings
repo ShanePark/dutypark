@@ -99,8 +99,8 @@
     },
     "auth.oauth.signup.name.help" : {
       "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter 1–10 characters." } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "1자 이상 10자 이하로 입력해주세요." } }
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter 1–20 characters." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "1자 이상 20자 이하로 입력해주세요." } }
       }
     },
     "auth.oauth.signup.name.placeholder" : {

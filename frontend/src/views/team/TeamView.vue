@@ -16,6 +16,7 @@ import {
   LogOut,
 } from '@lucide/vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import FittedMemberName from '@/components/common/FittedMemberName.vue'
 import DatePickerField from '@/components/common/DatePickerField.vue'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
@@ -776,9 +777,7 @@ onMounted(() => {
                 }"
               >
                 <ProfileAvatar :member-id="member.id" :has-profile-photo="member.hasProfilePhoto" :profile-photo-version="member.profilePhotoVersion" size="sm" class="mb-1" />
-                <span class="text-sm font-medium truncate w-full text-center text-dp-text-primary">
-                  {{ member.name }}
-                </span>
+                <FittedMemberName class="text-sm font-medium truncate w-full text-center text-dp-text-primary" :name="member.name" />
               </div>
             </div>
           </div>

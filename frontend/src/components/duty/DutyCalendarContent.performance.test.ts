@@ -322,9 +322,10 @@ describe('calendar derived display data', () => {
       .filter(child => child.type !== '#comment' && !(child.type === '#text' && !child.text))
       .filter(child => !hasClass(child, 'calendar-span__divider'))
       .map(child => hasClass(child, 'calendar-span__more') ? '›' : hasClass(child, 'calendar-span__tags') ? 'tags' : hostText(child))
-    // Tag widths are measured from a hidden copy of every chip, in display order.
-    const tagLabels = (band: HostNode) => findHostNodes(band, node => hasClass(node, 'span-tags-measure'))
-      .flatMap(measure => findHostNodes(measure, node => hasClass(node, 'span-tag-chip__label')).map(hostText))
+    // Tag widths are measured from a hidden copy of every chip, in display order:
+    // with full names, and with the short labels used when those do not fit.
+    const tagLabels = (band: HostNode, chip: 'name' | 'label') => findHostNodes(band, node => hasClass(node, 'span-tags-measure'))
+      .flatMap(measure => findHostNodes(measure, node => node.props['data-chip'] === chip).map(hostText))
 
     expect(cells.slice(4, 10).map(cell => lanes(cell).length)).toEqual([0, 1, 1, 1, 1, 0])
     expect(cells.slice(4, 10).map(cell => bands(cell).length)).toEqual([0, 1, 0, 1, 0, 0])
@@ -339,8 +340,10 @@ describe('calendar derived display data', () => {
     expect(hasClass(nextWeek!, 'calendar-span--end')).toBe(true)
     expect(visible(nextWeek!)).toEqual(['Schedule trip', 'tags', '~18:00'])
     // Every segment carries the members a single-day item shows: owner first, the viewer left out.
-    expect(tagLabels(thisWeek!)).toEqual(['Ow…', 'Al…', 'Br…', 'Ch…'])
-    expect(tagLabels(nextWeek!)).toEqual(['Ow…', 'Al…', 'Br…', 'Ch…'])
+    expect(tagLabels(thisWeek!, 'name')).toEqual(['Owner', 'Alpha', 'Bravo', 'Charlie'])
+    expect(tagLabels(thisWeek!, 'label')).toEqual(['Ow…', 'Al…', 'Br…', 'Ch…'])
+    expect(tagLabels(nextWeek!, 'name')).toEqual(['Owner', 'Alpha', 'Bravo', 'Charlie'])
+    expect(tagLabels(nextWeek!, 'label')).toEqual(['Ow…', 'Al…', 'Br…', 'Ch…'])
     expect(findHostNode(thisWeek!, node => hasClass(node, 'calendar-span__tags'))!.props['aria-hidden']).toBe('true')
     // The tightest level is measured too: one pill with an avatar and "+N" for the other members.
     const compactPills = findHostNodes(thisWeek!, node => hasClass(node, 'span-tags-measure'))
