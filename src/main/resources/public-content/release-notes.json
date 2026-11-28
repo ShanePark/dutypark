@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-448": {
+          "title": "이름 20자와 내 정보 빠른 로딩",
+          "summary": "이름을 최대 20자까지 쓸 수 있고, 내 정보 화면이 더 빨리 뜹니다.",
+          "changes": [
+            "이름을 최대 20자까지 정할 수 있습니다.",
+            "친구 카드, 달력 일정 태그, 팀 근무표처럼 좁은 곳에서 영문 이름이 넘치면 'S.P'처럼 이니셜로 줄여 보여 줍니다. 한글 이름은 그대로 표시합니다.",
+            "내 정보 화면이 준비된 항목부터 바로 보여 주고, iOS에서는 다시 들어가면 기다리지 않고 바로 열립니다."
+          ]
+        },
         "pr-447": {
           "title": "소셜 가입 이름 자동 입력과 이름 변경",
           "summary": "소셜 계정으로 가입할 때 이름이 미리 채워지고, 가입한 뒤에도 내 정보에서 이름을 바꿀 수 있습니다.",
@@ -2510,6 +2519,15 @@
         }
       },
       "entries": {
+        "pr-448": {
+          "title": "20-character names and a faster My Info",
+          "summary": "Names can be up to 20 characters, and My Info opens faster.",
+          "changes": [
+            "Names can now be up to 20 characters long.",
+            "In narrow spots such as friend cards, calendar tags and the team roster, a Latin name that doesn't fit is shortened to initials like \"S.P\". Korean names are shown in full.",
+            "My Info shows each section as soon as it is ready, and on iOS it opens instantly when you come back to it."
+          ]
+        },
         "pr-447": {
           "title": "Pre-filled signup names and name changes",
           "summary": "Signing up with a social account pre-fills your name, and you can change it later from your profile.",
@@ -4943,6 +4961,19 @@
     }
   },
   "items": [
+    {
+      "id": "pr-448",
+      "version": "2026.11.28.04",
+      "date": "2026-11-28",
+      "pr": 448,
+      "url": "https://github.com/ShanePark/dutypark/pull/448",
+      "category": "improvement",
+      "areas": [
+        "profile",
+        "calendar",
+        "dashboard"
+      ]
+    },
     {
       "id": "pr-447",
       "version": "2026.11.28.03",
