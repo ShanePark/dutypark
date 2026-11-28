@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-449": {
+          "title": "눈에 잘 띄는 오늘 표시",
+          "summary": "근무 색과 상관없이 달력에서 오늘이 바로 보입니다.",
+          "changes": [
+            "오늘 칸이 그림자와 테두리를 두른 카드처럼 살짝 떠올라, 빨간 계열 근무 색에서도 오늘을 놓치지 않습니다.",
+            "날짜 숫자에 빨간 동그라미가 다시 표시되고, 요일 머리글에는 오늘 요일 아래에 밑줄이 그어집니다.",
+            "오늘이 달력 끝 칸이어도 카드가 잘리지 않고 끝선에 맞춰 붙습니다."
+          ]
+        },
         "pr-448": {
           "title": "이름 20자와 내 정보 빠른 로딩",
           "summary": "이름을 최대 20자까지 쓸 수 있고, 내 정보 화면이 더 빨리 뜹니다.",
@@ -2519,6 +2528,15 @@
         }
       },
       "entries": {
+        "pr-449": {
+          "title": "A clearer today marker",
+          "summary": "Today now stands out on the calendar whatever your duty color.",
+          "changes": [
+            "Today's cell lifts slightly as a card with a shadow and outline, so it stays visible even on red duty colors.",
+            "The red circle is back on today's date, and today's weekday is underlined in the header.",
+            "When today is in an edge cell, the card sits flush with the calendar edge instead of being cut off."
+          ]
+        },
         "pr-448": {
           "title": "20-character names and a faster My Info",
           "summary": "Names can be up to 20 characters, and My Info opens faster.",
@@ -4961,6 +4979,17 @@
     }
   },
   "items": [
+    {
+      "id": "pr-449",
+      "version": "2026.11.28.05",
+      "date": "2026-11-28",
+      "pr": 449,
+      "url": "https://github.com/ShanePark/dutypark/pull/449",
+      "category": "improvement",
+      "areas": [
+        "calendar"
+      ]
+    },
     {
       "id": "pr-448",
       "version": "2026.11.28.04",
