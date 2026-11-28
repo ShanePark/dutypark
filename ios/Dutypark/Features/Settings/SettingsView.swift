@@ -288,17 +288,21 @@ nonisolated enum SettingsSocialUnlinkPolicy {
     }
 }
 
+/// Session lists can hold hundreds of rows, so every formatter is created once and reused.
+/// Foundation's date formatters are thread-safe while they are not mutated, and none of these
+/// are mutated after creation; the display formatters are cached per app locale.
 nonisolated enum SettingsSessionFormatter {
     static func sorted(_ sessions: [SettingsRefreshToken]) -> [SettingsRefreshToken] {
-        sessions.sorted { lhs, rhs in
-            let lhsIsCurrent = lhs.isCurrentLogin == true
-            let rhsIsCurrent = rhs.isCurrentLogin == true
-            if lhsIsCurrent != rhsIsCurrent { return lhsIsCurrent }
-            let lhsDate = date(from: lhs.lastUsed) ?? .distantPast
-            let rhsDate = date(from: rhs.lastUsed) ?? .distantPast
-            if lhsDate != rhsDate { return lhsDate > rhsDate }
-            return lhs.id < rhs.id
-        }
+        sessions
+            .map { (token: $0, lastUsed: date(from: $0.lastUsed) ?? .distantPast) }
+            .sorted { lhs, rhs in
+                let lhsIsCurrent = lhs.token.isCurrentLogin == true
+                let rhsIsCurrent = rhs.token.isCurrentLogin == true
+                if lhsIsCurrent != rhsIsCurrent { return lhsIsCurrent }
+                if lhs.lastUsed != rhs.lastUsed { return lhs.lastUsed > rhs.lastUsed }
+                return lhs.token.id < rhs.token.id
+            }
+            .map(\.token)
     }
 
     static func relativeTime(_ value: String?, now: Date = Date()) -> String {
@@ -308,10 +312,7 @@ nonisolated enum SettingsSessionFormatter {
             return SettingsLocalization.string("settings.sessions.justNow")
         }
 
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = AppLocalization.locale
-        formatter.unitsStyle = .full
-        formatter.dateTimeStyle = .numeric
+        let formatter = DisplayFormatters.current.relative
 
         if abs(elapsed) < 3_600 {
             let minutes = signedUnit(elapsed, divisor: 60)
@@ -330,37 +331,16 @@ nonisolated enum SettingsSessionFormatter {
 
     static func dateText(_ value: String?) -> String {
         guard let date = date(from: value) else { return "-" }
-        let formatter = DateFormatter()
-        formatter.locale = AppLocalization.locale
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+        return DisplayFormatters.current.date.string(from: date)
     }
 
     static func date(from value: String?) -> Date? {
         guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
             return nil
         }
-
-        let fractionalISO = ISO8601DateFormatter()
-        fractionalISO.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let date = fractionalISO.date(from: value) { return date }
-
-        let standardISO = ISO8601DateFormatter()
-        standardISO.formatOptions = [.withInternetDateTime]
         if let date = standardISO.date(from: value) { return date }
-
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.timeZone = .current
-        for format in [
-            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS",
-            "yyyy-MM-dd'T'HH:mm:ss.SSS",
-            "yyyy-MM-dd'T'HH:mm:ss",
-            "yyyy-MM-dd",
-        ] {
-            formatter.dateFormat = format
+        for formatter in localFormatters {
             if let date = formatter.date(from: value) { return date }
         }
         return nil
@@ -369,6 +349,62 @@ nonisolated enum SettingsSessionFormatter {
     private static func signedUnit(_ elapsed: TimeInterval, divisor: TimeInterval) -> Int {
         let magnitude = max(1, Int(floor(abs(elapsed) / divisor)))
         return elapsed >= 0 ? -magnitude : magnitude
+    }
+
+    private nonisolated(unsafe) static let fractionalISO: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private nonisolated(unsafe) static let standardISO: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    /// Server timestamps without a zone are device-local; `autoupdatingCurrent` keeps following
+    /// the device time zone like the per-call `.current` formatters did.
+    private static let localFormatters: [DateFormatter] = [
+        "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS",
+        "yyyy-MM-dd'T'HH:mm:ss.SSS",
+        "yyyy-MM-dd'T'HH:mm:ss",
+        "yyyy-MM-dd",
+    ].map { format in
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateFormat = format
+        return formatter
+    }
+
+    private struct DisplayFormatters: @unchecked Sendable {
+        let relative: RelativeDateTimeFormatter
+        let date: DateFormatter
+
+        private static let lock = NSLock()
+        private nonisolated(unsafe) static var cache: [String: DisplayFormatters] = [:]
+
+        static var current: DisplayFormatters {
+            let locale = AppLocalization.locale
+            lock.lock()
+            defer { lock.unlock() }
+            if let cached = cache[locale.identifier] { return cached }
+
+            let relative = RelativeDateTimeFormatter()
+            relative.locale = locale
+            relative.unitsStyle = .full
+            relative.dateTimeStyle = .numeric
+            let date = DateFormatter()
+            date.locale = locale
+            date.timeZone = .autoupdatingCurrent
+            date.dateStyle = .medium
+            date.timeStyle = .none
+            let formatters = DisplayFormatters(relative: relative, date: date)
+            cache[locale.identifier] = formatters
+            return formatters
+        }
     }
 }
 
@@ -656,6 +692,9 @@ struct VisibilitySettingsModal: View {
     private func visibilityOption(_ option: Visibility) -> some View {
         let selected = model.member?.calendarVisibility == option
         let audience = option == .friends ? model.friends : option == .family ? model.friends.filter(\.isFamily) : []
+        // Friends load independently; an empty audience warning would be misleading until they arrive.
+        let showsAudience = (option == .friends || option == .family)
+            && !(model.loadingSections.contains(.friends) && !model.loadedSections.contains(.friends))
         return Button {
             if model.member?.calendarVisibility != option {
                 DPHapticCenter.shared.emit(.selection)
@@ -678,7 +717,7 @@ struct VisibilitySettingsModal: View {
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textSecondary)
                     .padding(.leading, DPSpacing.large)
-                if option == .friends || option == .family {
+                if showsAudience {
                     Text(audience.isEmpty
                          ? SettingsLocalization.string(option == .friends ? "settings.visibility.emptyFriends" : "settings.visibility.emptyFamily")
                          : audience.prefix(3).map(\.name).joined(separator: ", ") + (audience.count > 3 ? " +\(audience.count - 3)" : ""))

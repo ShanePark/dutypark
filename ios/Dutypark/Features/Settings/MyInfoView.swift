@@ -72,7 +72,7 @@ struct MyInfoView: View {
 
     var body: some View {
         Group {
-            if model.member == nil, model.isLoading || !model.didAttemptMemberLoad {
+            if model.member == nil, model.isLoadingMember || !model.didAttemptMemberLoad {
                 ProgressView(SettingsLocalization.string("settings.loading"))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if model.member == nil {
@@ -83,7 +83,7 @@ struct MyInfoView: View {
                     )
                 } actions: {
                     Button(SettingsLocalization.string("settings.action.retry")) {
-                        Task { await model.load(.myInfo) }
+                        Task { await model.load(.myInfo, snapshotScope: snapshotScope) }
                     }
                     .buttonStyle(.borderedProminent)
                 }
@@ -96,12 +96,18 @@ struct MyInfoView: View {
                         aiConsentSection
                         if model.loadedSections.isSuperset(of: [.family, .managers]) {
                             managerSection
+                        } else if isLoadingSection(.family) || isLoadingSection(.managers) {
+                            sectionLoadingCard(title: "settings.manager.title", icon: "shield")
                         }
                         if model.loadedSections.contains(.managedAccounts) {
                             managedAccountSection
+                        } else if isLoadingSection(.managedAccounts) {
+                            sectionLoadingCard(title: "settings.managed.title", icon: "person.2")
                         }
                         if model.loadedSections.contains(.sessions) {
                             sessionSection
+                        } else if isLoadingSection(.sessions) {
+                            sectionLoadingCard(title: "settings.sessions.title", icon: "iphone")
                         }
                         if accountActionVisibility.showsAccountControls {
                             socialSection
@@ -113,11 +119,11 @@ struct MyInfoView: View {
                     .padding(.bottom, DPSpacing.extraLarge)
                 }
                 .background(DPColor.backgroundSecondary)
-                .refreshable { await model.load(.myInfo) }
+                .refreshable { await model.load(.myInfo, snapshotScope: snapshotScope) }
             }
         }
         .accessibilityIdentifier("screen.myInfo")
-        .task { await model.load(.myInfo) }
+        .task { await model.load(.myInfo, snapshotScope: snapshotScope) }
         .task(id: model.member?.id) {
             guard let memberID = model.member?.id else { return }
             await aiConsent.load(for: memberID)
@@ -480,12 +486,7 @@ struct MyInfoView: View {
                     .buttonStyle(DPSecondaryButtonStyle())
                 }
             } else if !model.loadedSections.contains(.dutyPattern) {
-                HStack {
-                    Spacer()
-                    ProgressView().tint(DPColor.accent)
-                    Spacer()
-                }
-                .frame(minHeight: 72)
+                sectionProgress
             } else if let pattern = model.dutyPattern {
                 DutyPatternSummary(pattern: pattern) {
                     DPHapticCenter.shared.emit(.routine)
@@ -795,16 +796,19 @@ struct MyInfoView: View {
                 }
             }
 
-            if sortedSessions.isEmpty {
+            if model.sessions.isEmpty {
                 SettingsLocalization.text("settings.sessions.empty")
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, minHeight: 72)
             } else {
-                ForEach(sortedSessions) { token in
-                    SettingsSessionCard(token: token) {
-                        withoutPresentationAnimation {
-                            confirmation = .session(.session(token))
+                // Lazy so a long session list only builds the cards on screen.
+                LazyVStack(alignment: .leading, spacing: DPSpacing.medium) {
+                    ForEach(model.sessions) { token in
+                        SettingsSessionCard(token: token) {
+                            withoutPresentationAnimation {
+                                confirmation = .session(.session(token))
+                            }
                         }
                     }
                 }
@@ -871,8 +875,30 @@ struct MyInfoView: View {
         }
     }
 
-    private var sortedSessions: [SettingsRefreshToken] {
-        SettingsSessionFormatter.sorted(model.sessions)
+    /// Keys the re-entry snapshot to the signed-in session, so logout, account switches and
+    /// impersonation changes can never show another member's data.
+    private var snapshotScope: MyInfoSnapshotScope? {
+        guard case .authenticated(let member) = session.state,
+              let generation = session.authenticationSessionGenerationForCurrentAccount
+        else { return nil }
+        return MyInfoSnapshotScope(memberID: member.id, sessionGeneration: generation)
+    }
+
+    private func isLoadingSection(_ section: SettingsLoadedSection) -> Bool {
+        model.loadingSections.contains(section) && !model.loadedSections.contains(section)
+    }
+
+    private func sectionLoadingCard(title: String, icon: String) -> some View {
+        SettingsCard(title: title, icon: icon) { sectionProgress }
+    }
+
+    private var sectionProgress: some View {
+        HStack {
+            Spacer()
+            ProgressView().tint(DPColor.accent)
+            Spacer()
+        }
+        .frame(minHeight: 72)
     }
 
     private var otherSessionCount: Int {
