@@ -23,8 +23,11 @@ readonly DEMO_PASSWORD="demo1234!"
 readonly DEMO_BCRYPT_HASH='$2a$10$J6nedueOD3J3OeDW8YDhbOswTZHT9v9GxFLFOEeNSsClA.WFsZUeG'
 readonly KO_TEAM_NAME="Dutypark Demo 2026"
 readonly EN_TEAM_NAME="Dutypark English Demo 2026"
+readonly KO_WARD_TEAM_NAME="Dutypark Ward Demo 2026"
+readonly EN_WARD_TEAM_NAME="Dutypark English Ward Demo 2026"
 readonly KO_OWNER_EMAIL="demo.seoa@dutypark.local"
 readonly EN_OWNER_EMAIL="demo.en.emma@dutypark.local"
+readonly EN_WARD_ADMIN_EMAIL="demo.en.noah@dutypark.local"
 readonly CAPTURE_DATE="2026-11-28"
 readonly ENGLISH_CALENDAR_MONTH="2026-11"
 
@@ -58,7 +61,8 @@ readonly -a KO_DATES=(
     "2026-11-17" "2026-11-18" "2026-11-19" "2026-11-20"
     "2026-11-21" "2026-11-22" "2026-11-23" "2026-11-24"
     "2026-11-25" "2026-11-26" "2026-11-27" "2026-11-28"
-    "2026-11-29" "2026-11-30"
+    "2026-11-29" "2026-11-30" "2026-12-01" "2026-12-02"
+    "2026-12-03" "2026-12-04" "2026-12-05"
 )
 readonly -a EN_DATES=(
     "2026-11-01" "2026-11-02" "2026-11-03" "2026-11-04"
@@ -68,7 +72,27 @@ readonly -a EN_DATES=(
     "2026-11-17" "2026-11-18" "2026-11-19" "2026-11-20"
     "2026-11-21" "2026-11-22" "2026-11-23" "2026-11-24"
     "2026-11-25" "2026-11-26" "2026-11-27" "2026-11-28"
-    "2026-11-29" "2026-11-30"
+    "2026-11-29" "2026-11-30" "2026-12-01" "2026-12-02"
+    "2026-12-03" "2026-12-04" "2026-12-05"
+)
+
+# One roster per member, in KO_MEMBERS/EN_MEMBERS order, with one letter per
+# date above (2026-11-01 is a Sunday). W is an office work day; D, E, and N are
+# the ward's day, evening, and night shifts; O is the team's default OFF and
+# stores no duty row. The office rosters are weekdays only, with one day of
+# annual leave on 2026-11-13. The ward rosters run blocks of shifts, end every
+# night block with at least two OFF days, never go from Evening to Day or Day
+# to Night, give each nurse 8-9 OFF days in November, and cover every day with
+# Day >= Evening >= Night >= 1.
+readonly -a DUTY_ROSTERS=(
+    "OWWWWWOOWWWWOOOWWWWWOOWWWWWOOWWWWWO"
+    "OWWWWWOOWWWWWOOWWWWWOOWWWWWOOWWWWWO"
+    "DDDDODDDODDOEENNOODDDONNNOOEEEONNNO"
+    "DDOEENNNOODDDOEENNOODDDODDDDOEEOEEN"
+    "DODDDEEODDEEODDOEENNOODDONNNOODDDDE"
+    "OEEEODDONNNOODDDODDDEEODDDDONNNOODD"
+    "EENNNOODDODDDDODDOEENNOOEEEODDDEEOE"
+    "NNOODDOEEEONNNOODDODDDEEOODDDDODDDD"
 )
 
 CLEANUP_FILES=()
@@ -90,10 +114,11 @@ Usage: scripts/seed-local-demo-content.sh [--dry-run]
 
 Creates the deterministic Korean and English local screenshot fixtures. The
 script first runs seed-local-demo-accounts.sh, creates/refreshes the English
-marker team, uploads the generated avatars, and then uses the localhost API
+marker teams, uploads the generated avatars, and then uses the localhost API
 for schedules, Todos, D-Days, friends, friend order, tags, notifications, and team
 schedules. Duties are the only bulk rows inserted directly, because no API
-creates deterministic duty rows for a capture date.
+creates deterministic duty rows for a capture date. Each locale has an office
+team for the owner and a ward team whose nurses the Team capture shows.
 
 The only writable targets are:
   MySQL  127.0.0.1:3307/dutypark_demo
@@ -136,6 +161,8 @@ if (( dry_run )); then
     cat <<EOF
 mysql=${DB_HOST}:${DB_PORT}/${DB_NAME}
 api=${API_BASE_URL}
+koreanTeams=${KO_TEAM_NAME}, ${KO_WARD_TEAM_NAME}
+englishTeams=${EN_TEAM_NAME}, ${EN_WARD_TEAM_NAME}
 koreanAccounts=${#KO_MEMBERS[@]}
 englishAccounts=${#EN_MEMBERS[@]}
 captureDate=${CAPTURE_DATE}
@@ -217,8 +244,10 @@ DUTYPARK_DEMO_CONFIRM=1 "${SCRIPT_DIR}/seed-local-demo-accounts.sh" >/dev/null
 # intentionally not exposed as a general-purpose seed target or an API account
 # creation flow (the product has no ordinary email/password signup endpoint).
 en_emails_sql="'demo.en.emma@dutypark.local','demo.en.jamie@dutypark.local','demo.en.noah@dutypark.local','demo.en.chloe@dutypark.local','demo.en.liam@dutypark.local','demo.en.sophia@dutypark.local','demo.en.ethan@dutypark.local','demo.en.ava@dutypark.local'"
+en_ward_emails_sql="'demo.en.noah@dutypark.local','demo.en.chloe@dutypark.local','demo.en.liam@dutypark.local','demo.en.sophia@dutypark.local','demo.en.ethan@dutypark.local','demo.en.ava@dutypark.local'"
 existing_en_team_id=$(run_sql "SELECT COALESCE((SELECT id FROM team WHERE name = '${EN_TEAM_NAME}' LIMIT 1), 0);")
-en_conflict_count=$(run_sql "SELECT COUNT(*) FROM member WHERE email IN (${en_emails_sql}) AND (team_id IS NULL OR team_id <> ${existing_en_team_id});")
+existing_en_ward_team_id=$(run_sql "SELECT COALESCE((SELECT id FROM team WHERE name = '${EN_WARD_TEAM_NAME}' LIMIT 1), 0);")
+en_conflict_count=$(run_sql "SELECT COUNT(*) FROM member WHERE email IN (${en_emails_sql}) AND (team_id IS NULL OR team_id NOT IN (${existing_en_team_id}, ${existing_en_ward_team_id}));")
 if [[ "$en_conflict_count" != "0" ]]; then
     echo "Refusing to update an English marker email owned by another team." >&2
     exit 1
@@ -237,7 +266,7 @@ INSERT INTO team (
     default_duty_name, duty_batch_template, default_duty_color
 ) VALUES (
     '${EN_TEAM_NAME}', @seed_now, @seed_now, 'Local-only English sample data for screenshots', NULL,
-    'Off', NULL, '#20B8B0'
+    'OFF', NULL, '#ECC2C9'
 )
 ON DUPLICATE KEY UPDATE
     id = LAST_INSERT_ID(id),
@@ -246,8 +275,24 @@ ON DUPLICATE KEY UPDATE
     default_duty_name = VALUES(default_duty_name),
     default_duty_color = VALUES(default_duty_color);
 SET @seed_team_id = (SELECT id FROM team WHERE name = '${EN_TEAM_NAME}' LIMIT 1);
+INSERT INTO team (
+    name, created_date, modified_date, description, admin_id,
+    default_duty_name, duty_batch_template, default_duty_color
+) VALUES (
+    '${EN_WARD_TEAM_NAME}', @seed_now, @seed_now, 'Local-only English ward sample data for screenshots', NULL,
+    'OFF', NULL, '#FFB3BA'
+)
+ON DUPLICATE KEY UPDATE
+    id = LAST_INSERT_ID(id),
+    description = VALUES(description),
+    modified_date = @seed_now,
+    default_duty_name = VALUES(default_duty_name),
+    default_duty_color = VALUES(default_duty_color);
+SET @seed_ward_team_id = (SELECT id FROM team WHERE name = '${EN_WARD_TEAM_NAME}' LIMIT 1);
 INSERT INTO member (name, password, team_id, email, calendar_visibility, created_date, modified_date, status)
-SELECT seed.name, '${DEMO_BCRYPT_HASH}', @seed_team_id, seed.email, 'FRIENDS', @seed_now, @seed_now, 'ACTIVE'
+SELECT seed.name, '${DEMO_BCRYPT_HASH}',
+       IF(seed.email IN (${en_ward_emails_sql}), @seed_ward_team_id, @seed_team_id),
+       seed.email, 'FRIENDS', @seed_now, @seed_now, 'ACTIVE'
 FROM (
     SELECT 'Emma Moon' AS name, 'demo.en.emma@dutypark.local' AS email
     UNION ALL SELECT 'Jamie Bear', 'demo.en.jamie@dutypark.local'
@@ -270,32 +315,47 @@ SET name = CASE email
     WHEN 'demo.en.ethan@dutypark.local' THEN 'Ethan Otter'
     WHEN 'demo.en.ava@dutypark.local' THEN 'Ava Panda'
 END,
-    password = '${DEMO_BCRYPT_HASH}', team_id = @seed_team_id,
+    password = '${DEMO_BCRYPT_HASH}',
+    team_id = IF(email IN (${en_ward_emails_sql}), @seed_ward_team_id, @seed_team_id),
     calendar_visibility = 'FRIENDS', modified_date = @seed_now,
     status = 'ACTIVE', deletion_requested_at = NULL
 WHERE email IN (${en_emails_sql});
 SET @seed_owner_id = (SELECT id FROM member WHERE email = '${EN_OWNER_EMAIL}' AND team_id = @seed_team_id ORDER BY id LIMIT 1);
 UPDATE team SET admin_id = @seed_owner_id, modified_date = @seed_now WHERE id = @seed_team_id;
+SET @seed_ward_admin_id = (SELECT id FROM member WHERE email = '${EN_WARD_ADMIN_EMAIL}' AND team_id = @seed_ward_team_id ORDER BY id LIMIT 1);
+UPDATE team SET admin_id = @seed_ward_admin_id, modified_date = @seed_now WHERE id = @seed_ward_team_id;
+DELETE duty FROM duty JOIN member ON member.id = duty.member_id
+WHERE member.email IN (${en_emails_sql}) AND NOT (duty.team_id <=> member.team_id);
+DELETE FROM duty
+WHERE duty_type_id IN (
+    SELECT id FROM duty_type
+    WHERE (team_id = @seed_team_id AND name NOT IN ('Work'))
+       OR (team_id = @seed_ward_team_id AND name NOT IN ('Day', 'Evening', 'Night'))
+);
+DELETE FROM duty_type WHERE team_id = @seed_team_id AND name NOT IN ('Work');
+DELETE FROM duty_type WHERE team_id = @seed_ward_team_id AND name NOT IN ('Day', 'Evening', 'Night');
 INSERT INTO duty_type (name, position, team_id, color, hidden)
-SELECT seed.name, seed.position, @seed_team_id, seed.color, 0
+SELECT seed.name, seed.position, seed.team_id, seed.color, 0
 FROM (
-    SELECT 'Morning' AS name, 0 AS position, '#20B8B0' AS color
-    UNION ALL SELECT 'Evening', 1, '#FFC857'
-    UNION ALL SELECT 'Night', 2, '#5865F2'
-    UNION ALL SELECT 'Off', 3, '#CBD5E1'
+    SELECT 'Work' AS name, 0 AS position, @seed_team_id AS team_id, '#9DDBDE' AS color
+    UNION ALL SELECT 'Day', 0, @seed_ward_team_id, '#F0F8FF'
+    UNION ALL SELECT 'Evening', 1, @seed_ward_team_id, '#98FB98'
+    UNION ALL SELECT 'Night', 2, @seed_ward_team_id, '#9370DB'
 ) seed
-WHERE NOT EXISTS (SELECT 1 FROM duty_type existing WHERE existing.team_id = @seed_team_id AND existing.name = seed.name);
-UPDATE duty_type SET position = 0, color = '#20B8B0', hidden = 0 WHERE team_id = @seed_team_id AND name = 'Morning';
-UPDATE duty_type SET position = 1, color = '#FFC857', hidden = 0 WHERE team_id = @seed_team_id AND name = 'Evening';
-UPDATE duty_type SET position = 2, color = '#5865F2', hidden = 0 WHERE team_id = @seed_team_id AND name = 'Night';
-UPDATE duty_type SET position = 3, color = '#CBD5E1', hidden = 0 WHERE team_id = @seed_team_id AND name = 'Off';
+WHERE NOT EXISTS (SELECT 1 FROM duty_type existing WHERE existing.team_id = seed.team_id AND existing.name = seed.name);
+UPDATE duty_type SET position = 0, color = '#9DDBDE', hidden = 0 WHERE team_id = @seed_team_id AND name = 'Work';
+UPDATE duty_type SET position = 0, color = '#F0F8FF', hidden = 0 WHERE team_id = @seed_ward_team_id AND name = 'Day';
+UPDATE duty_type SET position = 1, color = '#98FB98', hidden = 0 WHERE team_id = @seed_ward_team_id AND name = 'Evening';
+UPDATE duty_type SET position = 2, color = '#9370DB', hidden = 0 WHERE team_id = @seed_ward_team_id AND name = 'Night';
 COMMIT;
 SQL
 run_mysql <"$english_sql" >/dev/null
 
 KO_TEAM_ID=$(run_sql "SELECT id FROM team WHERE name = '${KO_TEAM_NAME}' LIMIT 1;")
 EN_TEAM_ID=$(run_sql "SELECT id FROM team WHERE name = '${EN_TEAM_NAME}' LIMIT 1;")
-if [[ -z "$KO_TEAM_ID" || -z "$EN_TEAM_ID" ]]; then
+KO_WARD_TEAM_ID=$(run_sql "SELECT id FROM team WHERE name = '${KO_WARD_TEAM_NAME}' LIMIT 1;")
+EN_WARD_TEAM_ID=$(run_sql "SELECT id FROM team WHERE name = '${EN_WARD_TEAM_NAME}' LIMIT 1;")
+if [[ -z "$KO_TEAM_ID" || -z "$EN_TEAM_ID" || -z "$KO_WARD_TEAM_ID" || -z "$EN_WARD_TEAM_ID" ]]; then
     echo "Marker teams were not created." >&2
     exit 1
 fi
@@ -306,7 +366,7 @@ KO_NAMES=()
 KO_AVATARS=()
 for spec in "${KO_MEMBERS[@]}"; do
     IFS='|' read -r name email avatar <<<"$spec"
-    id=$(run_sql "SELECT id FROM member WHERE email = '${email}' AND team_id = ${KO_TEAM_ID} LIMIT 1;")
+    id=$(run_sql "SELECT id FROM member WHERE email = '${email}' AND team_id IN (${KO_TEAM_ID}, ${KO_WARD_TEAM_ID}) LIMIT 1;")
     [[ -n "$id" ]] || { echo "Missing Korean marker member: ${email}" >&2; exit 1; }
     KO_IDS+=("$id"); KO_EMAILS+=("$email"); KO_NAMES+=("$name"); KO_AVATARS+=("$avatar")
 done
@@ -316,7 +376,7 @@ EN_NAMES=()
 EN_AVATARS=()
 for spec in "${EN_MEMBERS[@]}"; do
     IFS='|' read -r name email avatar <<<"$spec"
-    id=$(run_sql "SELECT id FROM member WHERE email = '${email}' AND team_id = ${EN_TEAM_ID} LIMIT 1;")
+    id=$(run_sql "SELECT id FROM member WHERE email = '${email}' AND team_id IN (${EN_TEAM_ID}, ${EN_WARD_TEAM_ID}) LIMIT 1;")
     [[ -n "$id" ]] || { echo "Missing English marker member: ${email}" >&2; exit 1; }
     EN_IDS+=("$id"); EN_EMAILS+=("$email"); EN_NAMES+=("$name"); EN_AVATARS+=("$avatar")
 done
@@ -485,14 +545,14 @@ ensure_todo_tag() {
 }
 
 wait_for_notifications() {
-    local team_id="$1" owner_id="$2" locale="$3"
+    local member_ids="$1" owner_id="$2" locale="$3"
     local deadline now accepted received schedule_tagged todo_tagged
     deadline=$(( $(date +%s) + 20 ))
     while true; do
         accepted=$(run_sql "SELECT COUNT(*) FROM notifications WHERE member_id = ${owner_id} AND type = 'FRIEND_REQUEST_ACCEPTED';")
-        received=$(run_sql "SELECT COUNT(*) FROM notifications n JOIN member m ON m.id = n.member_id WHERE m.team_id = ${team_id} AND n.type = 'FRIEND_REQUEST_RECEIVED';")
-        schedule_tagged=$(run_sql "SELECT COUNT(*) FROM notifications n JOIN member m ON m.id = n.member_id WHERE m.team_id = ${team_id} AND n.type = 'SCHEDULE_TAGGED';")
-        todo_tagged=$(run_sql "SELECT COUNT(*) FROM notifications n JOIN member m ON m.id = n.member_id WHERE m.team_id = ${team_id} AND n.type = 'TODO_TAGGED';")
+        received=$(run_sql "SELECT COUNT(*) FROM notifications WHERE member_id IN (${member_ids}) AND type = 'FRIEND_REQUEST_RECEIVED';")
+        schedule_tagged=$(run_sql "SELECT COUNT(*) FROM notifications WHERE member_id IN (${member_ids}) AND type = 'SCHEDULE_TAGGED';")
+        todo_tagged=$(run_sql "SELECT COUNT(*) FROM notifications WHERE member_id IN (${member_ids}) AND type = 'TODO_TAGGED';")
         if [[ "$accepted" -ge 7 && "$received" -ge 7 && "$schedule_tagged" -ge 7 && "$todo_tagged" -ge 1 ]]; then
             return
         fi
@@ -506,7 +566,7 @@ wait_for_notifications() {
 }
 
 populate_locale() {
-    local locale="$1" team_id="$2" owner_email="$3"; shift 3
+    local locale="$1" ward_team_id="$2" owner_email="$3"; shift 3
     local ids_name="$1" emails_name="$2" names_name="$3" avatars_name="$4"
     local -a ids emails names avatars
     eval "ids=(\"\${${ids_name}[@]}\")"
@@ -589,62 +649,70 @@ populate_locale() {
         ensure_schedule_tag "$owner_primary_schedule_id" "$owner_cookie" "${ids[friend_index]}"
     done
     ensure_todo_tag "$owner_primary_todo_id" "$owner_cookie" "${ids[1]}"
-    wait_for_notifications "$team_id" "$owner_id" "$locale"
+    local member_ids
+    member_ids=$(IFS=,; echo "${ids[*]}")
+    wait_for_notifications "$member_ids" "$owner_id" "$locale"
 
-    login "$owner_email" "$owner_cookie"
+    # The Team capture signs in as the ward admin (the third member), so the
+    # ward team carries the team schedules.
+    local ward_admin_id="${ids[2]}"
+    login "${emails[2]}" "$friend_cookie"
     if [[ "$locale" == "ko" ]]; then
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '데모팀 전체 회의' '모두가 함께 확인하는 주간 회의예요.' '2026-11-25T15:00:00' '2026-11-25T16:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '팀 점심 시간' '함께 쉬며 다음 계획을 이야기해요.' '2026-11-26T12:00:00' '2026-11-26T13:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '월말 회고' '이번 달의 배움과 다음 목표를 나눠요.' '2026-11-30T17:00:00' '2026-11-30T18:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '다음 달 준비' '새로운 달의 일정을 함께 준비해요.' '2026-12-01T10:00:00' '2026-12-01T11:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" '11월 킥오프' '새로운 달의 공동 계획으로 시작해요.' '2026-11-01T10:00:00' '2026-11-01T11:00:00'
+        create_team_schedule_if_missing "$ward_team_id" "$ward_admin_id" "$friend_cookie" '병동 컨퍼런스' '이번 주 환자 케어 사례를 함께 나눠요.' '2026-11-25T15:00:00' '2026-11-25T16:00:00'
+        create_team_schedule_if_missing "$ward_team_id" "$ward_admin_id" "$friend_cookie" '감염관리 교육' '근무 전후로 참석할 수 있게 두 번 진행해요.' '2026-11-26T12:00:00' '2026-11-26T13:00:00'
+        create_team_schedule_if_missing "$ward_team_id" "$ward_admin_id" "$friend_cookie" '월말 물품 점검' '병동 소모품과 장비를 함께 확인해요.' '2026-11-30T17:00:00' '2026-11-30T18:00:00'
+        create_team_schedule_if_missing "$ward_team_id" "$ward_admin_id" "$friend_cookie" '12월 근무표 공지' '다음 달 근무표를 확인하고 교환 신청을 받아요.' '2026-12-01T10:00:00' '2026-12-01T11:00:00'
+        create_team_schedule_if_missing "$ward_team_id" "$ward_admin_id" "$friend_cookie" '11월 근무표 확정' '이번 달 근무와 휴무를 확정했어요.' '2026-11-01T10:00:00' '2026-11-01T11:00:00'
     else
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'Demo team all-hands' 'A weekly sync for everyone on the team.' '2026-11-25T15:00:00' '2026-11-25T16:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'Team lunch break' 'A shared pause to talk through the next plan.' '2026-11-26T12:00:00' '2026-11-26T13:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'Month-end retro' 'Share the lessons and goals for next month.' '2026-11-30T17:00:00' '2026-11-30T18:00:00'
-        create_team_schedule_if_missing "$team_id" "$owner_id" "$owner_cookie" 'November kickoff' 'Start the next month with a clear shared plan.' '2026-11-01T10:00:00' '2026-11-01T11:00:00'
+        create_team_schedule_if_missing "$ward_team_id" "$ward_admin_id" "$friend_cookie" 'Ward conference' 'Share patient care cases from the week.' '2026-11-25T15:00:00' '2026-11-25T16:00:00'
+        create_team_schedule_if_missing "$ward_team_id" "$ward_admin_id" "$friend_cookie" 'Infection control training' 'Two sessions so every shift can attend.' '2026-11-26T12:00:00' '2026-11-26T13:00:00'
+        create_team_schedule_if_missing "$ward_team_id" "$ward_admin_id" "$friend_cookie" 'Month-end supply check' 'Review ward supplies and equipment together.' '2026-11-30T17:00:00' '2026-11-30T18:00:00'
+        create_team_schedule_if_missing "$ward_team_id" "$ward_admin_id" "$friend_cookie" 'November roster set' 'Shifts and days off for the month are final.' '2026-11-01T10:00:00' '2026-11-01T11:00:00'
     fi
 
     rm -f "$owner_cookie" "$friend_cookie"
 }
 
 insert_duties() {
-    local locale="$1" team_id="$2"; shift 2
+    local locale="$1"; shift
     local ids_name="$1"
-    local -a ids dates type_ids
+    local -a ids dates
     eval "ids=(\"\${${ids_name}[@]}\")"
+    local work_name day_name evening_name night_name
     if [[ "$locale" == "ko" ]]; then
-        dates=("${KO_DATES[@]}")
-        type_ids=(
-            "$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = '오전' LIMIT 1;")"
-            "$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = '오후' LIMIT 1;")"
-            "$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = '야간' LIMIT 1;")"
-        )
+        dates=("${KO_DATES[@]}"); work_name='출근'; day_name='데이'; evening_name='이브'; night_name='나이트'
     else
-        dates=("${EN_DATES[@]}")
-        type_ids=(
-            "$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = 'Morning' LIMIT 1;")"
-            "$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = 'Evening' LIMIT 1;")"
-            "$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = 'Night' LIMIT 1;")"
-            "$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = 'Off' LIMIT 1;")"
-        )
+        dates=("${EN_DATES[@]}"); work_name='Work'; day_name='Day'; evening_name='Evening'; night_name='Night'
     fi
-    for type_id in "${type_ids[@]}"; do [[ -n "$type_id" ]] || { echo "Missing ${locale} duty type." >&2; exit 1; }; done
     local duties_sql=$(mktemp "${TMPDIR:-/tmp}/dutypark-demo-duties.XXXXXX.sql")
     cleanup_file "$duties_sql"
-    local member_index date_index date type_id
-    local duty_offset=0
-    [[ "$locale" == "en" ]] && duty_offset=1
+    local member_index member_id team_id roster date_index date code type_name type_id
+    local work_id day_id evening_id night_id
     {
         echo "SET SESSION time_zone = '+00:00';"
         echo "START TRANSACTION;"
         for member_index in "${!ids[@]}"; do
+            member_id="${ids[member_index]}"
+            roster="${DUTY_ROSTERS[member_index]}"
+            team_id=$(run_sql "SELECT team_id FROM member WHERE id = ${member_id};")
+            [[ "${#roster}" == "${#dates[@]}" ]] || { echo "Roster length mismatch for ${locale} member ${member_id}." >&2; exit 1; }
+            work_id=$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = '${work_name}' LIMIT 1;")
+            day_id=$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = '${day_name}' LIMIT 1;")
+            evening_id=$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = '${evening_name}' LIMIT 1;")
+            night_id=$(run_sql "SELECT id FROM duty_type WHERE team_id = ${team_id} AND name = '${night_name}' LIMIT 1;")
             for date_index in "${!dates[@]}"; do
                 date="${dates[date_index]}"
-                # Offset the English rotation by one day so the capture date (index 27)
-                # lands on Morning instead of Off on the Home screen.
-                type_id="${type_ids[$(((date_index + duty_offset) % ${#type_ids[@]}))]}"
-                echo "INSERT INTO duty (duty_type_id, member_id, duty_date, team_id, manual_override) SELECT ${type_id}, ${ids[member_index]}, '${date}', ${team_id}, 0 WHERE NOT EXISTS (SELECT 1 FROM duty WHERE member_id = ${ids[member_index]} AND duty_date = '${date}');"
+                code="${roster:date_index:1}"
+                case "$code" in
+                    O) continue ;;
+                    W) type_name="$work_name"; type_id="$work_id" ;;
+                    D) type_name="$day_name"; type_id="$day_id" ;;
+                    E) type_name="$evening_name"; type_id="$evening_id" ;;
+                    N) type_name="$night_name"; type_id="$night_id" ;;
+                    *) echo "Unknown roster code: ${code}" >&2; exit 1 ;;
+                esac
+                [[ -n "$type_id" ]] || { echo "Missing ${locale} duty type ${type_name} for team ${team_id}." >&2; exit 1; }
+                echo "INSERT INTO duty (duty_type_id, member_id, duty_date, team_id, manual_override) SELECT ${type_id}, ${member_id}, '${date}', ${team_id}, 0 WHERE NOT EXISTS (SELECT 1 FROM duty WHERE member_id = ${member_id} AND duty_date = '${date}');"
             done
         done
         echo "COMMIT;"
@@ -659,7 +727,7 @@ assert_api_identity "$KO_OWNER_EMAIL" "${KO_IDS[0]}" "${KO_NAMES[0]}" "$KO_TEAM_
 assert_api_identity "$EN_OWNER_EMAIL" "${EN_IDS[0]}" "${EN_NAMES[0]}" "$EN_TEAM_ID" "$EN_TEAM_NAME" "$identity_cookie"
 rm -f "$identity_cookie"
 
-# Reconcile only the two verified marker teams. A previous capture run or an
+# Reconcile only the verified marker teams. A previous capture run or an
 # older fixture revision must not accumulate alongside the current deterministic
 # dataset. This happens only after the running API has proved that it serves the
 # exact local member/team identities read from dutypark_demo.
@@ -678,15 +746,15 @@ DELETE FROM friends WHERE member_id IN (${marker_member_ids}) OR friend_id IN ($
 DELETE FROM schedule WHERE member_id IN (${marker_member_ids});
 DELETE FROM todo WHERE member_id IN (${marker_member_ids});
 DELETE FROM d_day_event WHERE member_id IN (${marker_member_ids});
-DELETE FROM team_schedule WHERE team_id IN (${KO_TEAM_ID}, ${EN_TEAM_ID});
-DELETE FROM duty WHERE member_id IN (${marker_member_ids}) OR team_id IN (${KO_TEAM_ID}, ${EN_TEAM_ID});
+DELETE FROM team_schedule WHERE team_id IN (${KO_TEAM_ID}, ${EN_TEAM_ID}, ${KO_WARD_TEAM_ID}, ${EN_WARD_TEAM_ID});
+DELETE FROM duty WHERE member_id IN (${marker_member_ids}) OR team_id IN (${KO_TEAM_ID}, ${EN_TEAM_ID}, ${KO_WARD_TEAM_ID}, ${EN_WARD_TEAM_ID});
 COMMIT;
 "
 
-populate_locale ko "$KO_TEAM_ID" "$KO_OWNER_EMAIL" KO_IDS KO_EMAILS KO_NAMES KO_AVATARS
-insert_duties ko "$KO_TEAM_ID" KO_IDS
-populate_locale en "$EN_TEAM_ID" "$EN_OWNER_EMAIL" EN_IDS EN_EMAILS EN_NAMES EN_AVATARS
-insert_duties en "$EN_TEAM_ID" EN_IDS
+populate_locale ko "$KO_WARD_TEAM_ID" "$KO_OWNER_EMAIL" KO_IDS KO_EMAILS KO_NAMES KO_AVATARS
+insert_duties ko KO_IDS
+populate_locale en "$EN_WARD_TEAM_ID" "$EN_OWNER_EMAIL" EN_IDS EN_EMAILS EN_NAMES EN_AVATARS
+insert_duties en EN_IDS
 
 # A small API smoke check makes a successful SQL-only partial run impossible to
 # mistake for a complete fixture. It also leaves a machine-readable summary.
@@ -708,12 +776,14 @@ en_friend_count=$(jq 'length' <<<"$LAST_BODY")
 [[ "$en_profile" == "true" && "$en_friend_count" == "7" ]] || { echo "English demo API smoke check failed." >&2; exit 1; }
 rm -f "$summary_cookie"
 
-ko_schedule_count=$(run_sql "SELECT COUNT(*) FROM schedule WHERE member_id IN (SELECT id FROM member WHERE team_id = ${KO_TEAM_ID});")
-en_schedule_count=$(run_sql "SELECT COUNT(*) FROM schedule WHERE member_id IN (SELECT id FROM member WHERE team_id = ${EN_TEAM_ID});")
-ko_todo_count_db=$(run_sql "SELECT COUNT(*) FROM todo WHERE member_id IN (SELECT id FROM member WHERE team_id = ${KO_TEAM_ID});")
-en_todo_count_db=$(run_sql "SELECT COUNT(*) FROM todo WHERE member_id IN (SELECT id FROM member WHERE team_id = ${EN_TEAM_ID});")
-ko_duty_count=$(run_sql "SELECT COUNT(*) FROM duty WHERE team_id = ${KO_TEAM_ID} AND duty_date BETWEEN '2026-11-01' AND '2026-11-30';")
-en_duty_count=$(run_sql "SELECT COUNT(*) FROM duty WHERE team_id = ${EN_TEAM_ID} AND duty_date BETWEEN '2026-11-01' AND '2026-11-30';")
+ko_member_ids=$(IFS=,; echo "${KO_IDS[*]}")
+en_member_ids=$(IFS=,; echo "${EN_IDS[*]}")
+ko_schedule_count=$(run_sql "SELECT COUNT(*) FROM schedule WHERE member_id IN (${ko_member_ids});")
+en_schedule_count=$(run_sql "SELECT COUNT(*) FROM schedule WHERE member_id IN (${en_member_ids});")
+ko_todo_count_db=$(run_sql "SELECT COUNT(*) FROM todo WHERE member_id IN (${ko_member_ids});")
+en_todo_count_db=$(run_sql "SELECT COUNT(*) FROM todo WHERE member_id IN (${en_member_ids});")
+ko_duty_count=$(run_sql "SELECT COUNT(*) FROM duty WHERE member_id IN (${ko_member_ids}) AND duty_date BETWEEN '2026-11-01' AND '2026-11-30';")
+en_duty_count=$(run_sql "SELECT COUNT(*) FROM duty WHERE member_id IN (${en_member_ids}) AND duty_date BETWEEN '2026-11-01' AND '2026-11-30';")
 
 jq -n \
     --arg database "${DB_HOST}:${DB_PORT}/${DB_NAME}" \
@@ -722,6 +792,8 @@ jq -n \
     --arg englishMonth "$ENGLISH_CALENDAR_MONTH" \
     --argjson koreanTeamId "$KO_TEAM_ID" \
     --argjson englishTeamId "$EN_TEAM_ID" \
+    --argjson koreanWardTeamId "$KO_WARD_TEAM_ID" \
+    --argjson englishWardTeamId "$EN_WARD_TEAM_ID" \
     --argjson koreanAccounts "${#KO_IDS[@]}" \
     --argjson englishAccounts "${#EN_IDS[@]}" \
     --argjson koreanSchedules "$ko_schedule_count" \
@@ -730,4 +802,4 @@ jq -n \
     --argjson englishTodos "$en_todo_count_db" \
     --argjson koreanDuties "$ko_duty_count" \
     --argjson englishDuties "$en_duty_count" \
-    '{database: $database, api: $api, captureDate: $captureDate, englishCalendarMonth: $englishMonth, teams: {korean: {id: $koreanTeamId, accounts: $koreanAccounts, schedules: $koreanSchedules, todos: $koreanTodos, duties: $koreanDuties}, english: {id: $englishTeamId, accounts: $englishAccounts, schedules: $englishSchedules, todos: $englishTodos, duties: $englishDuties}}, credentials: {password: "demo1234!", localOnly: true}}'
+    '{database: $database, api: $api, captureDate: $captureDate, englishCalendarMonth: $englishMonth, teams: {korean: {id: $koreanTeamId, wardTeamId: $koreanWardTeamId, accounts: $koreanAccounts, schedules: $koreanSchedules, todos: $koreanTodos, duties: $koreanDuties}, english: {id: $englishTeamId, wardTeamId: $englishWardTeamId, accounts: $englishAccounts, schedules: $englishSchedules, todos: $englishTodos, duties: $englishDuties}}, credentials: {password: "demo1234!", localOnly: true}}'
